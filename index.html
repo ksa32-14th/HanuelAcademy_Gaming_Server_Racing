@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="HRC — Haneul Racing Championship: 브라우저에서 돌아가는 F1 스타일 레이싱 게임. 마리나 베이와 송도 스트리트 서킷.">
+<meta name="description" content="HRC - Haneul Racing Championship: an F1-style racing game that runs in the browser.">
 </head>
 <body>
 <title>HRC — Haneul Racing Championship</title>
-<meta name="description" content="싱가포르 마리나 베이 스트리트 서킷(2022, 5.063km)을 실제 F1 규격으로 재현한 WEC 스타일 레이스 게임">
+<meta name="description" content="HRC - Haneul Racing Championship: an F1-style racing game that runs in the browser">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
@@ -57,9 +57,9 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 #topc b{font:700 22px var(--f-disp);font-variant-numeric:tabular-nums}
 #flags{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 76px);transform:translateX(-50%);display:flex;gap:6px}
 .flag{padding:3px 10px;border-radius:4px;font:700 12px var(--f-disp);letter-spacing:.08em}
-#msg{position:absolute;left:50%;top:34%;transform:translateX(-50%);font:900 30px var(--f-disp);letter-spacing:.04em;text-shadow:0 2px 14px rgba(0,0,0,.8);text-align:center;opacity:0;transition:opacity .25s;white-space:nowrap}
-#msg.on{opacity:1}
-#msg small{display:block;font:600 15px var(--f-body);letter-spacing:0;color:#dfe5f3}
+#msg{position:absolute;left:50%;top:14px;transform:translate(-50%,-14px);font:900 17px var(--f-disp);letter-spacing:.14em;white-space:nowrap;opacity:0;transition:opacity .2s,transform .2s;background:rgba(8,11,16,.9);border-left:5px solid var(--red);border-radius:4px;padding:9px 20px 9px 16px;box-shadow:0 6px 22px rgba(0,0,0,.5)}
+#msg.on{opacity:1;transform:translate(-50%,0)}
+#msg small{display:none}
 /* lights */
 #lights{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 110px);transform:translateX(-50%);display:flex;gap:12px;padding:12px 16px;background:#0a0a0c;border-radius:10px;border:2px solid #222}
 #lights[hidden]{display:none}
@@ -119,6 +119,23 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 .rules li{margin-bottom:3px}
 .rules b{color:var(--ink)}
 .keyl{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--mute);margin-top:12px}
+/* lobby: buttons for grand prix, laps, difficulty and team */
+.sec{margin-top:18px}
+.sec h3{margin:0 0 8px}
+.secrow{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:620px){.secrow{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:700 13px var(--f-disp);letter-spacing:.08em;background:#10162a;color:#cfd6e6;border:1px solid var(--line);border-radius:6px;padding:10px 15px;cursor:pointer}
+.chip:hover{border-color:#5a6480}
+.chip.on{background:var(--red);border-color:var(--red);color:#fff}
+.chip small{display:block;font:400 10px/1.3 var(--f-body);letter-spacing:0;opacity:.75;margin-top:2px}
+.teams{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:760px){.teams{grid-template-columns:repeat(2,1fr)}}
+.team{background:#10162a;border:1px solid var(--line);border-radius:6px;padding:7px;cursor:pointer;color:#cfd6e6;font:700 11px var(--f-disp);letter-spacing:.04em;text-align:left}
+.team.on{border-color:var(--red);background:rgba(225,6,0,.16);color:#fff}
+.liv{height:24px;border-radius:3px;position:relative;overflow:hidden;margin-bottom:5px}
+.liv i{position:absolute;top:0;bottom:0;right:-6px;width:38%;transform:skewX(-20deg)}
+.liv b{position:absolute;left:5px;top:50%;transform:translateY(-50%);width:16px;height:5px;border-radius:2px;background:rgba(255,255,255,.75)}
 kbd{font:700 11px var(--f-disp);background:#1d2540;border:1px solid #33406a;border-bottom-width:3px;border-radius:4px;padding:1px 6px;color:var(--ink)}
 h3{font:700 13px var(--f-disp);letter-spacing:.16em;color:var(--mute);margin:0 0 8px}
 .tblw{overflow-x:auto;margin-top:10px}
@@ -147,20 +164,20 @@ td .sw{display:inline-block;width:4px;height:12px;margin-right:6px;vertical-alig
   <div id="msg"></div>
   <canvas id="minimap" class="panel" width="230" height="230"></canvas>
   <div id="info" class="panel">
-    <div class="kv"><span>순위</span><span class="pos num" id="pos">P10</span></div>
-    <div class="kv"><span>앞 차와 간격</span><b id="gapA">—</b></div>
-    <div class="kv"><span>뒤 차와 간격</span><b id="gapB">—</b></div>
+    <div class="kv"><span>POSITION</span><span class="pos num" id="pos">P10</span></div>
+    <div class="kv"><span>GAP AHEAD</span><b id="gapA">—</b></div>
+    <div class="kv"><span>GAP BEHIND</span><b id="gapB">—</b></div>
     <div class="sep"></div>
-    <div class="kv"><span>현재 랩</span><b id="curLap">—</b></div>
-    <div class="kv"><span>지난 랩</span><b id="lastLap">—</b></div>
-    <div class="kv"><span>베스트 랩</span><b id="bestLap">—</b></div>
+    <div class="kv"><span>CURRENT LAP</span><b id="curLap">—</b></div>
+    <div class="kv"><span>LAST LAP</span><b id="lastLap">—</b></div>
+    <div class="kv"><span>BEST LAP</span><b id="bestLap">—</b></div>
     <div class="secs"><i id="s1">S1</i><i id="s2">S2</i><i id="s3">S3</i></div>
     <div class="sep"></div>
-    <div class="kv"><span>타이어 · 마모</span><b><span class="tc" id="tyreC">M</span> <span id="wear">0%</span></b></div>
-    <div class="kv"><span>다음 피트 타이어 (1/2/3)</span><b><span class="tc" id="nextC">H</span></b></div>
-    <div class="kv"><span>사용한 컴파운드</span><b id="used">M</b></div>
-    <div class="kv"><span>연료 · 손상</span><b><span id="fuel">0.0</span> kg · <span id="dmg">0%</span></b></div>
-    <div class="kv"><span>트랙 리밋 · 페널티</span><b><span id="tl">0</span>/3 · <span id="pen">0</span>s</b></div>
+    <div class="kv"><span>TYRE / WEAR</span><b><span class="tc" id="tyreC">M</span> <span id="wear">0%</span></b></div>
+    <div class="kv"><span>NEXT TYRE (1/2/3)</span><b><span class="tc" id="nextC">H</span></b></div>
+    <div class="kv"><span>COMPOUNDS USED</span><b id="used">M</b></div>
+    <div class="kv"><span>FUEL / DAMAGE</span><b><span id="fuel">0.0</span> kg · <span id="dmg">0%</span></b></div>
+    <div class="kv"><span>TRACK LIMITS / PENALTY</span><b><span id="tl">0</span>/3 · <span id="pen">0</span>s</b></div>
   </div>
   <div id="dash" class="panel">
     <div class="rpm"><div id="rpmFill"></div></div>
@@ -168,77 +185,64 @@ td .sw{display:inline-block;width:4px;height:12px;margin-right:6px;vertical-alig
     <div class="drsrow"><div id="drs">DRS</div><div id="lim">PIT</div></div>
     <div class="ped"><div class="pb"><i id="thr"></i></div><div class="pb br"><i id="brk"></i></div></div>
   </div>
-  <div id="keys"><kbd>W</kbd> 가속 · <kbd>A</kbd>/<kbd>D</kbd> 조향 · <kbd>SPACE</kbd> 브레이크 · <kbd>E</kbd> DRS · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 다음 타이어 · <kbd>L</kbd> 레이싱 라인 · <kbd>H</kbd> HUD 크기 · <kbd>R</kbd> 코스 복귀 · <kbd>P</kbd> 일시정지 · <kbd>0</kbd> 다시보기 · <kbd>M</kbd> 사운드</div>
+  <div id="keys"><kbd>W</kbd> Throttle · <kbd>A</kbd>/<kbd>D</kbd> Steer · <kbd>SPACE</kbd> Brake · <kbd>E</kbd> DRS · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Next tyre · <kbd>L</kbd> Racing line · <kbd>H</kbd> HUD · <kbd>R</kbd> Recover · <kbd>P</kbd> Pause · <kbd>0</kbd> Replay · <kbd>M</kbd> Sound</div>
 </div>
 
 <div id="menu" class="ov">
   <div class="card">
     <div class="eyebrow">HRC · HANEUL RACING CHAMPIONSHIP · 2022 REGULATIONS</div>
-    <h1 id="trkTitle">Marina Bay <em>Night</em> GP</h1>
-    <p class="sub" id="trkSub">마리나 베이 스트리트 서킷 · 5.063 km · 23 코너 · 반시계 방향 · 3 DRS 존 (2022 레이아웃 근사)</p>
-    <div class="grid2">
-      <div>
-        <h3>레이스 설정</h3>
-        <div class="set">
-          <label for="optTrack" style="grid-column:1/-1">서킷
-            <select id="optTrack"></select></label>
-          <label for="optLaps">랩 수
-            <select id="optLaps"><option value="3">3 랩</option><option value="5" selected>5 랩</option><option value="10">10 랩</option><option value="20">20 랩</option><option value="30">30 랩</option><option value="61" id="optFull">61 랩 (실제 거리)</option></select></label>
-          <label for="optTeam">내 팀
-            <select id="optTeam"></select></label>
-          <label for="optGrid">출발 그리드
-            <select id="optGrid"></select></label>
-          <label for="optAI">AI 난이도
-            <select id="optAI"><option value="0.99">루키</option><option value="1.03" selected>프로</option><option value="1.06">챔피언</option><option value="1.09">에일리언</option></select></label>
-          <label for="optTyre">스타트 타이어
-            <select id="optTyre"><option value="S">소프트 (C5)</option><option value="M" selected>미디엄 (C4)</option><option value="H">하드 (C3)</option></select></label>
-          <label for="optWear">타이어 마모 배율
-            <select id="optWear"><option value="1" selected>1× (실제)</option><option value="3">3×</option><option value="6">6×</option></select></label>
-          <label for="optLine">레이싱 라인 (L)
-            <select id="optLine"><option value="1" selected>전체</option><option value="2">코너만</option><option value="0">끔</option></select></label>
-        </div>
-        <div class="spec">
-          <div><b class="num">5.88 m</b><span>전장</span></div>
-          <div><b class="num">2.40 m</b><span>전폭</span></div>
-          <div><b class="num">1.12 m</b><span>전고</span></div>
-          <div><b class="num">798 kg</b><span>최소 중량</span></div>
-        </div>
-        <div class="keyl"><span><kbd>W</kbd> 가속</span><span><kbd>A</kbd><kbd>D</kbd> 조향</span><span><kbd>SPACE</kbd> 브레이크</span><span><kbd>E</kbd> DRS</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 피트 타이어 S/M/H</span><span><kbd>L</kbd> 레이싱 라인</span><span><kbd>H</kbd> HUD 크기</span><span><kbd>R</kbd> 복귀</span><span><kbd>P</kbd> 일시정지</span><span><kbd>0</kbd> 다시보기(20초)</span></div>
-        <button class="btn" id="startBtn">그리드로 이동</button>
-      </div>
-      <div>
-        <h3>적용되는 2022 규정</h3>
-        <ul class="rules">
-          <li><b>스타트</b> — 5개의 적색등이 모두 꺼지면 출발. 그리드 간격 8 m.</li>
-          <li><b>DRS</b> — <b>1랩부터</b> 사용(하우스 룰). 감지 지점에서 앞차와 <b>3초 이내</b>면 다음 활성화 구간에서 <kbd>E</kbd>로 개방, 브레이크를 밟으면 닫힘.</li>
-          <li><b>트랙 리밋</b> — 네 바퀴가 모두 흰 선 밖으로 나가면 위반. 3회째 흑백기, 이후 위반마다 <b>5초 페널티</b>.</li>
-          <li><b>타이어</b> — 드라이 레이스에서 <b>2종 이상의 컴파운드</b> 의무 사용. 위반 시 실격(게임 단순화).</li>
-          <li><b>피트 레인</b> — 시가지 서킷 제한속도 <b>60 km/h</b>(자동 리미터). 자기 팀 박스에서 자동 정차.</li>
-          <li><b>연료</b> 최대 110 kg · <b>레이스 최대 2시간</b>.</li>
-          <li><b>포인트</b> — 25·18·15·12·10·8·6·4·2·1 + 10위 이내 패스티스트 랩 1점.</li>
-        </ul>
-        <p class="sub" style="margin-top:14px;font-size:12px">송도 건물·도로·수변 데이터 © OpenStreetMap contributors (ODbL)</p>
-      </div>
+    <h1>HRC <em>— Haneul Racing Championship</em></h1>
+    <p class="sub" id="trkSub"></p>
+    <div class="sec"><h3>GRAND PRIX</h3><div class="chips" id="gpSel"></div>
+      <canvas id="trkMap" width="880" height="330" style="width:100%;height:auto;margin-top:12px;background:#080c16;border:1px solid var(--line);border-radius:8px"></canvas>
+      <div class="keyl" style="margin-top:6px"><span style="color:#1be26b">■ DRS zone</span><span style="color:#ffb000">● DRS detection</span><span style="color:#c9d3ea">— Sector split</span><span style="color:#fff">▮ Start / finish</span></div></div>
+    <div class="secrow">
+      <div class="sec"><h3>RACE LENGTH</h3><div class="chips" id="lapSel"></div></div>
+      <div class="sec"><h3>AI DIFFICULTY</h3><div class="chips" id="aiSel"></div></div>
     </div>
+    <div class="sec"><h3>TEAM / LIVERY</h3><div class="teams" id="teamSel"></div></div>
+    <div class="keyl"><span><kbd>W</kbd> Throttle</span><span><kbd>A</kbd><kbd>D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>E</kbd> DRS</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Pit tyre S/M/H</span><span><kbd>L</kbd> Racing line</span><span><kbd>H</kbd> HUD</span><span><kbd>R</kbd> Recover</span><span><kbd>P</kbd> Pause</span><span><kbd>0</kbd> Replay</span></div>
+    <button class="btn" id="startBtn">ENTER PIT BOX</button>
+    </div>
+  </div>
+</div>
+
+<div id="box" class="ov" hidden>
+  <div class="card" style="width:min(560px,100%)">
+    <div class="eyebrow" id="boxEye">PIT BOX</div>
+    <h1 id="boxTitle" style="font-size:34px">Qualifying <em>Tyre</em></h1>
+    <p class="sub" id="boxSub"></p>
+    <div class="chips" id="boxTyres" style="margin-top:16px"></div>
+    <button class="btn" id="boxGo">LEAVE THE BOX</button>
+  </div>
+</div>
+
+<div id="qres" class="ov" hidden>
+  <div class="card" style="width:min(760px,100%)">
+    <div class="eyebrow">ONE-SHOT QUALIFYING · CLASSIFICATION</div>
+    <h1 style="font-size:36px">Qualifying <em>Result</em></h1>
+    <p class="sub" id="qresSub"></p>
+    <div style="max-height:50vh;overflow:auto;margin-top:12px"><table><thead><tr><th>P</th><th>DRIVER</th><th>TEAM</th><th class="num">TIME</th><th class="num">GAP</th></tr></thead><tbody id="qresBody"></tbody></table></div>
+    <button class="btn" id="qresBtn">TO THE PIT BOX</button>
   </div>
 </div>
 
 <div id="pause" class="ov" hidden>
   <div class="card" style="width:min(420px,100%);text-align:center">
     <div class="eyebrow">RED FLAG · PAUSED</div>
-    <h1 style="font-size:40px">일시정지</h1>
-    <button class="btn" id="resumeBtn">계속하기 (P)</button>
-    <button class="btn ghost" id="quitBtn">메뉴로 나가기</button>
+    <h1 style="font-size:40px">Paused</h1>
+    <button class="btn" id="resumeBtn">RESUME (P)</button>
+    <button class="btn ghost" id="quitBtn">QUIT TO MENU</button>
   </div>
 </div>
 
 <div id="results" class="ov" hidden>
   <div class="card">
-    <div class="eyebrow">CHEQUERED FLAG · 최종 결과</div>
+    <div class="eyebrow">CHEQUERED FLAG · FINAL CLASSIFICATION</div>
     <h1 style="font-size:40px">Race <em>Classification</em></h1>
     <p class="sub" id="resSub"></p>
-    <div class="tblw"><table><thead><tr><th>POS</th><th>드라이버</th><th>팀</th><th>랩</th><th>기록 / 차이</th><th>페널티</th><th>베스트 랩</th><th>PTS</th></tr></thead><tbody id="resBody"></tbody></table></div>
-    <button class="btn" id="againBtn">다시 레이스</button>
+    <div class="tblw"><table><thead><tr><th>POS</th><th>DRIVER</th><th>TEAM</th><th>LAPS</th><th>TIME / GAP</th><th>PEN</th><th>BEST LAP</th><th>PTS</th></tr></thead><tbody id="resBody"></tbody></table></div>
+    <button class="btn" id="againBtn">NEW RACE</button>
   </div>
 </div>
 
@@ -265,8 +269,8 @@ function fmtRace(t){if(t==null)return '0:00.000';const h=Math.floor(t/3600);cons
    raw coords: x east, y north. `len` is the official lap length the layout is scaled to.
    `fillet` (m) rounds every polyline corner with an arc — used for GPS-traced street routes. */
 const TRACKS={
- singapore:{title:'Marina Bay <em>Night</em> GP',label:'싱가포르 · 마리나 베이',
-  sub:'마리나 베이 스트리트 서킷 · 5.063 km · 23 코너 · 반시계 방향 · 3 DRS 존 (2022 레이아웃 근사)',len:5063,fullLaps:61,start:[0,250],fillet:0,
+ singapore:{title:'Marina Bay <em>Night</em> GP',label:'Singapore · Marina Bay',
+  sub:'Marina Bay Street Circuit · 5.063 km · 23 corners · anti-clockwise · 3 DRS zones',len:5063,fullLaps:61,start:[0,250],fillet:0,
   raw:[[0,-40],[0,100],[0,250],[0,400],[-2,500],[-15,545],[-40,570],[-60,585],[-72,605],[-80,640],[-88,655],[-103,664],[-120,662],[-132,650],[-140,632],
    [-158,607],[-185,592],[-215,588],[-245,600],[-265,620],[-330,690],[-420,790],[-510,890],[-560,940],[-600,975],[-625,975],[-645,955],[-690,910],
    [-710,895],[-735,900],[-755,915],[-790,950],[-810,965],[-835,960],[-850,945],[-900,880],[-960,790],[-1010,710],[-1025,670],[-1022,640],[-1010,610],
@@ -277,8 +281,8 @@ const TRACKS={
   stands:[[-205,200,1,180],[-760,505,-1,140]],
   water:[[-800,400],[-700,470],[-560,450],[-340,420],[-310,300],[-300,100],[-310,-120],[-420,-250],[-850,-250],[-980,300]],
   tall:(x,y)=>x<-880&&y<500},
- songdo:{title:'Songdo <em>Street</em> GP',label:'인천 · 송도국제도시',
-  sub:'송도 스트리트 서킷 · 7.450 km · 반시계 방향 · 3 DRS 존 (GPS 경로 기반 사용자 코스)',len:7450,fullLaps:41,start:[911,120],simp:12,fillet:140,minR:62,
+ songdo:{title:'Songdo <em>Street</em> GP',label:'Incheon · Songdo',
+  sub:'Songdo Street Circuit · 7.450 km · anti-clockwise · 3 DRS zones · GPS-traced',len:7450,fullLaps:41,start:[911,120],simp:12,fillet:140,minR:62,
   // traced from the gmap-pedometer route "Songdo Grand-Prix" (metres from 37.3854 N, 126.6435 E)
   raw:[[13.1,506.4],[-151.6,312.4],[-222.6,367.5],[-305.1,431.6],[-355.5,372.5],[-435.4,279],[-476.1,354.4],[-493.6,386.6],[-531.7,457.2],[-495.3,502.7],
    [-457.5,550],[-463.8,554.7],[-469.3,559.5],[-534.2,609.6],[-564.4,632.9],[-608.5,667.2],[-621.8,677.6],[-644.1,682.6],[-658.7,688.6],[-596,573.8],
@@ -296,9 +300,9 @@ const TRACKS={
    [481.5,378.1],[472.2,385],[434.1,413.8],[382.5,452.8],[149,628.7],[129.1,644.8]],
   // DRS zones placed by hand [detection, activation start, activation end]: the automatic version
   // only keeps the three longest runs on the lap, and the new Michuhol Park straight came sixth.
-  drs:[[[1449.5,-192.7],[1290,-97],[260,558]],      // start/finish straight — the longest zone on the lap
-       [[25.6,-65.7],[230,10],[490,92]],           // Michuhol Park straight
-       [[-596,573.8],[-570,410],[-470,226]]],       // west section
+  drs:[[[1521.8,-231.8],[1400,-165],[175,610]],     // start/finish straight - the longest zone on the lap
+       [[25.6,-65.7],[160,-12],[505,98]],          // Michuhol Park straight
+       [[-596,573.8],[-585,437],[-424,146]]],      // west section
   stands:[[1570,-515,1,150]],
   // the right-hander at the end of the Michuhol Park straight opened out from ~64 m to ~100 m along its
   // whole arc (a single centre only pushes the tight part to the edge of the zone)
@@ -1173,25 +1177,115 @@ function makeCar(k,team,drv,isPlayer,skill,comp,num){
 function placeOnGrid(c,slot){const dist=8+slot*8;const i=idxSp(-dist);const d=slot%2?GRID_D:-GRID_D;
   c.idx=i;c.x=X[i]-TZ[i]*d;c.z=Z[i]+TX[i]*d;c.yaw=c.chi=ANG[i];locate(c);c.prevS=c.s;c.progress=-dist;c.laneOff=d-RL[i];}
 
-function setupRace(){
-  totalLaps=targetLaps=+$('optLaps').value;wearMult=+$('optWear').value;
-  const pt=+$('optTeam').value,grid=+$('optGrid').value-1,diff=+$('optAI').value,ptyre=$('optTyre').value;
+/* ================= SESSION =================
+   A weekend runs: lobby → pit box (quali tyre) → one-shot qualifying → classification →
+   pit box (race tyre) → grid → race. In one-shot qualifying the car is alone on circuit: an out
+   lap, then exactly one timed lap. The rest of the field waits in the garage and their laps are
+   worked out from the ideal-line time, scaled by the pace each driver can actually hold. */
+const IDEAL_LAP=(()=>{let t=0;for(let i=0;i<N;i++)t+=DS/VP[i];return t;})();
+const CUMT=(()=>{const a=new Float32Array(N+1);let t=0;for(let i=0;i<N;i++){a[i]=t;t+=DS/VP[i];}a[N]=t;return a;})();
+const QUALI_K=1.03; // a perfect ideal-line lap is not a lap anybody drives; this is the real-world gap
+let session='quali',qStage='',qAttempt=0,qTimes=new Map(),qGrid=null,boxMode='quali',boxComp='S';
+
+function parkInGarage(c){c.parked=true;c.mesh.root.visible=false;c.held=true;c.v=0;c.throttle=0;c.brake=0;}
+function placeInBox(c){const i=idxSp(BOX_S[c.team]);c.idx=i;
+  c.x=X[i]-TZ[i]*PIT_OFF;c.z=Z[i]+TX[i]*PIT_OFF;c.yaw=c.chi=ANG[i];
+  c.v=0;c.delta=0;c.r=0;c.slip=0;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;
+  locate(c);c.prevS=c.s;c.lapCount=-1;c.laneOff=0;c.laneOffT=0;c.boxDone=true;c.pitStop=0;
+  // the box sits between PIT_B and PIT_C, where post() freezes the pit-side flag instead of deriving
+  // it — so it has to be set here, or the car counts as being on the circuit while still in its box
+  c.pitSide=true;c.limiter=true;camYaw=null;}
+
+function setupSession(){
+  totalLaps=targetLaps=optLaps;wearMult=1;
+  const pt=optTeam,diff=optAI;
   const nums=[...Array(98).keys()].map(n=>n+2).sort(()=>Math.random()-.5);
   const ai=[];let di=0;
   for(let t=0;t<10;t++)for(let s=0;s<2;s++){if(t===pt&&s===0)continue;const perf=1-t*0.0035+rand(-0.006,0.004);ai.push({team:t,drv:DRIVERS[di++],skill:diff*perf});}
   ai.sort((a,b)=>b.skill-a.skill);
-  let slot=0;cars=[];
-  for(let g=0;g<20;g++){
-    if(g===grid){player=makeCar(g,pt,['YOU','You'],true,1,ptyre,7);cars.push(player);placeOnGrid(player,g);continue;}
-    const a=ai[slot++];const comp=g<10?(Math.random()<.5?'S':'M'):(Math.random()<.5?'M':'H');
-    const c=makeCar(g,a.team,a.drv,false,a.skill,comp,nums[g]);
-    if(totalLaps>=2){const lo=Math.max(1,Math.floor(totalLaps*0.3)),hi=Math.max(lo,Math.ceil(totalLaps*0.7)-1);c.pitLap=lo+Math.floor(Math.random()*(hi-lo+1));}
-    else c.pitLap=1;
-    cars.push(c);placeOnGrid(c,g);}
-  simTime=0;raceStart=null;gridT0=0.8;lightsOutAt=gridT0+5+rand(0.3,2.6);lightsOn=-1;phase='grid';
+  cars=[];player=makeCar(0,pt,['YOU','You'],true,1,'S',7);cars.push(player);
+  ai.forEach((a,k)=>cars.push(makeCar(k+1,a.team,a.drv,false,a.skill,'S',nums[k])));
+  qTimes=new Map();
+  for(const c of cars)if(!c.isPlayer){qTimes.set(c,IDEAL_LAP*QUALI_K/c.skill*(1+rand(-0.003,0.010)));parkInGarage(c);}
+  simTime=0;raceStart=null;lightsOn=-1;drsEnabled=true;checkered=false;timeLimitHit=false;fastest=null;
+  bestSecAll.fill(null);resultsShown=false;qGrid=null;session='quali';
+  $('tower').hidden=true;$('lights').hidden=true;
+  openBox('quali');
+}
+
+function openBox(mode){
+  boxMode=mode;phase='box';paused=false;
+  const c=player;placeInBox(c);c.held=true;c.wear=0;c.damage=0;c.tl=0;c.tlOut=false;c.pen=0;c.drsOpen=false;
+  c.fuel=mode==='quali'?12:Math.min(110,totalLaps*FUEL_PER_LAP+2.5);
+  $('boxEye').textContent=mode==='quali'?'PIT BOX · ONE-SHOT QUALIFYING':'PIT BOX · RACE';
+  $('boxTitle').innerHTML=mode==='quali'?'Qualifying <em>Tyre</em>':'Starting <em>Tyre</em>';
+  $('boxSub').textContent=mode==='quali'?'':('P'+(qGrid?qGrid.indexOf(c)+1:1)+' · '+totalLaps+' laps');
+  boxComp=mode==='quali'?'S':'M';
+  const tb=$('boxTyres');tb.innerHTML='';
+  for(const k of ['S','M','H'])tb.appendChild(chip(COMP[k].name,'',k===boxComp,()=>{boxComp=k;
+    [...tb.children].forEach((b,i)=>b.classList.toggle('on',['S','M','H'][i]===boxComp));}));
+  $('boxGo').textContent=mode==='quali'?'LEAVE THE BOX':'TO THE GRID';
+  $('boxGo').onclick=leaveBox;
+  $('box').hidden=false;
+}
+
+function leaveBox(){
+  $('box').hidden=true;const c=player;
+  c.comp=boxComp;c.wear=0;c.used=new Set([boxComp]);c.nextComp=boxComp==='H'?'M':'H';
+  c.mesh.band.color.setHex(COMP[boxComp].hex);
+  if(boxMode==='quali'){phase='quali';qStage='out';qAttempt=1;c.lapInvalid=false;c.held=false;
+    c.bestLap=null;c.lastLap=null;c.sec=[null,null,null];c.secCol=['','',''];
+    msg('OUT LAP');}
+  else startRace();
+}
+
+function qualiCross(c){
+  if(c.pitSide)return; // crossing the line inside the pit lane is not a lap of the circuit
+  if(qStage==='out'){qStage='flying';c.lapStart=simTime;c.secStart=simTime;c.lapInvalid=false;
+    msg('FLYING LAP');return;}
+  if(qStage!=='flying')return;
+  const lt=simTime-c.lapStart;
+  if(c.lapInvalid){finishQuali(null);return;}
+  c.lastLap=lt;c.bestLap=lt;finishQuali(lt);
+}
+function finishQuali(t){
+  qStage='done';phase='qdone';const c=player;c.held=true;c.throttle=0;c.brake=0;
+  qTimes.set(c,t);
+  qGrid=cars.slice().sort((a,b)=>{const ta=qTimes.get(a),tb=qTimes.get(b);
+    if(ta==null&&tb==null)return 0;if(ta==null)return 1;if(tb==null)return -1;return ta-tb;});
+  const pole=qTimes.get(qGrid[0]);
+  $('qresBody').innerHTML=qGrid.map((c2,k)=>{const q=qTimes.get(c2);
+    return '<tr class="'+(c2.isPlayer?'me':'')+'"><td class="num">'+(k+1)+'</td>'+
+      '<td><span class="sw" style="background:'+hex(c2.col)+'"></span>'+(c2.isPlayer?'<b>YOU</b>':c2.name)+' <span style="color:var(--mute)">#'+c2.num+'</span></td>'+
+      '<td>'+TEAMS[c2.team].name+'</td><td class="num">'+(q==null?'NO TIME':fmt(q))+'</td>'+
+      '<td class="num">'+(q==null?'—':k===0?'POLE':'+'+(q-pole).toFixed(3))+'</td></tr>';}).join('');
+  const p=qGrid.indexOf(c),pt=qTimes.get(c);
+  $('qresSub').textContent=pt==null?'LAP DELETED — you start from the back of the grid'
+    :'P'+(p+1)+' · '+fmt(pt)+(p===0?' · POLE POSITION':' · +'+(pt-pole).toFixed(3)+'s to pole');
+  $('qres').hidden=false;
+  msg(pt==null?'NO TIME':'P'+(p+1)+' · '+fmt(pt));
+}
+
+function startRace(){
+  session='race';phase='grid';
+  qGrid.forEach((c,slot)=>{
+    c.parked=false;c.mesh.root.visible=true;
+    if(!c.isPlayer){const comp=slot<10?(Math.random()<.5?'S':'M'):(Math.random()<.5?'M':'H');
+      c.comp=comp;c.nextComp=comp==='H'?'M':'H';c.mesh.band.color.setHex(COMP[comp].hex);
+      if(totalLaps>=2){const lo=Math.max(1,Math.floor(totalLaps*0.3)),hi=Math.max(lo,Math.ceil(totalLaps*0.7)-1);c.pitLap=lo+Math.floor(Math.random()*(hi-lo+1));}
+      else c.pitLap=1;}
+    c.used=new Set([c.comp]);c.fuel=Math.min(110,totalLaps*FUEL_PER_LAP+2.5);
+    c.wear=0;c.damage=0;c.tl=0;c.tlOut=false;c.pen=0;c.finished=false;c.finishT=null;
+    c.pitStop=0;c.boxDone=false;c.pitPlan=false;c.pitCount=0;c.pitSide=false;c.limiter=false;
+    c.lastLap=null;c.bestLap=null;c.sec=[null,null,null];c.secCol=['','',''];c.bestSec=[null,null,null];
+    c.hp=[];c.ht=[];c.drsOpen=false;c.drsElig=[false,false,false];c.detT=[null,null,null];c.zone=-1;
+    c.tow=0;c.slip=0;c.v=0;c.delta=0;c.r=0;c.laneOff=0;c.laneOffT=0;c.laneHold=0;c.sep=0;c.held=true;
+    placeOnGrid(c,slot);c.lapCount=-1;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;});
+  simTime=0;raceStart=null;gridT0=0.8;lightsOutAt=gridT0+5+rand(0.3,2.6);lightsOn=-1;
   drsEnabled=false;checkered=false;timeLimitHit=false;fastest=null;bestSecAll.fill(null);resultsShown=false;
-  buildTower();$('lights').hidden=false;setLights(0);
-  msg('그리드 정렬 완료','적색등 5개가 모두 꺼지면 출발 — W를 누르고 대기');
+  camYaw=null;recReset();
+  $('tower').hidden=false;buildTower();$('lights').hidden=false;setLights(0);
+  msg('FORMATION COMPLETE · LIGHTS OUT WHEN ALL FIVE GO OUT');
 }
 
 /* ================= PHYSICS ================= */
@@ -1248,13 +1342,16 @@ function walls(c){
     if(d<-WL[i]){pen=-WL[i]-d;s=1;}else if(d>WR[i]){pen=d-WR[i];s=-1;}
     if(pitZone){if(c.pitSide&&d<PITWALL+.3&&PITWALL+.3-d>pen){pen=PITWALL+.3-d;s=1;}else if(!c.pitSide&&d>PITWALL-.3&&d-PITWALL+.3>pen){pen=d-PITWALL+.3;s=-1;}}
     if(pen>0&&(!w||pen>w.pen))w={pen,nx:rx*s,nz:rz*s};}
-  if(!w){c.onWall=false;return;}
+  if(!w){c.onWall=false;c.wallT=0;return;}
   c.x+=w.nx*w.pen;c.z+=w.nz*w.pen;
   const cd=c.chi??c.yaw,fx=Math.cos(cd),fz=Math.sin(cd),into=Math.max(0,-(fx*w.nx+fz*w.nz)); // travel direction vs wall
   if(!c.onWall){const vn=c.v*into;if(vn>1)jolt(c,w.nx,w.nz,c.x+fx*HX*0.8-w.nx*HZ,c.z+fz*HX*0.8-w.nz*HZ,vn);if(vn>12){c.damage=Math.min(1,c.damage+(vn-12)*0.02);
-    if(c.isPlayer&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT!','벽 충돌 — 에어로 손상 '+Math.round(c.damage*100)+'%');}}}
+    if(c.isPlayer&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT · AERO DAMAGE '+Math.round(c.damage*100)+'%');}}}
   c.onWall=true;
-  c.v=Math.max(0,c.v-(5+28*into)*dt);
+  // scraping the barrier costs speed: a brush barely hurts, but the longer the car stays against it
+  // the harder it drags (bodywork, then tyre, biting into the wall)
+  c.wallT=Math.min(2.5,(c.wallT||0)+dt);
+  c.v=Math.max(0,c.v-(1.2+3.6*c.wallT+26*into)*dt);
   if(into>0){const ta=Math.atan2(fz+w.nz*into,fx+w.nx*into);c.chi=cd+clamp(wrapA(ta-cd),-3*dt,3*dt);c.yaw+=clamp(wrapA(ta-c.yaw),-1.0*dt,1.0*dt);}
 }
 
@@ -1262,6 +1359,7 @@ function walls(c){
 // The car driving into the other just gives up the closing speed (rear car matches the car ahead).
 function collide(){
   for(let a=0;a<cars.length;a++)for(let b=a+1;b<cars.length;b++){const A=cars[a],B=cars[b];
+    if(A.parked||B.parked)continue;
     const dx=B.x-A.x,dz=B.z-A.z;if(dx*dx+dz*dz>40)continue;
     if(A.pitStop>0||B.pitStop>0)continue;
     const h=obbHit(A,B);if(!h)continue;
@@ -1282,7 +1380,7 @@ function collide(){
     const hitter=sa>=0.5?A:B;
     jolt(A,-h.nx,-h.nz,h.px,h.pz,closing);jolt(B,h.nx,h.nz,h.px,h.pz,closing);
     if(hitter&&closing>13)hitter.damage=Math.min(1,hitter.damage+(closing-13)*0.012); // front wing
-    if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT','차량 접촉'+(closing>10?' — 에어로 손상':''));}}
+    if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT'+(closing>10?' · AERO DAMAGE':''));}}
 }
 let lastContact=-9;
 // remove `dn` m/s of velocity along (nx,nz) from a car, keeping its tangential motion. The heading
@@ -1314,28 +1412,31 @@ function obbHit(A,B){
 
 /* ================= RACE CONTROL ================= */
 function startPit(c){c.pitStop=2.2+rand(0,.7)+(c.damage>0.05?5:0);c.v=0;c.boxDone=true;c.pitCount++;c.drsOpen=false;
-  if(c.isPlayer)msg('PIT STOP','타이어 교체 → '+COMP[c.nextComp].name+(c.damage>0.05?' · 프론트 윙 교체':''));}
+  if(c.isPlayer)msg('PIT STOP · '+COMP[c.nextComp].name+(c.damage>0.05?' · NEW FRONT WING':''));}
 function finishPit(c){c.pitStop=0;c.comp=c.nextComp;c.wear=0;c.used.add(c.comp);c.damage=0;c.mesh.band.color.setHex(COMP[c.comp].hex);
-  if(!c.isPlayer){c.pitLap=Infinity;c.nextComp=c.comp==='H'?'M':'H';}else{c.nextComp=c.comp==='H'?'M':'H';msg('GO GO GO','피트 레인 60 km/h 리미터 작동 중');}}
-function trackLimit(c){c.tl++;if(!c.isPlayer){if(c.tl>=4)c.pen+=5;return;}
-  if(c.tl>=4){c.pen+=5;msg('5초 타임 페널티','트랙 리밋 위반 '+c.tl+'회');}
-  else if(c.tl===3)msg('흑백기 (BLACK & WHITE)','트랙 리밋 3회 — 다음 위반부터 5초 페널티');
-  else msg('트랙 리밋 경고 '+c.tl+'/3','네 바퀴 모두 흰 선 밖');}
+  if(!c.isPlayer){c.pitLap=Infinity;c.nextComp=c.comp==='H'?'M':'H';}else{c.nextComp=c.comp==='H'?'M':'H';msg('GO GO GO');}}
+function trackLimit(c){
+  if(session==='quali'){if(c.isPlayer&&qStage==='flying'&&!c.lapInvalid){c.lapInvalid=true;msg('LAP DELETED · YOU START LAST');}return;}
+  c.tl++;if(!c.isPlayer){if(c.tl>=4)c.pen+=5;return;}
+  if(c.tl>=4){c.pen+=5;msg('5 SECOND PENALTY · TRACK LIMITS');}
+  else if(c.tl===3)msg('BLACK AND WHITE FLAG · TRACK LIMITS');
+  else msg('TRACK LIMITS '+c.tl+'/3');}
 function sectorDone(c,k,t){const st=t-c.secStart;c.secStart=t;
   if(k===0){c.sec=[st,null,null];c.secCol=['','',''];}else c.sec[k]=st;
   c.secCol[k]=(bestSecAll[k]==null||st<bestSecAll[k])?'pu':(c.bestSec[k]==null||st<c.bestSec[k])?'gr':'ye';
   if(c.bestSec[k]==null||st<c.bestSec[k])c.bestSec[k]=st;if(bestSecAll[k]==null||st<bestSecAll[k])bestSecAll[k]=st;}
 function lapCross(c){
+  if(session==='quali'){if(c===player)qualiCross(c);return;}
   c.lapCount++;const t=simTime;
   if(c.lapCount===0){c.lapStart=raceStart??t;c.secStart=c.lapStart;return;}
   sectorDone(c,2,t);const lt=t-c.lapStart;c.lastLap=lt;c.lapStart=t;
   if(c.bestLap==null||lt<c.bestLap)c.bestLap=lt;
   if(!fastest||lt<fastest.t){fastest={t:lt,car:c};if(c.isPlayer&&c.lapCount>1)msg('FASTEST LAP',fmt(lt));}
-  if(!checkered&&c.lapCount>=targetLaps){checkered=true;if(!c.isPlayer)msg('CHEQUERED FLAG',c.code+' 우승 — 이번 랩을 마치면 레이스 종료');}
-  if(checkered&&!c.finished){c.finished=true;c.finishT=t-raceStart;if(c.isPlayer){msg('FINISH','P'+(order().indexOf(c)+1)+' · 결과 집계 중');setTimeout(showResults,3000);}}
+  if(!checkered&&c.lapCount>=targetLaps){checkered=true;if(!c.isPlayer)msg('CHEQUERED FLAG · '+c.code+' WINS');}
+  if(checkered&&!c.finished){c.finished=true;c.finishT=t-raceStart;if(c.isPlayer){msg('FINISH · P'+(order().indexOf(c)+1));setTimeout(showResults,3000);}}
 }
 function detect(c,k){const t=simTime;let ok=false;for(const o of cars){if(o===c)continue;const ot=o.detT[k];if(ot!=null&&t-ot>=0&&t-ot<=DRS_GAP)ok=true;}
-  c.detT[k]=t;c.drsElig[k]=ok&&drsEnabled&&phase==='race';}
+  c.detT[k]=t;c.drsElig[k]=phase==='quali'?true:(ok&&drsEnabled&&phase==='race');}
 
 function post(c){
   const ps=c.s;locate(c);
@@ -1350,20 +1451,20 @@ function post(c){
   const box=BOX_S[c.team],psp=spOf(ps);
   if(phase==='race'&&c.pitSide&&!c.boxDone&&psp<box&&sp>=box&&(c.isPlayer||c.pitPlan))startPit(c);
   if(sp>PIT_D&&sp<PIT_D+120&&c.boxDone){c.boxDone=false;c.pitPlan=false;}
-  if(phase==='race'){const off=ad>hw+KERB_W+1.2*CAR_SZ&&!inPit&&!c.pitSide;if(off&&!c.tlOut){c.tlOut=true;trackLimit(c);}else if(ad<hw)c.tlOut=false;}
+  if(phase==='race'||phase==='quali'){const off=ad>hw+KERB_W+1.2*CAR_SZ&&!inPit&&!c.pitSide;if(off&&!c.tlOut){c.tlOut=true;trackLimit(c);}else if(ad<hw)c.tlOut=false;}
   if(ps>L-80&&s<80)lapCross(c);else if(ps<80&&s>L-80)c.lapCount--;
   if(c.lapCount>=0)for(let k=0;k<2;k++)if(ps<SEC[k]&&s>=SEC[k]&&s-ps<50)sectorDone(c,k,simTime);
   c.progress=c.lapCount*L+s;
   for(let k=0;k<DRSZ.length;k++){const dz=DRSZ[k].det;if(ps<dz&&s>=dz&&s-ps<50)detect(c,k);}
   c.zone=c.pitSide?-1:drsZoneOf(s);
-  if(c.drsOpen&&(c.zone<0||c.brake>0.05))c.drsOpen=false;
+  if(c.drsOpen&&(c.zone<0||c.brake>0.05||yellowAt(s)))c.drsOpen=false;
   // AI only runs DRS where the road is genuinely straight — the wing loss would send it wide in a fast bend
-  if(!c.isPlayer&&c.zone>=0&&c.drsElig[c.zone]&&drsEnabled&&c.brake<0.05){let flat=true;
+  if(!c.isPlayer&&c.zone>=0&&c.drsElig[c.zone]&&drsEnabled&&c.brake<0.05&&!yellowAt(s)){let flat=true;
     for(let k=0;k<Math.round((30+c.v*1.6)/DS);k++)if(Math.abs(K[(c.idx+k)%N])>1/900){flat=false;break;}
     c.drsOpen=flat;}
 }
 
-function computeTow(){for(const c of cars){c.tow=0;for(const o of cars){if(o===c)continue;let a=o.s-c.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L;
+function computeTow(){for(const c of cars){c.tow=0;if(c.parked)continue;for(const o of cars){if(o===c||o.parked)continue;let a=o.s-c.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L;
   if(a>3&&a<45&&Math.abs(o.d-c.d)<1.8)c.tow=Math.max(c.tow,1-a/45);}}}
 
 /* ================= DRIVER INPUT / AI ================= */
@@ -1395,6 +1496,7 @@ function aiDrive(c,dt){
     if(Math.abs(a)<7&&Math.abs(lat)<3.5&&passT==null&&!c.pitPlan){const side=-Math.sign(lat)||1;passT=clamp(o.d+side*3.6,-(HWa[c.idx]-1.4),HWa[c.idx]-1.4)-RL[c.idx];} // give room alongside
     if(a<0&&a>-45&&o.progress>c.progress+L*0.5)yielding=true;}
   if(yielding)passT=(RL[c.idx]>0?-HWa[c.idx]+2.2:HWa[c.idx]-2.2)-RL[c.idx];
+  if(yellowAt(c.s)&&!c.pitPlan)passT=null; // no overtaking under yellow
   if(passT!=null)vcap=Math.max(vcap,4);
   if(passT!=null){c.laneOffT=passT;c.laneHold=1.3;}else if((c.laneHold-=dt)<=0)c.laneOffT=0;
   c.laneOff+=clamp(c.laneOffT-c.laneOff,-2.2*dt,2.2*dt);
@@ -1418,6 +1520,7 @@ function aiDrive(c,dt){
   let vt=1e9;for(let j=0;j<4;j++)vt=Math.min(vt,VP[(c.idx+j)%N]);
   vt*=c.skill*Math.sqrt(tyreGrip(c)/0.975)*(1-0.12*c.damage);
   if(yielding)vt*=0.95;if(c.finished)vt*=0.6;vt=Math.min(vt,vcap);
+  if(session==='race'&&yellowAt(c.s)){vt*=0.72;c.drsOpen=false;}
   // full speed down the entry taper; brake late and hard so the car arrives at the limiter line at
   // exactly 60 km/h — the only slowing happens inside the lane, right before the line
   if(c.pitPlan){if(sp>PIT_A-400&&sp<PIT_L)vt=Math.min(vt,Math.sqrt(PIT_LIMIT**2+2*20*Math.max(0,PIT_L-18-sp)));
@@ -1436,6 +1539,22 @@ function orderCmp(a,b){
   return b.progress-a.progress;}
 const order=()=>cars.slice().sort(orderCmp);
 
+/* ---- yellow flags: a car stopped or stranded off the road waves yellow in its sector. Nobody
+   overtakes there, everyone lifts, and DRS is cut until the sector is clear again. ---- */
+const flagSec=[0,0,0];let flagShown=[false,false,false];
+const secOf=s=>s<SEC[0]?0:s<SEC[1]?1:2;
+function updateFlags(dt){
+  for(let k=0;k<3;k++)flagSec[k]=Math.max(0,flagSec[k]-dt);
+  if(phase!=='race'||raceStart==null||simTime-raceStart<3)return;
+  for(const c of cars){
+    if(c.parked||c.pitSide||c.pitStop>0||c.finished||c.held)continue;
+    const off=Math.abs(c.d)>HWa[c.idx]+KERB_W+1.5;
+    if(c.v<4||(off&&c.v<22))flagSec[secOf(c.s)]=Math.max(flagSec[secOf(c.s)],4);}
+  for(let k=0;k<3;k++){const on=flagSec[k]>0;
+    if(on&&!flagShown[k]&&player&&secOf(player.s)!==k)msg('YELLOW FLAG · S'+(k+1));
+    flagShown[k]=on;}}
+const yellowAt=s=>flagSec[secOf(s)]>0;
+
 function step(dt){
   simTime+=dt;
   for(const c of cars){c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;}
@@ -1444,15 +1563,16 @@ function step(dt){
       for(const c of cars)c.releaseAt=c.isPlayer?simTime:simTime+rand(.12,.3);msg('LIGHTS OUT','AND AWAY WE GO!');}}
   if(phase==='race')for(const c of cars)if(c.held&&simTime>=c.releaseAt)c.held=false;
   playerControl(dt);
-  for(const c of cars)if(!c.isPlayer)aiDrive(c,dt);
+  for(const c of cars)if(!c.isPlayer&&!c.parked)aiDrive(c,dt);
   computeTow();
-  for(const c of cars)physics(c,dt);
+  for(const c of cars)if(!c.parked)physics(c,dt);
   collide();
-  for(const c of cars)post(c);
+  for(const c of cars)if(!c.parked)post(c);
   if(phase==='race'){
     let lead=cars[0];for(const c of cars)if(c.progress>lead.progress)lead=c;
-    if(!drsEnabled&&lead.lapCount>=DRS_FROM_LAP-1){drsEnabled=true;msg('DRS ENABLED','감지 지점에서 앞차와 '+DRS_GAP+'초 이내면 사용 가능');}
-    if(!checkered&&!timeLimitHit&&simTime-raceStart>=7200){timeLimitHit=true;targetLaps=lead.lapCount+1;msg('2시간 제한','선두가 이번 랩을 마치면 체커기');}
+    if(!drsEnabled&&lead.lapCount>=DRS_FROM_LAP-1){drsEnabled=true;msg('DRS ENABLED');}
+    if(!checkered&&!timeLimitHit&&simTime-raceStart>=7200){timeLimitHit=true;targetLaps=lead.lapCount+1;msg('TWO HOUR LIMIT · FINAL LAP');}
+    updateFlags(dt);
     if(simTime-lastHist>=0.1){lastHist=simTime;for(const c of cars){c.hp.push(c.progress);c.ht.push(simTime);if(c.hp.length>6000){c.hp.splice(0,1000);c.ht.splice(0,1000);}}}
   }
 }
@@ -1484,7 +1604,7 @@ function buildMinimap(){let a=1e9,b=-1e9,c=1e9,d=-1e9;for(let i=0;i<N;i++){a=Mat
   for(const z of DRSZ){x.beginPath();let st=Math.round(z.a/DS),en=Math.round(z.b/DS);if(en<st)en+=N;for(let i=st;i<=en;i+=2){const [px,pz]=mmT(X[i%N],Z[i%N]);i===st?x.moveTo(px,pz):x.lineTo(px,pz);}x.strokeStyle='rgba(27,226,107,.75)';x.lineWidth=5;x.stroke();}
   const [sx,sz]=mmT(X[0],Z[0]);x.fillStyle='#fff';x.fillRect(sx-4,sz-1.5,8,3);mmBase=off;}
 function drawMinimap(){mctx.clearRect(0,0,230,230);mctx.drawImage(mmBase,0,0);
-  for(const c of cars){if(c===player)continue;const [x,z]=mmT(c.x,c.z);mctx.fillStyle=hex(c.col);mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
+  for(const c of cars){if(c===player||c.parked)continue;const [x,z]=mmT(c.x,c.z);mctx.fillStyle=hex(c.col);mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
   const [x,z]=mmT(player.x,player.z);mctx.fillStyle='#fff';mctx.beginPath();mctx.arc(x,z,5.5,0,7);mctx.fill();mctx.fillStyle='#e10600';mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
 
 function gearOf(v){const k=v*3.6;let g=0;while(g<7&&k>GEARS[g])g++;return g;}
@@ -1498,7 +1618,10 @@ function updateHud(){
   audioUpdate(rpm,c.held?0:g);
 }
 function updateInfo(){
-  const c=player,o=order(),k=o.indexOf(c);
+  const c=player;
+  if(session==='quali'){updateQualiInfo();return;}
+  const o=order(),k=o.indexOf(c);
+  $('gapA').previousElementSibling.textContent='GAP AHEAD';$('gapA').style.color='';$('gapB').parentElement.style.display='';
   $('pos').textContent='P'+(k+1);$('gapA').textContent=k>0?gapStr(o[k-1],c).replace('+','-'):'LEADER';$('gapB').textContent=k<o.length-1?gapStr(c,o[k+1]):'—';
   const lap=Math.max(1,Math.min(totalLaps,c.lapCount+1));$('lapNum').textContent=lap+' / '+targetLaps;
   $('raceTime').textContent=fmtRace(raceStart==null?0:simTime-raceStart);
@@ -1506,14 +1629,43 @@ function updateInfo(){
   ['s1','s2','s3'].forEach((id,i)=>{const e=$(id);e.textContent=c.sec[i]!=null?c.sec[i].toFixed(3):'S'+(i+1);e.className=c.secCol[i];});
   const tc=$('tyreC');tc.textContent=c.comp;tc.style.borderColor=COMP[c.comp].col;$('wear').textContent=Math.round(c.wear*100)+'%';
   const nc=$('nextC');nc.textContent=c.nextComp;nc.style.borderColor=COMP[c.nextComp].col;
-  $('used').textContent=[...c.used].join(' · ')+(c.used.size<2?'  (1종 더 필요)':' ✓');
+  $('used').textContent=[...c.used].join(' · ')+(c.used.size<2?'  (1 more needed)':' ✓');
   $('fuel').textContent=c.fuel.toFixed(1);$('dmg').textContent=Math.round(c.damage*100)+'%';$('tl').textContent=Math.min(c.tl,3);$('pen').textContent=c.pen;
-  const f=[];if(!drsEnabled&&phase==='race')f.push(['DRS DISABLED','#333','#aaa']);
+  const f=[];
+  if(phase==='race'&&yellowAt(c.s))f.push(['YELLOW FLAG','#ffd200','#151515']);
+  else if(phase==='race'&&flagSec.some(v=>v>0))f.push(['YELLOW AHEAD','#6b5a00','#ffd200']);
+  if(!drsEnabled&&phase==='race')f.push(['DRS DISABLED','#333','#aaa']);
   if(phase==='race'){for(const x of cars){if(x===c)continue;let a=c.s-x.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L;if(a>0&&a<70&&x.progress>c.progress+L*0.5){f.push(['BLUE FLAG','#1560ff','#fff']);break;}}}
   if(c.tl===3)f.push(['BLACK & WHITE','linear-gradient(135deg,#000 50%,#fff 50%)','#e10600']);
   if(checkered)f.push(['CHEQUERED','repeating-conic-gradient(#fff 0 25%,#111 0 50%) 0 0/12px 12px','#e10600']);
   $('flags').innerHTML=f.map(x=>`<span class="flag" style="background:${x[1]};color:${x[2]}">${x[0]}</span>`).join('');
   updateTower();
+}
+
+// qualifying HUD: no gaps to cars on track (there are none) — show the stage, the running lap and
+// the time that would take pole
+function updateQualiInfo(){
+  const c=player,rivals=[...qTimes.entries()].filter(([k,v])=>k!==c&&v!=null).map(([,v])=>v),best=rivals.length?Math.min(...rivals):null;
+  const stage=qStage==='out'?'OUT LAP':qStage==='flying'?(c.lapInvalid?'LAP DELETED':'FLYING LAP'):'QUALIFYING';
+  $('lapNum').textContent=stage;
+  $('pos').textContent=qStage==='done'&&qGrid?'P'+(qGrid.indexOf(c)+1):'—';
+  $('gapA').previousElementSibling.textContent='DELTA TO POLE';
+  const ref=best!=null&&qStage==='flying'&&!c.lapInvalid?best*CUMT[c.idx]/CUMT[N]:null;
+  const dl=ref==null?null:(simTime-c.lapStart)-ref;
+  $('gapA').textContent=dl==null?'—':(dl>=0?'+':'')+dl.toFixed(3);
+  $('gapA').style.color=dl==null?'':(dl<0?'#1be26b':'#ff5252');
+  $('gapB').parentElement.style.display='none';
+  const cur=qStage==='flying'?simTime-c.lapStart:null;
+  $('raceTime').textContent=cur==null?'0:00.000':fmtRace(cur);
+  $('curLap').textContent=cur==null?'—':fmt(cur);
+  $('lastLap').textContent=fmt(c.lastLap);$('bestLap').textContent=fmt(c.bestLap);
+  ['s1','s2','s3'].forEach((id,i)=>{const e=$(id);e.textContent=c.sec[i]!=null?c.sec[i].toFixed(3):'S'+(i+1);e.className=c.secCol[i];});
+  const tc=$('tyreC');tc.textContent=c.comp;tc.style.borderColor=COMP[c.comp].col;$('wear').textContent=Math.round(c.wear*100)+'%';
+  const nc=$('nextC');nc.textContent=c.nextComp;nc.style.borderColor=COMP[c.nextComp].col;
+  $('used').textContent='QUALIFYING';
+  $('fuel').textContent=c.fuel.toFixed(1);$('dmg').textContent=Math.round(c.damage*100)+'%';
+  $('tl').textContent=Math.min(c.tl,3);$('pen').textContent=c.pen;
+  $('flags').innerHTML=c.lapInvalid?'<span class="flag" style="background:#333;color:#fff">LAP DELETED</span>':'';
 }
 
 /* ================= AUDIO ================= */
@@ -1570,7 +1722,7 @@ function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
   au.me.set(rpm,c.throttle,t);
   if(c.throttle<.05&&rpm>6500&&c.v>15&&Math.random()<.07)pop(t);
   // nearest rival: distance attenuation + doppler
-  let o=null,bd=150;for(const x of cars){if(x===c)continue;const d=Math.hypot(x.x-c.x,x.z-c.z);if(d<bd){bd=d;o=x;}}
+  let o=null,bd=150;for(const x of cars){if(x===c||x.parked)continue;const d=Math.hypot(x.x-c.x,x.z-c.z);if(d<bd){bd=d;o=x;}}
   if(o){const dx=o.x-c.x,dz=o.z-c.z,d=Math.max(bd,1),vr=((Math.cos(o.yaw)*o.v-Math.cos(c.yaw)*c.v)*dx+(Math.sin(o.yaw)*o.v-Math.sin(c.yaw)*c.v)*dz)/d;
     au.opp.set(rpmOf(o)*clamp(343/(343+vr),0.7,1.4),o.throttle,t,clamp(9/d,0,1)*0.28);}else au.opp.set(4000,0,t,0);
   au.sq.gain.setTargetAtTime(Math.min(.25,c.slip*.6)*(c.v>6?1:0),t,.05);
@@ -1637,18 +1789,18 @@ document.body.appendChild(pitHud);
 function updatePitHud(){
   const c=player;if(!c||phase!=='race'){pitHud.style.display='none';return;}
   if(c.pitStop>0){
-    const t=c.pitStop,stage=t>0.75?'타이어 교체 중':'출발 준비';
+    const t=c.pitStop,stage=t>0.75?'TYRE CHANGE':'READY TO GO';
     pitHud.innerHTML='<span style="color:'+(t>0.75?'#ff5252':'#3ddc6a')+'">● </span>'+stage+
       ' — <b>'+t.toFixed(1)+'s</b><br><span style="font-weight:400;opacity:.8;font-size:12px">'+
-      COMP[c.nextComp].name+' 장착'+(c.damage>0.05?' · 프런트윙 교체':'')+'</span>';
+      COMP[c.nextComp].name+(c.damage>0.05?' · NEW FRONT WING':'')+'</span>';
     pitHud.style.display='block';return;}
   const sp=spOf(c.s),d=PIT_A-sp;
   if(!c.pitSide&&d>0&&d<420){
-    pitHud.innerHTML='<span style="color:#4aa3ff">▸ 피트 진입</span> '+Math.round(d)+' m'+
-      '<br><span style="font-weight:400;opacity:.8;font-size:12px">빨간 진입로를 따라 오른쪽으로 · 다음 타이어 '+COMP[c.nextComp].name+'</span>';
+    pitHud.innerHTML='<span style="color:#4aa3ff">▸ PIT ENTRY</span> '+Math.round(d)+' m'+
+      '<br><span style="font-weight:400;opacity:.8;font-size:12px">Follow the red lane · next tyre '+COMP[c.nextComp].name+'</span>';
     pitHud.style.display='block';return;}
-  if(c.limiter){pitHud.innerHTML='<span style="color:#ffd200">피트 레인 60 km/h</span><br>'+
-    '<span style="font-weight:400;opacity:.8;font-size:12px">'+(c.boxDone?'출구까지 유지':'팀 박스에서 자동 정차')+'</span>';
+  if(c.limiter){pitHud.innerHTML='<span style="color:#ffd200">PIT LANE 60 km/h</span><br>'+
+    '<span style="font-weight:400;opacity:.8;font-size:12px">'+(c.boxDone?'Hold to the exit':'Automatic stop in your box')+'</span>';
     pitHud.style.display='block';return;}
   pitHud.style.display='none';}
 
@@ -1675,7 +1827,7 @@ function renderMirror(){
 // F1-game style proximity arrows: amber = car closing on that side, red = car alongside
 function updateProximity(){
   const c=player,fx=Math.cos(c.yaw),fz=Math.sin(c.yaw);let pl=0,pr=0,al=false,ar=false;
-  for(const o of cars){if(o===c||o.pitStop>0||o.pitSide!==c.pitSide)continue;const dx=o.x-c.x,dz=o.z-c.z;if(dx*dx+dz*dz>900)continue;
+  for(const o of cars){if(o===c||o.parked||o.pitStop>0||o.pitSide!==c.pitSide)continue;const dx=o.x-c.x,dz=o.z-c.z;if(dx*dx+dz*dz>900)continue;
     const lg=dx*fx+dz*fz,lt=-dx*fz+dz*fx;if(lg>2*HX||lg<-24||Math.abs(lt)<0.8||Math.abs(lt)>8)continue;
     const k=clamp(1-Math.max(0,-lg-2*HX)/18,0,1)*clamp(1-(Math.abs(lt)-2.6)/5.4,0.4,1),side=Math.abs(lg)<2*HX;
     if(lt>0){pr=Math.max(pr,k);ar=ar||side;}else{pl=Math.max(pl,k);al=al||side;}}
@@ -1687,7 +1839,7 @@ function menuCamera(dt){orbit+=dt*0.05;camera.position.set(CX+Math.cos(orbit)*OR
 /* ================= DYNAMIC RACING LINE (assist) =================
    Colour of each point = your current speed vs the ideal speed there:
    green = keep accelerating, yellow = lift/ease off, red = you must be braking by here */
-const RLN=150,RL_MODES=['끔','전체','코너만'];let rlMode=1;
+const RLN=150,RL_MODES=['OFF','FULL','CORNERS ONLY'];let rlMode=1;
 const rlPos=new Float32Array(RLN*2*3),rlCol=new Float32Array(RLN*2*4);
 const rlGeo=new THREE.BufferGeometry();
 rlGeo.setAttribute('position',new THREE.BufferAttribute(rlPos,3).setUsage(THREE.DynamicDrawUsage));
@@ -1719,11 +1871,11 @@ function renderResults(){
   const leadT=fin.length?fin[0].total:null;const flCar=fastest?fastest.car:null;
   let rows='';cls.forEach((r,k)=>{const c=r.c;let pts=k<10?POINTS[k]:0;if(k<10&&flCar===c)pts+=1;
     const laps=Math.max(0,Math.min(c.lapCount,targetLaps));const ld=Math.min(lead.lapCount,targetLaps)-laps;
-    const time=r.total==null?'주행 중':k===0?fmtRace(r.total):ld>0?'+'+ld+' LAP':'+'+(r.total-leadT).toFixed(3)+'s';
+    const time=r.total==null?'RUNNING':k===0?fmtRace(r.total):ld>0?'+'+ld+' LAP':'+'+(r.total-leadT).toFixed(3)+'s';
     rows+=`<tr class="${c.isPlayer?'me':''}"><td class="num">${k+1}</td><td><span class="sw" style="background:${hex(c.col)}"></span>${c.isPlayer?'<b>YOU</b>':c.name} <span style="color:var(--mute)">#${c.num}</span></td><td>${TEAMS[c.team].name}</td><td class="num">${laps}</td><td class="num">${time}</td><td class="num">${c.pen?'+'+c.pen+'s':''}</td><td class="num" style="${flCar===c?'color:var(--purple);font-weight:700':''}">${fmt(c.bestLap)}</td><td class="num pts">${pts||''}</td></tr>`;});
-  dsq.forEach(r=>{const c=r.c;rows+=`<tr class="${c.isPlayer?'me':''}"><td>DSQ</td><td><span class="sw" style="background:${hex(c.col)}"></span>${c.isPlayer?'<b>YOU</b>':c.name}</td><td>${TEAMS[c.team].name}</td><td class="num">${Math.max(0,Math.min(c.lapCount,targetLaps))}</td><td colspan="4" style="color:var(--red)">실격 — 드라이 레이스 2종 컴파운드 의무 사용 위반</td></tr>`;});
+  dsq.forEach(r=>{const c=r.c;rows+=`<tr class="${c.isPlayer?'me':''}"><td>DSQ</td><td><span class="sw" style="background:${hex(c.col)}"></span>${c.isPlayer?'<b>YOU</b>':c.name}</td><td>${TEAMS[c.team].name}</td><td class="num">${Math.max(0,Math.min(c.lapCount,targetLaps))}</td><td colspan="4" style="color:var(--red)">DISQUALIFIED — two compounds not used</td></tr>`;});
   $('resBody').innerHTML=rows;
-  $('resSub').textContent=`${targetLaps}랩 · ${(targetLaps*L/1000).toFixed(3)} km · 패스티스트 랩 ${fastest?fastest.car.code+' '+fmt(fastest.t):'—'}`;
+  $('resSub').textContent=`${targetLaps} laps · ${(targetLaps*L/1000).toFixed(3)} km · fastest lap ${fastest?fastest.car.code+' '+fmt(fastest.t):'—'}`;
 }
 
 /* ================= REPLAY (key 0) =================
@@ -1752,7 +1904,7 @@ rpBadge.style.cssText='position:fixed;left:18px;top:16px;z-index:40;display:none
 document.body.appendChild(rpBadge);
 function startReplay(){
   if(replay||phase==='menu'||resultsShown||!player)return;
-  if(recLen<REC_HZ*2){msg('다시보기','아직 녹화된 장면이 부족합니다');return;}
+  if(recLen<REC_HZ*2){msg('REPLAY NOT READY YET');return;}
   // copy the clip out in time order, oldest first
   const n=recLen,fs=cars.length*REC_F,clip=new Float32Array(n*fs);
   for(let k=0;k<n;k++){const src=((recHead-n+k)%REC_N+REC_N)%REC_N;clip.set(recBuf.subarray(src*fs,src*fs+fs),k*fs);}
@@ -1786,41 +1938,96 @@ function replayFrame(dt){
   const d=Math.hypot(R.look.x-C.x,R.look.z-C.z,C.y);camera.fov=clamp(2*Math.atan(11/d)*180/Math.PI,9,55);camera.updateProjectionMatrix();
   sun.position.set(R.fx+30,80,R.fz+20);sun.target.position.set(R.fx,0,R.fz);
   const left=Math.max(0,dur-R.t);
-  rpBadge.innerHTML='● REPLAY <span style="font-weight:400;opacity:.75;letter-spacing:.04em">'+left.toFixed(1)+' s · 0 키: 라이브 복귀</span>';}
+  rpBadge.innerHTML='● REPLAY <span style="font-weight:400;opacity:.75;letter-spacing:.04em">'+left.toFixed(1)+' s · press 0 for live</span>';}
 function idxNear(x,z,hint){let best=0,bd=1e18;
   if(hint!=null){for(let k=-40;k<=40;k++){const i=(hint+k+N)%N,d=(X[i]-x)**2+(Z[i]-z)**2;if(d<bd){bd=d;best=i;}}if(bd<900)return best;}
   for(let i=0;i<N;i++){const d=(X[i]-x)**2+(Z[i]-z)**2;if(d<bd){bd=d;best=i;}}return best;}
 
 /* ================= INPUT / BOOT ================= */
-addEventListener('keydown',e=>{if(phase==='menu')return;if(['Space','KeyW','KeyA','KeyD'].includes(e.code))e.preventDefault();keys[e.code]=true;
+addEventListener('keydown',e=>{if(phase==='menu'||phase==='box'||phase==='qdone')return;if(['Space','KeyW','KeyA','KeyD'].includes(e.code))e.preventDefault();keys[e.code]=true;
   if(e.repeat)return;
-  if(e.code==='KeyE'&&player){const c=player;if(drsEnabled&&c.zone>=0&&c.drsElig[c.zone]&&c.brake<0.05)c.drsOpen=true;else if(c.zone>=0&&drsEnabled&&!c.drsElig[c.zone])msg('DRS 불가','감지 지점에서 앞차와 '+DRS_GAP+'초 이내가 아니었습니다');}
-  if(e.code==='KeyL'){rlMode=(rlMode+1)%3;$('optLine').value=rlMode;saveOpts();msg('레이싱 라인: '+RL_MODES[rlMode]);}
+  if(e.code==='KeyE'&&player){const c=player;if(drsEnabled&&c.zone>=0&&c.drsElig[c.zone]&&c.brake<0.05)c.drsOpen=true;else if(c.zone>=0&&drsEnabled&&!c.drsElig[c.zone])msg('DRS NOT AVAILABLE');}
+  if(e.code==='KeyL'){rlMode=(rlMode+1)%3;msg('RACING LINE · '+RL_MODES[rlMode]);}
   if(e.code==='KeyM')muted=!muted;
-  if(e.code==='KeyH'){hudMode=(hudMode+1)%3;$('hud').className=['lite','','min'][hudMode];msg('HUD: '+['컴팩트','전체','최소'][hudMode]);}
+  if(e.code==='KeyH'){hudMode=(hudMode+1)%3;$('hud').className=['lite','','min'][hudMode];msg('HUD · '+['COMPACT','FULL','MINIMAL'][hudMode]);}
   if(e.code==='Digit0'||e.code==='Numpad0'){if(replay)endReplay();else startReplay();return;}
   if(e.code==='KeyP'||e.code==='Escape'){if(replay){endReplay();return;}togglePause();}
-  if(['Digit1','Digit2','Digit3'].includes(e.code)&&player){const n={Digit1:'S',Digit2:'M',Digit3:'H'}[e.code];player.nextComp=n;msg('다음 피트: '+COMP[n].name,'피트 레인으로 들어가 팀 박스에서 자동 정차');}
-  if(e.code==='KeyR'&&player&&phase==='race'&&player.pitStop<=0){const c=player,i=c.idx;const d=c.pitSide?PIT_OFF:clamp(c.d,-HWa[i]+1.5,HWa[i]-1.5);c.x=X[i]-TZ[i]*d;c.z=Z[i]+TX[i]*d;c.yaw=c.chi=ANG[i];c.v=0;c.delta=0;c.r=0;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;msg('코스 복귀','차량을 트랙 위에 재배치했습니다');}
+  if(['Digit1','Digit2','Digit3'].includes(e.code)&&player){const n={Digit1:'S',Digit2:'M',Digit3:'H'}[e.code];player.nextComp=n;msg('NEXT TYRE · '+COMP[n].name);}
+  if(e.code==='KeyR'&&player&&phase==='race'&&player.pitStop<=0){const c=player,i=c.idx;const d=c.pitSide?PIT_OFF:clamp(c.d,-HWa[i]+1.5,HWa[i]-1.5);c.x=X[i]-TZ[i]*d;c.z=Z[i]+TX[i]*d;c.yaw=c.chi=ANG[i];c.v=0;c.delta=0;c.r=0;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;msg('BACK ON TRACK');}
 });
 addEventListener('keyup',e=>{keys[e.code]=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
-function togglePause(){if(phase==='menu'||resultsShown||replay)return;paused=!paused;$('pause').hidden=!paused;}
+function togglePause(){if(phase==='menu'||phase==='box'||phase==='qdone'||resultsShown||replay)return;paused=!paused;$('pause').hidden=!paused;}
 $('resumeBtn').onclick=togglePause;
 $('quitBtn').onclick=$('againBtn').onclick=()=>location.reload();
 
-function loadOpts(){try{const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');for(const k in o){const el=$(k);if(el&&[...el.options].some(op=>op.value===o[k]))el.value=o[k];}}catch(e){}}
-function saveOpts(){try{const o={};for(const k of ['optTrack','optLaps','optTeam','optGrid','optAI','optTyre','optWear','optLine'])o[k]=$(k).value;localStorage.setItem('hrc-opts',JSON.stringify(o));}catch(e){}}
-for(const id in TRACKS){const o=document.createElement('option');o.value=id;o.textContent=TRACKS[id].label+' — '+(TRACKS[id].len/1000).toFixed(3)+' km';$('optTrack').appendChild(o);}
-$('trkTitle').innerHTML=TR.title;$('trkSub').textContent=TR.sub;
-{const f=$('optFull');f.value=TR.fullLaps;f.textContent=TR.fullLaps+' 랩 (실제 거리)';}
-// switching circuit rebuilds the whole world, so save the choice and reload into it
-$('optTrack').addEventListener('change',()=>{saveOpts();location.hash=$('optTrack').value;location.reload();});
-TEAMS.forEach((t,i)=>{const o=document.createElement('option');o.value=i;o.textContent=t.name;$('optTeam').appendChild(o);});
-for(let i=1;i<=20;i++){const o=document.createElement('option');o.value=i;o.textContent='P'+i;if(i===10)o.selected=true;$('optGrid').appendChild(o);}
-$('optTeam').value='3';loadOpts();$('optTrack').value=TRACK_ID;
+/* ---- lobby: grand prix / laps / difficulty / team, all picked with buttons ---- */
+const AI_LEVELS=[['Easy',0.975],['Medium',1.02],['Hard',1.06],['Simulation',1.10]];
+const LAP_CHOICES=[3,5,10,20];
+let optLaps=5,optAI=1.02,optTeam=3;
+function loadOpts(){try{const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');
+  if(o.laps)optLaps=+o.laps;if(o.ai)optAI=+o.ai;if(o.team!=null)optTeam=+o.team;}catch(e){}}
+function saveOpts(){try{localStorage.setItem('hrc-opts',JSON.stringify({gp:TRACK_ID,laps:optLaps,ai:optAI,team:optTeam}));}catch(e){}}
+function chip(label,sub,on,fn){const b=document.createElement('button');b.className='chip'+(on?' on':'');
+  b.innerHTML=label+(sub?'<small>'+sub+'</small>':'');b.onclick=fn;return b;}
+/* ---- lobby circuit map: the sampled centre line drawn the way a TV circuit map is — the lap split
+   into its three timed sectors, the DRS activation zones on top, and the detection points marked ---- */
+function drawTrackMap(){
+  const cv=$('trkMap');if(!cv)return;const g=cv.getContext('2d'),W=cv.width,H=cv.height,pad=34;
+  g.clearRect(0,0,W,H);
+  let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;
+  for(let i=0;i<N;i++){x0=Math.min(x0,X[i]);x1=Math.max(x1,X[i]);z0=Math.min(z0,Z[i]);z1=Math.max(z1,Z[i]);}
+  const sc=Math.min((W-2*pad)/(x1-x0),(H-2*pad)/(z1-z0));
+  const ox=pad+((W-2*pad)-(x1-x0)*sc)/2,oz=pad+((H-2*pad)-(z1-z0)*sc)/2;
+  const PX=i=>(X[i]-x0)*sc+ox,PZ=i=>(Z[i]-z0)*sc+oz;
+  g.lineJoin=g.lineCap='round';
+  const run=(a,b,col,w)=>{g.strokeStyle=col;g.lineWidth=w;g.beginPath();
+    for(let k=a;k<=b;k++){const i=((k%N)+N)%N;k===a?g.moveTo(PX(i),PZ(i)):g.lineTo(PX(i),PZ(i));}g.stroke();};
+  const S=[0,Math.round(SEC[0]/DS),Math.round(SEC[1]/DS),N];
+  const SCOL=['#8e9ab5','#5d6b8c','#8e9ab5'];
+  g.strokeStyle='#05070d';g.lineWidth=13;g.beginPath();
+  for(let k=0;k<=N;k++){const i=k%N;k?g.lineTo(PX(i),PZ(i)):g.moveTo(PX(i),PZ(i));}g.stroke();
+  for(let k=0;k<3;k++)run(S[k],S[k+1],SCOL[k],9);
+  for(const z of DRSZ){let a=Math.round(z.a/DS),b=Math.round(z.b/DS);if(b<a)b+=N;run(a,b,'#1be26b',9);}
+  // sector boundary lines across the circuit, then the sector number beside the middle of each sector
+  const tick=(i,col,w,len)=>{const nx=-TZ[i],nz=TX[i],l=len*sc;g.strokeStyle=col;g.lineWidth=w;
+    g.beginPath();g.moveTo(PX(i)+nx*l,PZ(i)+nz*l);g.lineTo(PX(i)-nx*l,PZ(i)-nz*l);g.stroke();};
+  tick(S[1]%N,'#c9d3ea',3,17);tick(S[2]%N,'#c9d3ea',3,17);
+  g.font='700 14px Titillium Web,sans-serif';g.textAlign='center';g.textBaseline='middle';
+  for(let k=0;k<3;k++){const i=Math.round((S[k]+S[k+1])/2)%N,nx=-TZ[i],nz=TX[i];
+    const lx=PX(i)+nx*34,lz=PZ(i)+nz*34;
+    g.fillStyle='#0b1020';g.beginPath();g.arc(lx,lz,12,0,7);g.fill();
+    g.strokeStyle='#c9d3ea';g.lineWidth=1.5;g.stroke();
+    g.fillStyle='#c9d3ea';g.fillText('S'+(k+1),lx,lz+1);}
+  // DRS detection points
+  for(const z of DRSZ){const i=Math.round(z.det/DS)%N;
+    g.fillStyle='#ffb000';g.beginPath();g.arc(PX(i),PZ(i),5.5,0,7);g.fill();
+    g.strokeStyle='#0b1020';g.lineWidth=2;g.stroke();}
+  // start / finish
+  {const i=0,nx=-TZ[i],nz=TX[i],l=22*sc;g.strokeStyle='#fff';g.lineWidth=5;
+   g.beginPath();g.moveTo(PX(i)+nx*l,PZ(i)+nz*l);g.lineTo(PX(i)-nx*l,PZ(i)-nz*l);g.stroke();}
+}
+function buildLobby(){
+  const gp=$('gpSel');gp.innerHTML='';
+  for(const id in TRACKS){const T=TRACKS[id];
+    gp.appendChild(chip(T.label,(T.len/1000).toFixed(3)+' km',id===TRACK_ID,()=>{
+      if(id===TRACK_ID)return;saveOpts();location.hash=id;location.reload();}));}
+  const lp=$('lapSel');lp.innerHTML='';
+  for(const n of LAP_CHOICES.concat([TR.fullLaps]))
+    lp.appendChild(chip(n+' LAPS',n===TR.fullLaps?'FULL':((n*L/1000).toFixed(0)+' km'),n===optLaps,()=>{optLaps=n;saveOpts();buildLobby();}));
+  const ai=$('aiSel');ai.innerHTML='';
+  for(const [nm,v] of AI_LEVELS)ai.appendChild(chip(nm,'',Math.abs(v-optAI)<1e-9,()=>{optAI=v;saveOpts();buildLobby();}));
+  const ts=$('teamSel');ts.innerHTML='';
+  TEAMS.forEach((t,i)=>{const b=document.createElement('button');b.className='team'+(i===optTeam?' on':'');
+    b.innerHTML='<div class="liv" style="background:'+hex(t.c)+'"><i style="background:'+hex(t.a)+'"></i><b></b></div>'+t.name;
+    b.onclick=()=>{optTeam=i;saveOpts();buildLobby();};ts.appendChild(b);});
+  drawTrackMap();
+}
+$('trkSub').textContent=TR.label+' · '+(TR.len/1000).toFixed(3)+' km';
+loadOpts();if(!LAP_CHOICES.includes(optLaps)&&optLaps!==TR.fullLaps)optLaps=5;buildLobby();
 
-$('startBtn').onclick=()=>{saveOpts();rlMode=+$('optLine').value;document.activeElement.blur();$('menu').hidden=true;$('hud').hidden=false;$('hud').className='lite';audioInit();setupRace();};
+$('startBtn').onclick=()=>{document.activeElement.blur();$('menu').hidden=true;$('hud').hidden=false;$('hud').className='lite';audioInit();setupSession();};
+$('qresBtn').onclick=()=>{$('qres').hidden=true;openBox('race');};
 
 buildWorld();buildMinimap();
 let last=performance.now(),acc=0,hudT=0;const H=1/120;
