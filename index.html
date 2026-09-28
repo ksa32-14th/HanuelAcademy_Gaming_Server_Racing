@@ -51,13 +51,13 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .prox i{position:absolute;inset:0;background:currentColor}
 #proxL{left:calc(50% - 250px)} #proxL i{clip-path:polygon(100% 0,0 50%,100% 100%,62% 50%)}
 #proxR{right:calc(50% - 250px)} #proxR i{clip-path:polygon(0 0,100% 50%,0 100%,38% 50%)}
-#topc{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 14px);transform:translateX(-50%);display:flex;gap:8px;align-items:stretch}
+#topc{position:absolute;left:16px;top:16px;display:flex;gap:8px;align-items:stretch}
 #topc .panel{padding:4px 14px;text-align:center}
 #topc small{display:block;font:700 10px var(--f-disp);letter-spacing:.14em;color:var(--mute)}
 #topc b{font:700 22px var(--f-disp);font-variant-numeric:tabular-nums}
 #flags{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 76px);transform:translateX(-50%);display:flex;gap:6px}
 .flag{padding:3px 10px;border-radius:4px;font:700 12px var(--f-disp);letter-spacing:.08em}
-#msg{position:absolute;left:50%;top:14px;transform:translate(-50%,-14px);font:900 17px var(--f-disp);letter-spacing:.14em;white-space:nowrap;opacity:0;transition:opacity .2s,transform .2s;background:rgba(8,11,16,.9);border-left:5px solid var(--red);border-radius:4px;padding:9px 20px 9px 16px;box-shadow:0 6px 22px rgba(0,0,0,.5)}
+#msg{position:absolute;left:50%;bottom:132px;transform:translate(-50%,14px);font:900 17px var(--f-disp);letter-spacing:.14em;white-space:nowrap;opacity:0;transition:opacity .2s,transform .2s;background:rgba(8,11,16,.9);border-left:5px solid var(--red);border-radius:4px;padding:9px 20px 9px 16px;box-shadow:0 6px 22px rgba(0,0,0,.5)}
 #msg.on{opacity:1;transform:translate(-50%,0)}
 #msg small{display:none}
 /* lights */
@@ -66,7 +66,15 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 #lights i{width:38px;height:38px;border-radius:50%;background:#2a0505;box-shadow:inset 0 0 8px #000}
 #lights i.on{background:radial-gradient(circle at 40% 35%,#ff8a80,#ff1a0a 45%,#a00000);box-shadow:0 0 22px #ff2a1a}
 /* minimap */
-#minimap{position:absolute;right:16px;top:16px}
+#leftcol{position:absolute;left:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+#minimap{display:block}
+#timing{position:absolute;left:16px;top:74px;width:268px;padding:10px 12px;display:grid;gap:7px}
+#timing .lbl{font:700 10px var(--f-disp);letter-spacing:.16em;color:var(--mute)}
+#timing .big{font:700 30px var(--f-disp);line-height:1;font-variant-numeric:tabular-nums}
+#timing .secs i{font-size:15px;padding:5px 0}
+#hud.lite #timing{width:230px}
+#hud.lite #timing .big{font-size:25px}
+#hud.min #timing{display:none}
 /* dash */
 #dash{position:absolute;right:16px;bottom:16px;width:272px;padding:10px 14px 12px}
 .rpm{height:8px;border-radius:4px;background:#1b2133;overflow:hidden}
@@ -83,7 +91,7 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .pb{flex:1;height:6px;background:#1b2133;border-radius:3px;overflow:hidden}
 .pb i{display:block;height:100%;width:0;background:var(--green)} .pb.br i{background:var(--red)}
 /* info */
-#info{position:absolute;left:16px;bottom:16px;width:272px;padding:10px 12px;font-size:13px;display:grid;gap:6px}
+#info{position:relative;width:272px;padding:10px 12px;font-size:13px;display:grid;gap:6px}
 .kv{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .kv span{color:var(--mute);font-size:12px}
 .kv b{font:700 15px var(--f-disp);font-variant-numeric:tabular-nums}
@@ -145,7 +153,7 @@ td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);white-space:now
 tr.me td{background:rgba(225,6,0,.18)}
 td .sw{display:inline-block;width:4px;height:12px;margin-right:6px;vertical-align:-1px}
 .pts{font-weight:700;color:var(--yellow)}
-@media (max-width:560px){#tower,#minimap{display:none} #keys{display:none} #dash,#info{width:calc(50% - 20px)} #spd{font-size:40px}}
+@media (max-width:560px){#tower,#minimap,#timing{display:none} #keys{display:none} #dash,#info{width:calc(50% - 20px)} #spd{font-size:40px}}
 @media (prefers-reduced-motion:reduce){#msg{transition:none}}
 </style>
 
@@ -157,27 +165,29 @@ td .sw{display:inline-block;width:4px;height:12px;margin-right:6px;vertical-alig
   <div id="proxL" class="prox"><i></i></div><div id="proxR" class="prox"><i></i></div>
   <div id="topc">
     <div class="panel"><small>LAP</small><b id="lapNum">1 / 5</b></div>
-    <div class="panel"><small>RACE TIME</small><b id="raceTime">0:00.000</b></div>
   </div>
   <div id="flags"></div>
   <div id="lights" hidden><i></i><i></i><i></i><i></i><i></i></div>
   <div id="msg"></div>
+  <div id="timing" class="panel">
+    <div><div class="lbl" id="gapALbl">GAP AHEAD</div><div class="big" id="gapA">—</div></div>
+    <div><div class="lbl">CURRENT LAP</div><div class="big" id="curLap">—</div></div>
+    <div class="secs"><i id="s1">S1</i><i id="s2">S2</i><i id="s3">S3</i></div>
+    <div class="kv"><span>LAST</span><b id="lastLap">—</b></div>
+    <div class="kv"><span>BEST</span><b id="bestLap">—</b></div>
+  </div>
+  <div id="leftcol">
   <canvas id="minimap" class="panel" width="230" height="230"></canvas>
   <div id="info" class="panel">
     <div class="kv"><span>POSITION</span><span class="pos num" id="pos">P10</span></div>
-    <div class="kv"><span>GAP AHEAD</span><b id="gapA">—</b></div>
     <div class="kv"><span>GAP BEHIND</span><b id="gapB">—</b></div>
-    <div class="sep"></div>
-    <div class="kv"><span>CURRENT LAP</span><b id="curLap">—</b></div>
-    <div class="kv"><span>LAST LAP</span><b id="lastLap">—</b></div>
-    <div class="kv"><span>BEST LAP</span><b id="bestLap">—</b></div>
-    <div class="secs"><i id="s1">S1</i><i id="s2">S2</i><i id="s3">S3</i></div>
     <div class="sep"></div>
     <div class="kv"><span>TYRE / WEAR</span><b><span class="tc" id="tyreC">M</span> <span id="wear">0%</span></b></div>
     <div class="kv"><span>NEXT TYRE (1/2/3)</span><b><span class="tc" id="nextC">H</span></b></div>
     <div class="kv"><span>COMPOUNDS USED</span><b id="used">M</b></div>
     <div class="kv"><span>FUEL / DAMAGE</span><b><span id="fuel">0.0</span> kg · <span id="dmg">0%</span></b></div>
     <div class="kv"><span>TRACK LIMITS / PENALTY</span><b><span id="tl">0</span>/3 · <span id="pen">0</span>s</b></div>
+  </div>
   </div>
   <div id="dash" class="panel">
     <div class="rpm"><div id="rpmFill"></div></div>
@@ -1233,11 +1243,19 @@ function leaveBox(){
   $('box').hidden=true;const c=player;
   c.comp=boxComp;c.wear=0;c.used=new Set([boxComp]);c.nextComp=boxComp==='H'?'M':'H';
   c.mesh.band.color.setHex(COMP[boxComp].hex);
-  if(boxMode==='quali'){phase='quali';qStage='out';qAttempt=1;c.lapInvalid=false;c.held=false;
+  if(boxMode==='quali'){phase='quali';qAttempt=1;c.lapInvalid=false;c.held=false;
+    // straight onto the timed lap: the car is released on the line, already at speed, clock running
+    rollingStart(c,0);qStage='flying';c.lapStart=simTime;c.secStart=simTime;
     c.bestLap=null;c.lastLap=null;c.sec=[null,null,null];c.secCol=['','',''];
-    msg('OUT LAP');}
+    msg('FLYING LAP');}
   else startRace();
 }
+
+function rollingStart(c,back){const sp=-back,i=idxSp(sp),off=RL[i];
+  c.idx=i;c.x=X[i]-TZ[i]*off;c.z=Z[i]+TX[i]*off;c.yaw=c.chi=ANG[i];
+  c.v=VP[i]*0.94;c.delta=0;c.r=0;c.slip=0;c.laneOff=0;c.laneOffT=0;c.sep=0;
+  c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;c.pitSide=false;c.limiter=false;c.boxDone=false;
+  locate(c);c.prevS=c.s;c.lapCount=-1;c.throttle=1;c.brake=0;camYaw=null;}
 
 function qualiCross(c){
   if(c.pitSide)return; // crossing the line inside the pit lane is not a lap of the circuit
@@ -1621,10 +1639,9 @@ function updateInfo(){
   const c=player;
   if(session==='quali'){updateQualiInfo();return;}
   const o=order(),k=o.indexOf(c);
-  $('gapA').previousElementSibling.textContent='GAP AHEAD';$('gapA').style.color='';$('gapB').parentElement.style.display='';
+  $('gapALbl').textContent='GAP AHEAD';$('gapA').style.color='';$('gapB').parentElement.style.display='';
   $('pos').textContent='P'+(k+1);$('gapA').textContent=k>0?gapStr(o[k-1],c).replace('+','-'):'LEADER';$('gapB').textContent=k<o.length-1?gapStr(c,o[k+1]):'—';
   const lap=Math.max(1,Math.min(totalLaps,c.lapCount+1));$('lapNum').textContent=lap+' / '+targetLaps;
-  $('raceTime').textContent=fmtRace(raceStart==null?0:simTime-raceStart);
   $('curLap').textContent=c.lapCount>=0&&phase==='race'&&!c.finished?fmt(simTime-c.lapStart):'—';$('lastLap').textContent=fmt(c.lastLap);$('bestLap').textContent=fmt(c.bestLap);
   ['s1','s2','s3'].forEach((id,i)=>{const e=$(id);e.textContent=c.sec[i]!=null?c.sec[i].toFixed(3):'S'+(i+1);e.className=c.secCol[i];});
   const tc=$('tyreC');tc.textContent=c.comp;tc.style.borderColor=COMP[c.comp].col;$('wear').textContent=Math.round(c.wear*100)+'%';
@@ -1646,17 +1663,16 @@ function updateInfo(){
 // the time that would take pole
 function updateQualiInfo(){
   const c=player,rivals=[...qTimes.entries()].filter(([k,v])=>k!==c&&v!=null).map(([,v])=>v),best=rivals.length?Math.min(...rivals):null;
-  const stage=qStage==='out'?'OUT LAP':qStage==='flying'?(c.lapInvalid?'LAP DELETED':'FLYING LAP'):'QUALIFYING';
+  const stage=qStage==='out'?'TO THE LINE':qStage==='flying'?(c.lapInvalid?'LAP DELETED':'FLYING LAP'):'QUALIFYING';
   $('lapNum').textContent=stage;
   $('pos').textContent=qStage==='done'&&qGrid?'P'+(qGrid.indexOf(c)+1):'—';
-  $('gapA').previousElementSibling.textContent='DELTA TO POLE';
+  $('gapALbl').textContent='DELTA TO POLE';
   const ref=best!=null&&qStage==='flying'&&!c.lapInvalid?best*CUMT[c.idx]/CUMT[N]:null;
   const dl=ref==null?null:(simTime-c.lapStart)-ref;
   $('gapA').textContent=dl==null?'—':(dl>=0?'+':'')+dl.toFixed(3);
   $('gapA').style.color=dl==null?'':(dl<0?'#1be26b':'#ff5252');
   $('gapB').parentElement.style.display='none';
   const cur=qStage==='flying'?simTime-c.lapStart:null;
-  $('raceTime').textContent=cur==null?'0:00.000':fmtRace(cur);
   $('curLap').textContent=cur==null?'—':fmt(cur);
   $('lastLap').textContent=fmt(c.lastLap);$('bestLap').textContent=fmt(c.bestLap);
   ['s1','s2','s3'].forEach((id,i)=>{const e=$(id);e.textContent=c.sec[i]!=null?c.sec[i].toFixed(3):'S'+(i+1);e.className=c.secCol[i];});
