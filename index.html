@@ -51,24 +51,24 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .prox i{position:absolute;inset:0;background:currentColor}
 #proxL{left:calc(50% - 250px)} #proxL i{clip-path:polygon(100% 0,0 50%,100% 100%,62% 50%)}
 #proxR{right:calc(50% - 250px)} #proxR i{clip-path:polygon(0 0,100% 50%,0 100%,38% 50%)}
-#topc{position:absolute;left:16px;top:16px;display:flex;gap:8px;align-items:stretch}
+#topc{position:absolute;right:16px;top:16px;display:flex;gap:8px;align-items:stretch}
 #topc .panel{padding:4px 14px;text-align:center}
 #topc small{display:block;font:700 10px var(--f-disp);letter-spacing:.14em;color:var(--mute)}
 #topc b{font:700 22px var(--f-disp);font-variant-numeric:tabular-nums}
-#flags{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 76px);transform:translateX(-50%);display:flex;gap:6px}
+#flags{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 92px);transform:translateX(-50%);display:flex;gap:6px}
 .flag{padding:3px 10px;border-radius:4px;font:700 12px var(--f-disp);letter-spacing:.08em}
-#msg{position:absolute;left:50%;bottom:132px;transform:translate(-50%,14px);font:900 17px var(--f-disp);letter-spacing:.14em;white-space:nowrap;opacity:0;transition:opacity .2s,transform .2s;background:rgba(8,11,16,.9);border-left:5px solid var(--red);border-radius:4px;padding:9px 20px 9px 16px;box-shadow:0 6px 22px rgba(0,0,0,.5)}
+#msg{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 18px);transform:translate(-50%,-10px);font:900 26px var(--f-disp);letter-spacing:.12em;white-space:nowrap;opacity:0;transition:opacity .2s,transform .2s;background:rgba(8,11,16,.9);border-left:6px solid var(--red);border-radius:5px;padding:12px 26px 12px 20px;box-shadow:0 8px 26px rgba(0,0,0,.55)}
 #msg.on{opacity:1;transform:translate(-50%,0)}
 #msg small{display:none}
 /* lights */
-#lights{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 110px);transform:translateX(-50%);display:flex;gap:12px;padding:12px 16px;background:#0a0a0c;border-radius:10px;border:2px solid #222}
+#lights{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 132px);transform:translateX(-50%);display:flex;gap:12px;padding:12px 16px;background:#0a0a0c;border-radius:10px;border:2px solid #222}
 #lights[hidden]{display:none}
 #lights i{width:38px;height:38px;border-radius:50%;background:#2a0505;box-shadow:inset 0 0 8px #000}
 #lights i.on{background:radial-gradient(circle at 40% 35%,#ff8a80,#ff1a0a 45%,#a00000);box-shadow:0 0 22px #ff2a1a}
 /* minimap */
 #leftcol{position:absolute;left:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 #minimap{display:block}
-#timing{position:absolute;left:16px;top:74px;width:268px;padding:10px 12px;display:grid;gap:7px}
+#timing{position:absolute;right:16px;top:74px;width:268px;padding:10px 12px;display:grid;gap:7px}
 #timing .lbl{font:700 10px var(--f-disp);letter-spacing:.16em;color:var(--mute)}
 #timing .big{font:700 30px var(--f-disp);line-height:1;font-variant-numeric:tabular-nums}
 #timing .secs i{font-size:15px;padding:5px 0}
@@ -1244,13 +1244,16 @@ function leaveBox(){
   c.comp=boxComp;c.wear=0;c.used=new Set([boxComp]);c.nextComp=boxComp==='H'?'M':'H';
   c.mesh.band.color.setHex(COMP[boxComp].hex);
   if(boxMode==='quali'){phase='quali';qAttempt=1;c.lapInvalid=false;c.held=false;
-    // straight onto the timed lap: the car is released on the line, already at speed, clock running
-    rollingStart(c,0);qStage='flying';c.lapStart=simTime;c.secStart=simTime;
+    // released at the start of the main straight, already at speed, so the flying lap is under way
+    // well before the line; the clock itself starts as the car crosses it
+    rollingStart(c,straightBack());qStage='out';
     c.bestLap=null;c.lastLap=null;c.sec=[null,null,null];c.secCol=['','',''];
     msg('FLYING LAP');}
   else startRace();
 }
 
+// how far before the line the last straight begins: walk back until the road bends
+function straightBack(){let d=900;for(let k=6;k<N;k++){const i=(N-k)%N;if(Math.abs(K[i])>1/200){d=(k-6)*DS;break;}}return clamp(d,200,1500);}
 function rollingStart(c,back){const sp=-back,i=idxSp(sp),off=RL[i];
   c.idx=i;c.x=X[i]-TZ[i]*off;c.z=Z[i]+TX[i]*off;c.yaw=c.chi=ANG[i];
   c.v=VP[i]*0.94;c.delta=0;c.r=0;c.slip=0;c.laneOff=0;c.laneOffT=0;c.sep=0;
@@ -1663,7 +1666,7 @@ function updateInfo(){
 // the time that would take pole
 function updateQualiInfo(){
   const c=player,rivals=[...qTimes.entries()].filter(([k,v])=>k!==c&&v!=null).map(([,v])=>v),best=rivals.length?Math.min(...rivals):null;
-  const stage=qStage==='out'?'TO THE LINE':qStage==='flying'?(c.lapInvalid?'LAP DELETED':'FLYING LAP'):'QUALIFYING';
+  const stage=qStage==='flying'&&c.lapInvalid?'LAP DELETED':qStage==='done'?'QUALIFYING':'FLYING LAP';
   $('lapNum').textContent=stage;
   $('pos').textContent=qStage==='done'&&qGrid?'P'+(qGrid.indexOf(c)+1):'—';
   $('gapALbl').textContent='DELTA TO POLE';
@@ -1684,42 +1687,60 @@ function updateQualiInfo(){
   $('flags').innerHTML=c.lapInvalid?'<span class="flag" style="background:#333;color:#fff">LAP DELETED</span>':'';
 }
 
-/* ================= AUDIO ================= */
-/* Deep V8 engine, built from real combustion physics rather than oscillators:
-   one engine cycle (720°) is synthesised as 8 exhaust pulses — each a decaying pressure wave plus a
-   noise burst — with the uneven cross-plane bank pattern that gives a V8 its low burble. The cycle is
-   looped and its playback rate follows rpm; then saturation, a heavy low-shelf/80 Hz body boost and a
-   throttle-driven low-pass (open exhaust on power, muffled on overrun). Game rpm (4–12k) is mapped to
-   a road-car range (~850–7100 rpm), so the fundamental sits in the 60–470 Hz bass/low-mid range. */
-let au=null,muted=false,lastGear=0;
+/* ================= AUDIO =================
+   Twin-turbo cross-plane V8 (the AMG kind of engine), built the way the engine actually makes its
+   noise rather than from oscillators. One 720° cycle is eight exhaust pulses, unevenly spaced across
+   the two banks — that uneven pattern is exactly what gives a cross-plane V8 its low burble — each a
+   decaying pressure wave with its harmonics plus a short noise burst. The cycle loops and its
+   playback rate follows rpm. On top of that sit the turbo whistle that rises with boost, the blow-off
+   hiss when the throttle slams shut, and the crackle that follows a lift or a downshift.
+   Game rpm (4–12k) maps to a road-car range (~800–7000 rpm), so the fundamental sits low. */
+let au=null,muted=false,lastGear=0,lastThr=0;
 const ENG_R0=2400; // rpm the cycle buffer is recorded at
 function engineCycle(ac){
   const sr=ac.sampleRate,T=120/ENG_R0,cycles=6,n=Math.round(sr*T*cycles),buf=ac.createBuffer(1,n,sr),d=buf.getChannelData(0);
-  const amp=[1,.7,.94,.86,.68,1,.76,.9]; // cross-plane bank unevenness → burble
+  const amp=[1,.68,.95,.85,.66,1,.74,.9]; // cross-plane bank unevenness -> the V8 burble
   for(let c=0;c<cycles;c++)for(let p=0;p<8;p++){
-    const t0=(c+(p+rand(-.035,.035))/8)*T,a=amp[p]*rand(.88,1.08),s0=Math.round(t0*sr);
-    for(let i=0;i<sr*0.03;i++){const t=i/sr,k=(s0+i)%n;
-      d[k]+=a*(Math.exp(-t/0.0065)*(Math.sin(2*Math.PI*125*t)+0.45*Math.sin(2*Math.PI*290*t+1.1))+ (Math.random()*2-1)*0.55*Math.exp(-t/0.0018));}}
+    const t0=(c+(p+rand(-.045,.045))/8)*T,a=amp[p]*rand(.88,1.08),s0=Math.round(t0*sr);
+    for(let i=0;i<sr*0.04;i++){const t=i/sr,k=(s0+i)%n;
+      d[k]+=a*(Math.exp(-t/0.0098)*(Math.sin(2*Math.PI*84*t)+0.62*Math.sin(2*Math.PI*168*t+0.6)+0.3*Math.sin(2*Math.PI*252*t+1.7)+0.16*Math.sin(2*Math.PI*415*t+2.4))
+        +(Math.random()*2-1)*0.34*Math.exp(-t/0.0025));}}
   let mx=0;for(let i=0;i<n;i++)mx=Math.max(mx,Math.abs(d[i]));for(let i=0;i<n;i++)d[i]*=0.9/mx;return buf;}
 function engineVoice(ac,dest,buf,vol,cyc){
   const G=v=>{const g=ac.createGain();g.gain.value=v;return g;},F=(type,f,q,gain)=>{const b=ac.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q;if(gain!=null)b.gain.value=gain;return b;};
   const pre=G(0.5),s1=ac.createBufferSource(),s2=ac.createBufferSource();
   for(const s of [s1,s2]){s.buffer=cyc;s.loop=true;}
-  s1.connect(G(.75)).connect(pre);s2.connect(G(.45)).connect(pre); // two slightly detuned banks = thickness
-  const sh=ac.createWaveShaper();const cv=new Float32Array(1024);for(let i=0;i<1024;i++){const x=i/511.5-1;cv[i]=Math.tanh(1.9*x);}sh.curve=cv;sh.oversample='2x';
+  s1.connect(G(.78)).connect(pre);s2.connect(G(.42)).connect(pre); // two slightly detuned banks = thickness
+  const sh=ac.createWaveShaper();const cv=new Float32Array(1024);for(let i=0;i<1024;i++){const x=i/511.5-1;cv[i]=Math.tanh(1.8*x);}sh.curve=cv;sh.oversample='2x';
   const lp=F('lowpass',900,.7),out=G(vol);
-  pre.connect(sh).connect(F('lowshelf',120,.7,9)).connect(F('peaking',75,1,5)).connect(F('peaking',1800,1,-4)).connect(lp).connect(F('highpass',28,.7)).connect(out).connect(dest);
-  const ns=ac.createBufferSource();ns.buffer=buf;ns.loop=true;const ig=G(0);ns.connect(F('bandpass',650,.8)).connect(ig).connect(out); // intake roar
-  s1.start(0,Math.random()*0.3);s2.start(0,Math.random()*0.3);ns.start(0,Math.random()*1.5);
-  let cutUntil=0,blipUntil=0;
+  pre.connect(sh).connect(F('lowshelf',115,.7,9)).connect(F('peaking',82,1,5)).connect(F('peaking',430,1.1,3)).connect(F('peaking',1900,1,-4)).connect(lp).connect(F('highpass',26,.7)).connect(out).connect(dest);
+  const ns=ac.createBufferSource();ns.buffer=buf;ns.loop=true;const ig=G(0);ns.connect(F('bandpass',620,.8)).connect(ig).connect(out); // intake roar
+  // turbochargers: a whistle whose pitch climbs with shaft speed, and the induction hiss behind it
+  const whi=ac.createOscillator();whi.type='sine';const whiG=G(0);
+  whi.connect(F('bandpass',2500,1.1)).connect(whiG).connect(out);
+  const hs=ac.createBufferSource();hs.buffer=buf;hs.loop=true;const hsG=G(0);
+  hs.connect(F('bandpass',2700,1.3)).connect(hsG).connect(out);
+  s1.start(0,Math.random()*0.3);s2.start(0,Math.random()*0.3);ns.start(0,Math.random()*1.5);hs.start(0,Math.random()*1.5);whi.start();
+  let cutUntil=0,blipUntil=0,boost=0;
   return{out,
     cut(t){cutUntil=t+0.06;},blip(t){blipUntil=t+0.1;},
-    set(rpm,thr,t,v){const ar=850+clamp((rpm-4000)/8200,0,1.05)*6300+(t<blipUntil?600:0),rate=ar/ENG_R0;
+    // blow-off valve: the boost that was on its way to the engine dumps when the throttle shuts
+    bov(t){const s=ac.createBufferSource();s.buffer=buf;const f=F('bandpass',rand(1900,2900),1.1),g=G(0);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.12+0.26*boost,t+.012);
+      g.gain.exponentialRampToValueAtTime(.001,t+rand(.18,.30));
+      s.connect(f).connect(g).connect(out);s.start(t,Math.random()*1.5,.4);},
+    get boost(){return boost;},
+    set(rpm,thr,t,v){const ar=800+clamp((rpm-4000)/8200,0,1.05)*6200+(t<blipUntil?600:0),rate=ar/ENG_R0;
       s1.playbackRate.setTargetAtTime(rate,t,.02);s2.playbackRate.setTargetAtTime(rate*1.004,t,.02);
       const th=t<blipUntil?1:thr;
-      lp.frequency.setTargetAtTime(th>0.05?500+ar*0.38*(0.4+0.6*th):320+ar*0.07,t,.04);
+      boost=th*clamp((ar-1900)/3400,0,1);
+      lp.frequency.setTargetAtTime(th>0.05?480+ar*0.4*(0.4+0.6*th):300+ar*0.07,t,.04);
       pre.gain.setTargetAtTime(t<cutUntil?0.1:0.32+0.68*th,t,t<cutUntil?.004:.03);
-      ig.gain.setTargetAtTime(th*clamp(ar/7000,0,1)*0.09,t,.05);
+      ig.gain.setTargetAtTime(th*clamp(ar/7000,0,1)*0.08,t,.05);
+      // the turbos take a moment to come up and spin down slowly when you lift
+      whi.frequency.setTargetAtTime(850+ar*0.6,t,.14);
+      whiG.gain.setTargetAtTime(boost*0.022,t,.3);
+      hsG.gain.setTargetAtTime(boost*0.016,t,.3);
       if(v!=null)out.gain.setTargetAtTime(v,t,.05);}};
 }
 function audioInit(){try{const ac=new (window.AudioContext||window.webkitAudioContext)();
@@ -1728,15 +1749,20 @@ function audioInit(){try{const ac=new (window.AudioContext||window.webkitAudioCo
   const mk=(type,fr,q)=>{const n=ac.createBufferSource();n.buffer=buf;n.loop=true;const bf=ac.createBiquadFilter();bf.type=type;bf.frequency.value=fr;bf.Q.value=q;const g=ac.createGain();g.gain.value=0;n.connect(bf).connect(g).connect(master);n.start();return g;};
   const cyc=engineCycle(ac);
   au={ac,master,buf,me:engineVoice(ac,master,buf,.34,cyc),opp:engineVoice(ac,master,buf,0,cyc),sq:mk('bandpass',1250,4),wn:mk('lowpass',500,.7)};}catch(e){au=null;}}
-function pop(t){const ac=au.ac,s=ac.createBufferSource();s.buffer=au.buf;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=rand(500,1600);f.Q.value=1.2;
-  const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(rand(.25,.6),t+.003);g.gain.exponentialRampToValueAtTime(.001,t+rand(.03,.09));
+function pop(t){const ac=au.ac,s=ac.createBufferSource();s.buffer=au.buf;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=rand(320,950);f.Q.value=1.1;
+  const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(rand(.15,.38),t+.004);g.gain.exponentialRampToValueAtTime(.001,t+rand(.04,.11));
   s.connect(f).connect(g).connect(au.master);s.start(t,Math.random()*1.5,.12);}
+// the string of pops down the exhaust after a lift: unburnt fuel lighting off in the pipes
+function crackle(t,rpm){const n=2+Math.floor(Math.random()*4);
+  for(let k=0;k<n;k++)pop(t+0.04+k*rand(0.03,0.11));}
 function rpmOf(c){const kmh=c.v*3.6,g=gearOf(c.v);let r=clamp(12000*kmh/GEARS[g],4000,12200);if(g===0)r=Math.max(r,4000+c.throttle*7000*(1-kmh/GEARS[0]));return r;}
 function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
   au.master.gain.setTargetAtTime(paused||muted||replay?0:.55,t,.05);
-  if(g>lastGear&&c.throttle>.3)au.me.cut(t);else if(g<lastGear)au.me.blip(t);lastGear=g;
+  if(g>lastGear&&c.throttle>.3)au.me.cut(t);else if(g<lastGear){au.me.blip(t);crackle(t,rpm);}lastGear=g;
+  // slamming the throttle shut while the turbos are spinning: the blow-off valve dumps the boost
+  if(lastThr>0.55&&c.throttle<0.12&&rpm>4200){au.me.bov(t);crackle(t,rpm);}lastThr=c.throttle;
   au.me.set(rpm,c.throttle,t);
-  if(c.throttle<.05&&rpm>6500&&c.v>15&&Math.random()<.07)pop(t);
+  if(c.throttle<.05&&rpm>5200&&c.v>15&&Math.random()<.05)pop(t);
   // nearest rival: distance attenuation + doppler
   let o=null,bd=150;for(const x of cars){if(x===c||x.parked)continue;const d=Math.hypot(x.x-c.x,x.z-c.z);if(d<bd){bd=d;o=x;}}
   if(o){const dx=o.x-c.x,dz=o.z-c.z,d=Math.max(bd,1),vr=((Math.cos(o.yaw)*o.v-Math.cos(c.yaw)*c.v)*dx+(Math.sin(o.yaw)*o.v-Math.sin(c.yaw)*c.v)*dz)/d;
