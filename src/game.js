@@ -11,6 +11,7 @@ import {TRACKS} from './data/tracks.js';
 import {TRACK_ID,TR,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js';
 import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,drsZoneOf,RL,VP,rawV,sp0} from './track.js';
 import {createTextures,canvasTex,winTex} from './textures.js';
+import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,pixelRatioFor} from './quality.js';
 const {OSM_SONGDO}=TR.osm?await import('./data/osm-songdo.js'):{OSM_SONGDO:null};
@@ -21,7 +22,7 @@ const renderer=new THREE.WebGLRenderer({canvas:$('gl'),antialias:false,powerPref
 let qName=qState.mode==='auto'?detectPreset(renderer.getContext()):qState.mode;
 let Q=PRESETS[qName];
 const BUILT_TEX=Q.texRes; // texture resolution is baked at load; everything else can change live
-const scaler=new ResolutionScaler();scaler.enabled=qState.mode==='auto';
+const scaler=new ResolutionScaler();scaler.enabled=true;
 renderer.setPixelRatio(pixelRatioFor(Q,scaler.scale));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -51,6 +52,7 @@ const stars=(()=>{if(TRACK_ID==='songdo')return null;const n=1600,p=new Float32A
 const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
 const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.26,0.4,0.95);composer.addPass(bloom);composer.addPass(new OutputPass());
 let gtao=null;
+const smaa=new SMAAPass(innerWidth,innerHeight);composer.addPass(smaa); // cheap post AA for HIGH: hardware MSAA on half-float targets cost ~9 ms/frame on integrated GPUs
 // studio environment only for car paint / carbon reflections (the night scene itself stays dark)
 const envTex=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),0.04).texture;
 let vw=0,vh=0; // resize lazily each frame: also covers pages that load while hidden (0×0)
@@ -74,7 +76,7 @@ function applyQuality(){
   if(sun.shadow.mapSize.x!==Q.shadow){sun.shadow.mapSize.set(Q.shadow,Q.shadow);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}
   // MSAA on the scene targets (ping-pong buffers, so both)
   for(const rt of [composer.renderTarget1,composer.renderTarget2])if(rt.samples!==Q.msaa){rt.samples=Q.msaa;rt.dispose();}
-  bloom.enabled=Q.bloom>0;bloom.strength=Q.bloom;
+  bloom.enabled=Q.bloom>0;bloom.strength=Q.bloom;smaa.enabled=!!Q.smaa;
   if(Q.ao&&!gtao){try{gtao=new GTAOPass(scene,camera,vw||innerWidth,vh||innerHeight);
       gtao.output=GTAOPass.OUTPUT.Default;gtao.blendIntensity=1;
       gtao.updateGtaoMaterial({radius:1.6,distanceExponent:1.4,thickness:2,scale:1.1,samples:12,distanceFallOff:1,screenSpaceRadius:false});
@@ -90,7 +92,7 @@ try{await Promise.race([document.fonts.load('900 22px "Titillium Web"'),new Prom
 const texSet=createTextures(BUILT_TEX,Math.min(Q.aniso,MAXANI));
 const {texAsphalt,texAsphaltN,texAsphaltR,texKerb,texCheck,texRubber,texConcrete,texConcreteN,texFence,texAds,texCrowd}=texSet;
 function setQualityMode(mode){qState.mode=mode;qName=mode==='auto'?detectPreset(renderer.getContext()):mode;Q=PRESETS[qName];
-  scaler.enabled=mode==='auto';scaler.reset();saveMode(mode);applyQuality();}
+  scaler.enabled=true;scaler.reset();saveMode(mode);applyQuality();}
 
 const mat=(o)=>new THREE.MeshStandardMaterial(o);
 const po=f=>({polygonOffset:true,polygonOffsetFactor:f,polygonOffsetUnits:f});
@@ -118,10 +120,10 @@ function strip(i0,n,offA,offB,yA,yB,m,uLen=20,shadow=true,geoOnly=false){
   const me=new THREE.Mesh(g,m);me.receiveShadow=shadow;scene.add(me);return me;}
 function flatAt(i,off,along,across,y,m){const g=new THREE.PlaneGeometry(along,across).rotateX(-Math.PI/2);const me=new THREE.Mesh(g,m);
   me.position.set(X[i]-TZ[i]*off,y,Z[i]+TX[i]*off);me.rotation.y=-ANG[i];me.receiveShadow=true;scene.add(me);return me;}
-// An InstancedMesh has ONE bounding sphere, so it is either fully drawn or fully skipped: 7000 tree crowns (400k triangles)// were pushed through the GPU every frame even when none were on screen. Splitting each one into ~350 m tiles gives every// tile its own bounding sphere, so frustum culling works again (and the mirror / shadow passes benefit too).function addTiled(...list){const TILE=350;  for(const im of list){const n=im.count,arr=im.instanceMatrix.array,tiles=new Map();    for(let k=0;k<n;k++){const key=Math.floor(arr[k*16+12]/TILE)+','+Math.floor(arr[k*16+14]/TILE);let a=tiles.get(key);if(!a)tiles.set(key,a=[]);a.push(k);}    for(const ids of tiles.values()){const t=new THREE.InstancedMesh(im.geometry,im.material,ids.length);      ids.forEach((k,j)=>t.instanceMatrix.array.set(arr.subarray(k*16,k*16+16),j*16));      t.instanceMatrix.needsUpdate=true;t.computeBoundingSphere();t.castShadow=im.castShadow;t.receiveShadow=im.receiveShadow;scene.add(t);}    im.dispose();}}
+// An InstancedMesh has ONE bounding sphere, so it is either fully drawn or fully skipped: 7000 tree crowns (400k triangles)// were pushed through the GPU every frame even when none were on screen. Splitting each one into ~350 m tiles gives every// tile its own bounding sphere, so frustum culling works again (and the mirror / shadow passes benefit too).function addTiled(...list){const TILE=520;  for(const im of list){const n=im.count,arr=im.instanceMatrix.array,tiles=new Map();    for(let k=0;k<n;k++){const key=Math.floor(arr[k*16+12]/TILE)+','+Math.floor(arr[k*16+14]/TILE);let a=tiles.get(key);if(!a)tiles.set(key,a=[]);a.push(k);}    for(const ids of tiles.values()){const t=new THREE.InstancedMesh(im.geometry,im.material,ids.length);      ids.forEach((k,j)=>t.instanceMatrix.array.set(arr.subarray(k*16,k*16+16),j*16));      t.instanceMatrix.needsUpdate=true;t.computeBoundingSphere();t.castShadow=im.castShadow;t.receiveShadow=im.receiveShadow;scene.add(t);}    im.dispose();}}
 // were pushed through the GPU every frame even when none were on screen. Splitting each one into ~350 m tiles gives every
 // tile its own bounding sphere, so frustum culling works again (and the mirror / shadow passes benefit too).
-function addTiled(...list){const TILE=350;
+function addTiled(...list){const TILE=520;
   for(const im of list){const n=im.count,arr=im.instanceMatrix.array,tiles=new Map();
     for(let k=0;k<n;k++){const key=Math.floor(arr[k*16+12]/TILE)+','+Math.floor(arr[k*16+14]/TILE);let a=tiles.get(key);if(!a)tiles.set(key,a=[]);a.push(k);}
     for(const ids of tiles.values()){const t=new THREE.InstancedMesh(im.geometry,im.material,ids.length);
@@ -637,11 +639,12 @@ async function buildCity(){
   const parkL=new THREE.Mesh(new THREE.BoxGeometry(342,1,40),new THREE.MeshBasicMaterial({color:0x7fd0ff}));parkL.position.set(20,194.3,0);mbs.add(parkL);
   // Singapore Flyer
   const [fx,fz]=rw(90,720);const fly=new THREE.Group();fly.position.set(fx,0,fz);fly.rotation.y=0.9;scene.add(fly);
-  const fm=new THREE.MeshBasicMaterial({color:0x9fe3ff});
+  const fm=new THREE.MeshBasicMaterial({color:0x9fe3ff}),FLY_SP=new THREE.MeshBasicMaterial({color:0x4b7aa0}),FLY_CAP=new THREE.MeshBasicMaterial({color:0xfff1c0});
   const ring=new THREE.Mesh(new THREE.TorusGeometry(75,1.1,8,120),fm);ring.position.y=90;fly.add(ring);
-  for(let k=0;k<16;k++){const sp=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,75,4),new THREE.MeshBasicMaterial({color:0x4b7aa0}));const a=k/16*Math.PI*2;sp.position.set(Math.cos(a)*37.5,90+Math.sin(a)*37.5,0);sp.rotation.z=a-Math.PI/2;fly.add(sp);}
-  for(let k=0;k<28;k++){const a=k/28*Math.PI*2;const cap=new THREE.Mesh(new THREE.SphereGeometry(2.2,10,8),new THREE.MeshBasicMaterial({color:0xfff1c0}));cap.position.set(Math.cos(a)*77,90+Math.sin(a)*77,0);fly.add(cap);}
+  for(let k=0;k<16;k++){const sp=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,75,4),FLY_SP);const a=k/16*Math.PI*2;sp.position.set(Math.cos(a)*37.5,90+Math.sin(a)*37.5,0);sp.rotation.z=a-Math.PI/2;fly.add(sp);}
+  for(let k=0;k<28;k++){const a=k/28*Math.PI*2;const cap=new THREE.Mesh(new THREE.SphereGeometry(2.2,10,8),FLY_CAP);cap.position.set(Math.cos(a)*77,90+Math.sin(a)*77,0);fly.add(cap);}
   for(const s of [-1,1]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.8,95,8),mat({color:0x5a6275}));leg.position.set(s*22,45,0);leg.rotation.z=s*0.24;fly.add(leg);}
+  bakeGroup(fly);
   // Esplanade domes
   const dm=mat({color:0x8e939c,roughness:.5,metalness:.4,emissive:0x302a20,emissiveIntensity:.6});
   for(const [rx,ry] of [[-520,530],[-455,510]]){const [x,z]=rw(rx,ry);const d=new THREE.Mesh(new THREE.SphereGeometry(34,28,14,0,Math.PI*2,0,Math.PI/2),dm);d.scale.set(1.25,.7,1);d.position.set(x,0,z);scene.add(d);}
@@ -649,6 +652,30 @@ async function buildCity(){
 
 /* ================= CAR MODEL (Hypercar-style body, F1 dimensions) ================= */
 function numTex(n,acc){return canvasTex(256,64,(x)=>{x.font='900 54px Titillium Web, sans-serif';x.fillStyle=acc;x.textAlign='center';x.textBaseline='middle';x.fillText(String(n),128,34);});}
+// A car used to be ~65 separate meshes = ~65 draw calls, x20 cars, plus the same again for the shadow pass and the mirror.
+// On ANGLE/D3D11 draw calls are the expensive part, so every static part of a group is baked into one mesh per material.
+function bakeGroup(par){
+  const buckets=new Map();
+  for(const m of par.children.filter(c=>c.isMesh)){
+    m.updateMatrix();let geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);
+    for(const k of Object.keys(geo.attributes))if(k!=='position'&&k!=='normal'&&k!=='uv')geo.deleteAttribute(k);
+    if(!geo.attributes.uv)geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*2),2));
+    let b=buckets.get(m.material);if(!b){b={geos:[],shadow:false};buckets.set(m.material,b);}
+    b.geos.push(geo);if(m.castShadow)b.shadow=true;par.remove(m);m.geometry.dispose();}
+  for(const [material,b] of buckets){const me=new THREE.Mesh(mergeGeometries(b.geos),material);me.castShadow=b.shadow;par.add(me);}}
+// Distant cars (> FAR_D from the camera) swap to ONE pre-merged, vertex-coloured mesh: a car costs 1 draw call instead of ~12.
+const FAR_D=110,farMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.5,metalness:.15});
+function makeFarLOD(car,root,g){
+  root.updateMatrixWorld(true);const geos=[];
+  root.traverse(o=>{if(!o.isMesh||o.material.map)return;
+    const geo=o.geometry.clone();geo.applyMatrix4(o.matrixWorld);
+    for(const k of Object.keys(geo.attributes))if(k!=='position'&&k!=='normal')geo.deleteAttribute(k);
+    const n=geo.attributes.position.count,col=new Float32Array(n*3),c=o.material.color||{r:1,g:1,b:1};
+    for(let i=0;i<n;i++){col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;}
+    geo.setAttribute('color',new THREE.BufferAttribute(col,3));geos.push(geo);});
+  const far=new THREE.Mesh(mergeGeometries(geos),farMat);far.visible=false;far.castShadow=false;root.add(far);
+  car.far=far;car.isFar=false;car.nearObjs=[g,...car.pivs];}
+function setFar(car,far){if(car.isFar===far)return;car.isFar=far;car.far.visible=far;for(const o of car.nearObjs)o.visible=!far;}
 function carMesh(col,acc,num){
   const root=new THREE.Group(),g=new THREE.Group();root.add(g);g.scale.set(CAR_SX,CAR_SY,CAR_SZ);const car={root,body:g};
   // matte race finish: the paint used to act like chrome and threw hard highlights around at speed
@@ -679,13 +706,15 @@ function carMesh(col,acc,num){
   add(new THREE.BoxGeometry(.3,.22,1.6),mC,-2.72,.2,0);
   add(new THREE.BoxGeometry(.03,.05,1.7),mTail,-2.82,.56,0,g,false);
   const mT=mat({color:0x161616,roughness:.85}),mR=mat({color:0x9aa0aa,metalness:.8,roughness:.3});const mBand=new THREE.MeshBasicMaterial({color:0xffd200});
-  car.wheels=[];car.steer=[];
+  car.wheels=[];car.steer=[];car.pivs=[];
   for(const [x,z,w,front] of [[1.8,.8,.305,1],[1.8,-.8,.305,1],[-1.8,.77,.405,0],[-1.8,-.77,.405,0]]){
     const piv=new THREE.Group();piv.position.set(x*CAR_SX,.36*WHEEL_S,z*CAR_SZ);piv.scale.setScalar(WHEEL_S);root.add(piv);const spin=new THREE.Group();piv.add(spin);
     add(new THREE.CylinderGeometry(.36,.36,w,22).rotateX(Math.PI/2),mT,0,0,0,spin);
     add(new THREE.CylinderGeometry(.23,.23,w+.012,6).rotateX(Math.PI/2),mR,0,0,0,spin,false);
     add(new THREE.TorusGeometry(.3,.014,6,28),mBand,0,0,Math.sign(z)*(w/2+.004),spin,false);
-    car.wheels.push(spin);if(front)car.steer.push(piv);}
+    car.wheels.push(spin);car.pivs.push(piv);if(front)car.steer.push(piv);}
+  for(const w of car.wheels)bakeGroup(w);bakeGroup(flap);bakeGroup(g);
+  makeFarLOD(car,root,g);
   car.tail=mTail;car.band=mBand;root.position.y=0.02;scene.add(root);return car;}
 
 /* ---- pit crew: jacks front and rear, a gunner and a fresh tyre at each corner, and the lollipop.
@@ -1332,6 +1361,7 @@ function updateVisuals(dt){
     if(!isFinite(c.roll)||!isFinite(c.pitch)){c.roll=c.pitch=c.rollV=c.pitchV=0;}if(!isFinite(c.jy)){c.jy=c.jyV=0;}
     m.body.rotation.set(clamp(c.roll,-0.05,0.05),0,clamp(c.pitch,-0.04,0.04));
     for(const w of m.wheels)w.rotation.z-=c.v*dt/(0.36*WHEEL_S);for(const s of m.steer)s.rotation.y=-c.delta*1.4;
+    setFar(m,c!==player&&Math.hypot(c.rx-camera.position.x,c.rz-camera.position.z)>FAR_D);
     m.flap.rotation.z=c.drsOpen?-.04:-.45;m.tail.color.setHex(c.brake>.1?0xff1010:0x4a0000);}
   // pit crew: parked on every car currently stationary in its box, wheel guns running until the
   // last moment, lollipop turning green as the jacks drop
@@ -1647,4 +1677,4 @@ async function boot(){
   requestAnimationFrame(frame);
 }
 boot();
-window.hrc={setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene};
+window.hrc={finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene};

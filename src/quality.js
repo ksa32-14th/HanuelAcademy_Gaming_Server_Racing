@@ -8,10 +8,10 @@
 const dpr = () => window.devicePixelRatio || 1;
 
 export const PRESETS = {
-  low:    {label:'LOW',    maxPR:1,   msaa:0, shadow:1024, shadowSpan:60, shadowEvery:2, bloom:0,    bloomRes:0.5, ao:false, aniso:2,  texRes:256,  mirror:0,   mirrorScale:0.5,  stars:false},
-  medium: {label:'MEDIUM', maxPR:1.25,msaa:0, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomRes:0.5, ao:false, aniso:4,  texRes:512,  mirror:3,   mirrorScale:0.6,  stars:true},
-  high:   {label:'HIGH',   maxPR:1.5, msaa:4, shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomRes:0.75,ao:false, aniso:8,  texRes:512,  mirror:2,   mirrorScale:0.85, stars:true},
-  ultra:  {label:'ULTRA',  maxPR:2,   msaa:4, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomRes:1,   ao:true,  aniso:16, texRes:1024, mirror:1,   mirrorScale:1,    stars:true},
+  low:    {label:'LOW',    maxPR:1,   msaa:0, smaa:false, shadow:1024, shadowSpan:60, shadowEvery:2, bloom:0,    bloomRes:0.5, ao:false, aniso:2,  texRes:256,  mirror:0,   mirrorScale:0.5,  stars:false},
+  medium: {label:'MEDIUM', maxPR:1.25,msaa:0, smaa:false, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomRes:0.5, ao:false, aniso:4,  texRes:512,  mirror:3,   mirrorScale:0.6,  stars:true},
+  high:   {label:'HIGH',   maxPR:1.5, msaa:0, smaa:true, shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomRes:0.75,ao:false, aniso:8,  texRes:512,  mirror:2,   mirrorScale:0.85, stars:true},
+  ultra:  {label:'ULTRA',  maxPR:2,   msaa:4, smaa:false, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomRes:1,   ao:true,  aniso:16, texRes:1024, mirror:1,   mirrorScale:1,    stars:true},
 };
 export const ORDER = ['low', 'medium', 'high', 'ultra'];
 export const MODES = ['auto', ...ORDER];
@@ -44,7 +44,7 @@ export function detectPreset(gl) {
 // budget the render scale drops in small steps, and it creeps back up when there is headroom.
 export class ResolutionScaler {
   constructor() {
-    this.scale = 1; this.min = 0.55; this.max = 1;
+    this.scale = 1; this.min = 0.5; this.max = 1;
     this.avg = 16.7; this.budget = 1000 / 60;
     this.slow = 0; this.fast = 0; this.enabled = true; this.warm = 0;
     this.deltas = [];
@@ -65,7 +65,9 @@ export class ResolutionScaler {
     if (this.avg > this.budget * 1.22) { this.slow++; this.fast = 0; }
     else if (this.avg < this.budget * 0.8) { this.fast++; this.slow = 0; }
     else { this.slow = this.fast = 0; }
-    if (this.slow > 45 && this.scale > this.min) { this.scale = Math.max(this.min, +(this.scale - 0.08).toFixed(2)); this.slow = 0; this.avg = this.budget; return true; }
+    if (this.slow > 20 && this.scale > this.min) { // pixel cost is ~linear in area: jump straight toward the scale that meets the budget
+      const want = this.scale * Math.sqrt(this.budget / this.avg) * 0.95;
+      this.scale = Math.max(this.min, +Math.max(this.scale - 0.3, want).toFixed(2)); this.slow = 0; this.avg = this.budget; return true; }
     if (this.fast > 240 && this.scale < this.max) { this.scale = Math.min(this.max, +(this.scale + 0.05).toFixed(2)); this.fast = 0; return true; }
     return false;
   }
