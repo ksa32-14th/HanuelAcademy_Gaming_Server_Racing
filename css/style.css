@@ -1,5 +1,5 @@
 :root{
-  --bg:#04060c; --panel:rgba(9,13,24,.82); --panel-solid:#0b1020; --ink:#f2f4fa; --mute:#8f9ab3;
+  --bg:#04060c; --panel:rgba(9,13,24,.9); --panel-solid:#0b1020; --ink:#f2f4fa; --mute:#8f9ab3;
   --line:rgba(255,255,255,.12); --red:#e10600; --drs:#1be26b; --purple:#b347ff; --green:#1be26b;
   --yellow:#ffd200; --blue:#2aa7ff; --orange:#ff8a00;
   --f-disp:'Titillium Web','Noto Sans KR',system-ui,sans-serif; --f-body:'Noto Sans KR','Titillium Web',system-ui,sans-serif;
@@ -10,7 +10,7 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .num{font-family:var(--f-disp);font-variant-numeric:tabular-nums}
 #hud{position:fixed;inset:0;pointer-events:none}
 #hud[hidden]{display:none!important}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;backdrop-filter:blur(6px)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px}
 /* timing tower */
 #tower{position:absolute;left:16px;top:16px;width:214px;overflow:hidden;max-height:calc(100% - 330px)}
 /* compact HUD (default): narrower, more transparent, only the rows around you — press H to cycle */

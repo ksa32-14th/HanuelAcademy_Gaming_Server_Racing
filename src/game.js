@@ -1201,13 +1201,18 @@ function drawMinimap(){mctx.clearRect(0,0,230,230);mctx.drawImage(mmBase,0,0);
   const [x,z]=mmT(player.x,player.z);mctx.fillStyle='#fff';mctx.beginPath();mctx.arc(x,z,5.5,0,7);mctx.fill();mctx.fillStyle='#e10600';mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
 
 function gearOf(v){const k=v*3.6;let g=0;while(g<7&&k>GEARS[g])g++;return g;}
+// HUD writes are guarded: touching the DOM every frame with an unchanged value still dirties style/layout next to a WebGL canvas
+const _hc={};
+function setTxt(id,v){if(_hc[id]!==v){_hc[id]=v;$(id).textContent=v;}}
+function setW(id,p){const v=Math.round(p);if(_hc['w'+id]!==v){_hc['w'+id]=v;$(id).style.width=v+'%';}}
 function updateHud(){
   const c=player,kmh=c.v*3.6,g=gearOf(c.v);
   const rpm=c.held?4000+c.throttle*7500:rpmOf(c);
-  $('spd').textContent=Math.round(kmh);$('gear').textContent=c.v<0.3&&c.held?'N':(g+1);
-  $('rpmFill').style.width=((rpm-4000)/8200*100)+'%';$('thr').style.width=(c.throttle*100)+'%';$('brk').style.width=(c.brake*100)+'%';
-  const drs=$('drs');drs.className=c.drsOpen?'open':(drsEnabled&&c.zone>=0&&c.drsElig[c.zone])?'av':drsEnabled?'en':'';
-  $('lim').className=c.limiter?'on':'';
+  setTxt('spd',Math.round(kmh));setTxt('gear',c.v<0.3&&c.held?'N':(g+1));
+  setW('rpmFill',(rpm-4000)/8200*100);setW('thr',c.throttle*100);setW('brk',c.brake*100);
+  const dc=c.drsOpen?'open':(drsEnabled&&c.zone>=0&&c.drsElig[c.zone])?'av':drsEnabled?'en':'';
+  if(_hc.drs!==dc){_hc.drs=dc;$('drs').className=dc;}
+  const lc=c.limiter?'on':'';if(_hc.lim!==lc){_hc.lim=lc;$('lim').className=lc;}
   audioUpdate(rpm,c.held?0:g);
 }
 function updateInfo(){
@@ -1427,14 +1432,20 @@ const ovScene=new THREE.Scene(),ovCam=new THREE.OrthographicCamera(-.5,.5,.5,-.5
 const ovQuad=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:mirrorRT.texture,side:THREE.DoubleSide,depthTest:false}));
 ovQuad.scale.x=-1;ovQuad.position.z=-1;ovScene.add(ovQuad);
 let mFrame=0;
+let _mr=null,_mrKey='';
+function mirrorRect(){const k=vw+'x'+vh+'|'+document.getElementById('hud').className;if(k!==_mrKey||!_mr||_mr.width<10){_mrKey=k;_mr=$('mirror').getBoundingClientRect();}return _mr;} // cached: getBoundingClientRect after the HUD writes forced a layout every frame
+let instList=null;
 function renderMirror(){
-  if(!player||Q.mirror===0||$("hud").hidden)return;const r=$('mirror').getBoundingClientRect();if(r.width<10)return;
+  if(!player||Q.mirror===0||$("hud").hidden)return;const r=mirrorRect();if(r.width<10)return;
   const x=r.left+4,y=r.top+4,w=r.width-8,h=r.height-8,dpr=renderer.getPixelRatio()*Q.mirrorScale,tw=Math.round(w*dpr),th=Math.round(h*dpr);
   if(mirrorRT.width!==tw||mirrorRT.height!==th)mirrorRT.setSize(tw,th);
   if((mFrame++%Q.mirror)===0){ // refresh the mirror image every Q.mirror-th frame (shadow map is reused, not re-rendered) (level, heading-only like the T-cam)
     const c=player,hx=Math.cos(c.ryaw),hz=Math.sin(c.ryaw);
     mirrorCam.position.set(c.rx-hx*3.0*CAR_SX,0.9*CAR_SY,c.rz-hz*3.0*CAR_SX);_v1.set(c.rx-hx*60,0.8,c.rz-hz*60);mirrorCam.lookAt(_v1);mirrorCam.aspect=w/h;mirrorCam.updateProjectionMatrix();
-    renderer.setRenderTarget(mirrorRT);renderer.render(scene,mirrorCam);renderer.setRenderTarget(null);}
+    if(!instList){instList=[];scene.traverse(o=>{if(o.isInstancedMesh)instList.push(o);});}
+    for(const o of instList)o.visible=false; // trees / lamps / far skyline are not worth a second pass in a 3.6:1 mirror
+    renderer.setRenderTarget(mirrorRT);renderer.render(scene,mirrorCam);renderer.setRenderTarget(null);
+    for(const o of instList)o.visible=true;}
   renderer.autoClear=false;renderer.setScissorTest(true);
   renderer.setViewport(x,vh-y-h,w,h);renderer.setScissor(x,vh-y-h,w,h);renderer.render(ovScene,ovCam);
   renderer.setScissorTest(false);renderer.setViewport(0,0,vw,vh);renderer.autoClear=true;}
@@ -1672,7 +1683,9 @@ async function boot(){
   scene.traverse(o=>{if(o.isMesh||o.isInstancedMesh||o.isPoints){o.matrixAutoUpdate=false;o.updateMatrix();}});
   applyQuality();
   await stage('Compiling shaders…',.95);
+  {const w=carMesh(0xd90008,0xf6f6f6,7);w.root.position.set(X[0],0,Z[0]);w.far.visible=true;window.__warm=w;} // one throw-away car so its programs are compiled now, not on the first race frame
   try{await renderer.compileAsync(scene,camera);}catch(e){}
+  {const w=window.__warm;if(w){w.far.visible=false;scene.remove(w.root);delete window.__warm;}}
   loadEl.classList.add('done');setTimeout(()=>loadEl.remove(),600);
   requestAnimationFrame(frame);
 }

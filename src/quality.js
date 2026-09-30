@@ -9,7 +9,7 @@ const dpr = () => window.devicePixelRatio || 1;
 
 export const PRESETS = {
   low:    {label:'LOW',    maxPR:1,   msaa:0, smaa:false, shadow:1024, shadowSpan:60, shadowEvery:2, bloom:0,    bloomRes:0.5, ao:false, aniso:2,  texRes:256,  mirror:0,   mirrorScale:0.5,  stars:false},
-  medium: {label:'MEDIUM', maxPR:1.25,msaa:0, smaa:false, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomRes:0.5, ao:false, aniso:4,  texRes:512,  mirror:3,   mirrorScale:0.6,  stars:true},
+  medium: {label:'MEDIUM', maxPR:1.25,msaa:0, smaa:false, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomRes:0.5, ao:false, aniso:16, texRes:1024, mirror:3,   mirrorScale:0.6,  stars:true},
   high:   {label:'HIGH',   maxPR:1.5, msaa:0, smaa:true, shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomRes:0.75,ao:false, aniso:8,  texRes:512,  mirror:2,   mirrorScale:0.85, stars:true},
   ultra:  {label:'ULTRA',  maxPR:2,   msaa:4, smaa:false, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomRes:1,   ao:true,  aniso:16, texRes:1024, mirror:1,   mirrorScale:1,    stars:true},
 };
@@ -43,12 +43,19 @@ export function detectPreset(gl) {
 // Dynamic resolution: keeps a moving average of the frame interval; if the GPU cannot hold the
 // budget the render scale drops in small steps, and it creeps back up when there is headroom.
 export class ResolutionScaler {
+  // Discrete levels on purpose: every change re-allocates the render targets (a visible hitch), so the scaler must not
+  // hunt. It steps down fast when frames are late, and only steps back up after ~10 s of headroom AND not into a level
+  // that failed in the last minute.
   constructor() {
-    this.scale = 1; this.min = 0.5; this.max = 1;
+    this.levels = [1, 0.85, 0.72, 0.6, 0.5]; this.idx = 0;
     this.avg = 16.7; this.budget = 1000 / 60;
-    this.slow = 0; this.fast = 0; this.enabled = true; this.warm = 0;
+    this.slow = 0; this.fast = 0; this.enabled = true;
+    this.failedAt = this.levels.map(() => -1e9);
     this.deltas = [];
   }
+  get scale() { return this.levels[this.idx]; }
+  set scale(v) { let b = 0; this.levels.forEach((l, i) => { if (Math.abs(l - v) < Math.abs(this.levels[b] - v)) b = i; }); this.idx = b; }
+  get min() { return this.levels[this.levels.length - 1]; }
   // returns true when the scale changed (caller then re-applies the pixel ratio)
   tick(ms) {
     if (!this.enabled || ms > 250 || ms <= 0) return false; // tab switch / hitch: ignore
@@ -56,22 +63,26 @@ export class ResolutionScaler {
       this.deltas.push(ms);
       if (this.deltas.length === 90) {
         const s = this.deltas.slice().sort((a, b) => a - b), med = s[45];
-        // 30 Hz / 45 Hz panels get a proportionally larger budget; 60 Hz and above target 60 fps
-        this.budget = Math.max(1000 / 60, med) * 1.02;
+        this.budget = Math.max(1000 / 60, med) * 1.02;      // 30/45 Hz panels get a proportionally larger budget
       }
       return false;
     }
-    this.avg += (ms - this.avg) * 0.08;
-    if (this.avg > this.budget * 1.22) { this.slow++; this.fast = 0; }
-    else if (this.avg < this.budget * 0.8) { this.fast++; this.slow = 0; }
+    this.avg += (ms - this.avg) * 0.1;
+    if (this.avg > this.budget * 1.2) { this.slow++; this.fast = 0; }
+    else if (this.avg < this.budget * 0.78) { this.fast++; this.slow = 0; }
     else { this.slow = this.fast = 0; }
-    if (this.slow > 20 && this.scale > this.min) { // pixel cost is ~linear in area: jump straight toward the scale that meets the budget
-      const want = this.scale * Math.sqrt(this.budget / this.avg) * 0.95;
-      this.scale = Math.max(this.min, +Math.max(this.scale - 0.3, want).toFixed(2)); this.slow = 0; this.avg = this.budget; return true; }
-    if (this.fast > 240 && this.scale < this.max) { this.scale = Math.min(this.max, +(this.scale + 0.05).toFixed(2)); this.fast = 0; return true; }
+    const now = performance.now();
+    if (this.slow > 25 && this.idx < this.levels.length - 1) {
+      this.failedAt[this.idx] = now;
+      this.idx = Math.min(this.levels.length - 1, this.idx + (this.avg > this.budget * 1.8 ? 2 : 1));
+      this.slow = 0; this.avg = this.budget; return true;
+    }
+    if (this.fast > 600 && this.idx > 0 && now - this.failedAt[this.idx - 1] > 60000) {
+      this.idx--; this.fast = 0; this.avg = this.budget; return true;
+    }
     return false;
   }
-  reset() { this.scale = 1; this.slow = this.fast = 0; }
+  reset() { this.idx = 0; this.slow = this.fast = 0; this.failedAt = this.levels.map(() => -1e9); }
 }
 
 export function pixelRatioFor(q, scale) {
