@@ -7,11 +7,16 @@
 
 const dpr = () => window.devicePixelRatio || 1;
 
+// Measured on an Iris Xe laptop: drawing the scene itself is cheap on the GPU (~5 ms @720p); the costs were draw-call
+// submission on the CPU (~12 ms, plus the same again for the rear-view mirror) and the post-processing chain (~8 ms).
+//   mirror: re-render the rear-view image every N-th frame · mirrorScale: its resolution · mirrorFar: its view distance
+//   AA: fxaa (1 pass, ~1.5 ms on Iris Xe @720p) · smaa (3 passes, ~6 ms there) · msaa (hardware, dedicated GPUs only)
+//   bloomScale: resolution of bloom's blur chain · LOW has no post effect at all, so it skips the composer entirely
 export const PRESETS = {
-  low:    {label:'LOW',    maxPR:1,   msaa:0, smaa:false, shadow:1024, shadowSpan:60, shadowEvery:2, bloom:0,    bloomRes:0.5, ao:false, aniso:2,  texRes:256,  mirror:2,   mirrorScale:1,  stars:false},
-  medium: {label:'MEDIUM', maxPR:1.25,msaa:0, smaa:false, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomRes:0.5, ao:false, aniso:16, texRes:1024, mirror:2,   mirrorScale:1,  stars:true},
-  high:   {label:'HIGH',   maxPR:1.5, msaa:0, smaa:true, shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomRes:0.75,ao:false, aniso:8,  texRes:512,  mirror:2,   mirrorScale:1, stars:true},
-  ultra:  {label:'ULTRA',  maxPR:2,   msaa:4, smaa:false, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomRes:1,   ao:true,  aniso:16, texRes:1024, mirror:2,   mirrorScale:1,    stars:true},
+  low:    {label:'LOW',    maxPR:1,   msaa:0, fxaa:false, smaa:false, shadow:1024, shadowSpan:60, shadowEvery:2, bloom:0,    bloomScale:0.5,  ao:false, aniso:4,  texRes:512,  mirror:3, mirrorScale:0.75, mirrorFar:260, stars:false},
+  medium: {label:'MEDIUM', maxPR:1.5, msaa:0, fxaa:true,  smaa:false, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomScale:0.5,  ao:false, aniso:8,  texRes:1024, mirror:2, mirrorScale:0.85, mirrorFar:380, stars:true},
+  high:   {label:'HIGH',   maxPR:2,   msaa:0, fxaa:false, smaa:true,  shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomScale:0.75, ao:false, aniso:16, texRes:1024, mirror:2, mirrorScale:1,    mirrorFar:520, stars:true},
+  ultra:  {label:'ULTRA',  maxPR:2,   msaa:4, fxaa:false, smaa:false, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomScale:1,    ao:true,  aniso:16, texRes:2048, mirror:1, mirrorScale:1,    mirrorFar:900, stars:true},
 };
 export const ORDER = ['low', 'medium', 'high', 'ultra'];
 export const MODES = ['auto', ...ORDER];
@@ -67,22 +72,62 @@ export class ResolutionScaler {
       }
       return false;
     }
-    this.avg += (ms - this.avg) * 0.1;
-    if (this.avg > this.budget * 1.2) { this.slow++; this.fast = 0; }
-    else if (this.avg < this.budget * 0.78) { this.fast++; this.slow = 0; }
-    else { this.slow = this.fast = 0; }
+    // With GPU timings available, judge the GPU alone: a CPU-bound frame (slow JS / draw submission) gains nothing
+    // from a lower resolution — it only gets blurrier — so frame interval is used only as a fallback.
+    // (the learned frame budget is not used here: on a CPU-bound machine it is itself slow, and would let the GPU
+    // load grow until the GPU became the bottleneck too — the GPU gets a fixed 60 fps budget instead)
+    const g = this.gpuAvg, gb = 1000 / 60;
+    if (g != null) {
+      const up = this.idx > 0 ? g * (this.levels[this.idx - 1] / this.levels[this.idx]) ** 2 : Infinity;
+      if (g > gb * 0.92) { this.slow++; this.fast = 0; }
+      else if (up < gb * 0.72) { this.fast++; this.slow = 0; }
+      else { this.slow = this.fast = 0; }
+      this.avg = g;
+    } else {
+      this.avg += (ms - this.avg) * 0.1;
+      if (this.avg > this.budget * 1.2) { this.slow++; this.fast = 0; }
+      else if (this.avg < this.budget * 0.78) { this.fast++; this.slow = 0; }
+      else { this.slow = this.fast = 0; }
+    }
     const now = performance.now();
     if (this.slow > 25 && this.idx < this.levels.length - 1) {
       this.failedAt[this.idx] = now;
       this.idx = Math.min(this.levels.length - 1, this.idx + (this.avg > this.budget * 1.8 ? 2 : 1));
-      this.slow = 0; this.avg = this.budget; return true;
+      this.slow = 0; this.avg = this.budget; this.gpuAvg = null; return true;
     }
-    if (this.fast > 600 && this.idx > 0 && now - this.failedAt[this.idx - 1] > 60000) {
-      this.idx--; this.fast = 0; this.avg = this.budget; return true;
+    // GPU-measured headroom is reliable, so it may climb back after ~3 s instead of ~10 s
+    if (this.fast > (g != null ? 180 : 600) && this.idx > 0 && now - this.failedAt[this.idx - 1] > 60000) {
+      this.idx--; this.fast = 0; this.avg = this.budget; this.gpuAvg = null; return true;
     }
     return false;
   }
-  reset() { this.idx = 0; this.slow = this.fast = 0; this.failedAt = this.levels.map(() => -1e9); }
+  // feed one frame's measured GPU time (ms)
+  gpu(ms) { if (!(ms > 0 && ms < 250)) return; this.gpuAvg = this.gpuAvg == null ? ms : this.gpuAvg + (ms - this.gpuAvg) * 0.1; }
+  reset() { this.idx = 0; this.slow = this.fast = 0; this.gpuAvg = null; this.failedAt = this.levels.map(() => -1e9); }
+}
+
+// GPU frame timer (EXT_disjoint_timer_query_webgl2). begin()/end() bracket everything drawn in a frame; results
+// arrive a few frames later and are handed out by poll(). Returns nothing when the extension is unavailable.
+export class GpuTimer {
+  constructor(gl) {
+    this.gl = gl; this.ext = null; this.pending = []; this.open = null;
+    try { this.ext = gl.getExtension('EXT_disjoint_timer_query_webgl2'); } catch (e) {}
+  }
+  get ok() { return !!this.ext; }
+  begin() {
+    if (!this.ext || this.open || this.pending.length > 4) return;
+    const q = this.gl.createQuery(); this.gl.beginQuery(this.ext.TIME_ELAPSED_EXT, q); this.open = q;
+  }
+  end() { if (!this.open) return; this.gl.endQuery(this.ext.TIME_ELAPSED_EXT); this.pending.push(this.open); this.open = null; }
+  poll() {
+    const gl = this.gl; let out = null;
+    while (this.pending.length && gl.getQueryParameter(this.pending[0], gl.QUERY_RESULT_AVAILABLE)) {
+      const q = this.pending.shift();
+      if (!gl.getParameter(this.ext.GPU_DISJOINT_EXT)) out = gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6;
+      gl.deleteQuery(q);
+    }
+    return out;
+  }
 }
 
 export function pixelRatioFor(q, scale) {
