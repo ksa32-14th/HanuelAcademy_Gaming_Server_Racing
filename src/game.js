@@ -1432,20 +1432,15 @@ const ovScene=new THREE.Scene(),ovCam=new THREE.OrthographicCamera(-.5,.5,.5,-.5
 const ovQuad=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:mirrorRT.texture,side:THREE.DoubleSide,depthTest:false}));
 ovQuad.scale.x=-1;ovQuad.position.z=-1;ovScene.add(ovQuad);
 let mFrame=0;
-let _mr=null,_mrKey='';
-function mirrorRect(){const k=vw+'x'+vh+'|'+document.getElementById('hud').className;if(k!==_mrKey||!_mr||_mr.width<10){_mrKey=k;_mr=$('mirror').getBoundingClientRect();}return _mr;} // cached: getBoundingClientRect after the HUD writes forced a layout every frame
-let instList=null;
 function renderMirror(){
-  if(!player||Q.mirror===0||$("hud").hidden)return;const r=mirrorRect();if(r.width<10)return;
+  if(!player||Q.mirror===0||$("hud").hidden)return;const r=$("mirror").getBoundingClientRect();if(r.width<10)return;
   const x=r.left+4,y=r.top+4,w=r.width-8,h=r.height-8,dpr=renderer.getPixelRatio()*Q.mirrorScale,tw=Math.round(w*dpr),th=Math.round(h*dpr);
   if(mirrorRT.width!==tw||mirrorRT.height!==th)mirrorRT.setSize(tw,th);
   if((mFrame++%Q.mirror)===0){ // refresh the mirror image every Q.mirror-th frame (shadow map is reused, not re-rendered) (level, heading-only like the T-cam)
     const c=player,hx=Math.cos(c.ryaw),hz=Math.sin(c.ryaw);
     mirrorCam.position.set(c.rx-hx*3.0*CAR_SX,0.9*CAR_SY,c.rz-hz*3.0*CAR_SX);_v1.set(c.rx-hx*60,0.8,c.rz-hz*60);mirrorCam.lookAt(_v1);mirrorCam.aspect=w/h;mirrorCam.updateProjectionMatrix();
-    if(!instList){instList=[];scene.traverse(o=>{if(o.isInstancedMesh)instList.push(o);});}
-    for(const o of instList)o.visible=false; // trees / lamps / far skyline are not worth a second pass in a 3.6:1 mirror
     renderer.setRenderTarget(mirrorRT);renderer.render(scene,mirrorCam);renderer.setRenderTarget(null);
-    for(const o of instList)o.visible=true;}
+}
   renderer.autoClear=false;renderer.setScissorTest(true);
   renderer.setViewport(x,vh-y-h,w,h);renderer.setScissor(x,vh-y-h,w,h);renderer.render(ovScene,ovCam);
   renderer.setScissorTest(false);renderer.setViewport(0,0,vw,vh);renderer.autoClear=true;}

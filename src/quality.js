@@ -8,10 +8,10 @@
 const dpr = () => window.devicePixelRatio || 1;
 
 export const PRESETS = {
-  low:    {label:'LOW',    maxPR:1,   msaa:0, smaa:false, shadow:1024, shadowSpan:60, shadowEvery:2, bloom:0,    bloomRes:0.5, ao:false, aniso:2,  texRes:256,  mirror:0,   mirrorScale:0.5,  stars:false},
-  medium: {label:'MEDIUM', maxPR:1.25,msaa:0, smaa:false, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomRes:0.5, ao:false, aniso:16, texRes:1024, mirror:3,   mirrorScale:0.6,  stars:true},
-  high:   {label:'HIGH',   maxPR:1.5, msaa:0, smaa:true, shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomRes:0.75,ao:false, aniso:8,  texRes:512,  mirror:2,   mirrorScale:0.85, stars:true},
-  ultra:  {label:'ULTRA',  maxPR:2,   msaa:4, smaa:false, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomRes:1,   ao:true,  aniso:16, texRes:1024, mirror:1,   mirrorScale:1,    stars:true},
+  low:    {label:'LOW',    maxPR:1,   msaa:0, smaa:false, shadow:1024, shadowSpan:60, shadowEvery:2, bloom:0,    bloomRes:0.5, ao:false, aniso:2,  texRes:256,  mirror:2,   mirrorScale:1,  stars:false},
+  medium: {label:'MEDIUM', maxPR:1.25,msaa:0, smaa:false, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomRes:0.5, ao:false, aniso:16, texRes:1024, mirror:2,   mirrorScale:1,  stars:true},
+  high:   {label:'HIGH',   maxPR:1.5, msaa:0, smaa:true, shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomRes:0.75,ao:false, aniso:8,  texRes:512,  mirror:2,   mirrorScale:1, stars:true},
+  ultra:  {label:'ULTRA',  maxPR:2,   msaa:4, smaa:false, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomRes:1,   ao:true,  aniso:16, texRes:1024, mirror:2,   mirrorScale:1,    stars:true},
 };
 export const ORDER = ['low', 'medium', 'high', 'ultra'];
 export const MODES = ['auto', ...ORDER];
