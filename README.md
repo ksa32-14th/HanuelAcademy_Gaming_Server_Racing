@@ -29,3 +29,7 @@ vendor/three/         three r160 (min) + 사용 addon — CDN 의존 제거
 - 차량: 도색/카본/타이어/림을 공용 버텍스 컬러 재질로 병합(근거리 차 20 → 12 draw), 원거리 LOD 전환 110 m → 60 m(그림자 유지).
 - 후처리: LOW는 composer를 건너뛰고 직접 렌더, MEDIUM은 SMAA 대신 FXAA(~6 ms → ~1.5 ms), bloom은 축소 해상도.
 - 동적 해상도(AUTO)는 GPU 타이머(EXT_disjoint_timer_query_webgl2)로 **GPU가 실제로 느릴 때만** 해상도를 내립니다. CPU가 병목인 프레임에서는 해상도를 낮춰도 빨라지지 않고 흐려지기만 하기 때문입니다.
+
+## 배포 시 캐시
+GitHub Pages는 파일을 10분간 캐시(`max-age=600`)하므로, 새 `game.js`가 캐시된 옛 모듈과 섞여 실행 오류가 날 수 있습니다. 로컬 모듈 import와 `index.html`의 `main.js`/CSS 주소에 `?v=20260930b` 버전 태그가 붙어 있으니, **배포할 때마다 이 값을 전부 한꺼번에 올려 주세요** (한 모듈이 여러 주소로 불리면 두 번 로드됩니다):
+`grep -rl "?v=20260930b" index.html src | xargs sed -i "s/?v=20260930b/?v=새값/g"`
