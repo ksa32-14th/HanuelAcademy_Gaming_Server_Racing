@@ -6,18 +6,18 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,hex,fmt,fmtRace} from './util.js?v=20261004a';
-import {TRACKS} from './data/tracks.js?v=20261004a';
-import {TRACK_ID,TR,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261004a';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261004a';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261004a';
+import {$,clamp,wrapA,smooth,rand,hex,fmt,fmtRace} from './util.js?v=20261005a';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261005a';
+import {TRACK_ID,TR,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005a';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005a';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261005a';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261004a';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005a';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261004a'):import('./data/osm-songdo.js?v=20261004a')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005a'):import('./data/osm-songdo.js?v=20261005a')))[0]:null;
 const DAY=!!TR.day; // daylight circuits (Busan): bright sky, haze instead of night fog, unlit windows
 
 /* ================= RENDERER / SCENE / QUALITY ================= */
@@ -74,6 +74,13 @@ const fxaa=new ShaderPass(FXAAShader);composer.addPass(fxaa);
 let usePost=true;
 // studio environment only for car paint / carbon reflections (the night scene itself stays dark)
 const envTex=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),0.04).texture;
+// by day, glass towers reflect the sky rather than a studio: the sky gradient wrapped round as an environment
+// (without it Marine City's blue curtain walls came out nearly black against the sun)
+const skyEnv=DAY?(()=>{const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,128);
+  [[0,'#3f7fd0'],[.35,'#86b4e4'],[.49,'#d8e6f2'],[.52,'#b9c8d4'],[.6,'#5d7186'],[1,'#3d4752']].forEach(([p,v])=>g.addColorStop(p,v));
+  x.fillStyle=g;x.fillRect(0,0,256,128);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.mapping=THREE.EquirectangularReflectionMapping;
+  return new THREE.PMREMGenerator(renderer).fromEquirectangular(t).texture;})():envTex;
 let vw=0,vh=0; // resize lazily each frame: also covers pages that load while hidden (0×0)
 function resizeAll(){const w=vw||innerWidth,h=vh||innerHeight;if(!w||!h)return;
   const pr=pixelRatioFor(Q,scaler.scale);renderer.setPixelRatio(pr);renderer.setSize(w,h);composer.setPixelRatio(pr);composer.setSize(w,h);
@@ -233,7 +240,7 @@ async function buildWorld(){
   await stage("Pit lane & stands…",.15);
   // pit boxes, garages
   // the garage block spans the boxes (with the standard 40 m boxes that is the usual 440 m building centred 25 m before the line)
-  const std=BOX_GAP===40,gLen=std?440:BOX_GAP*(TEAMS.length+1),gMid=std?-25:(BOX_S[0]+BOX_S[TEAMS.length-1])/2;
+  const std=BOX_GAP===40,gLen=std?440:BOX_GAP*TEAMS.length+4,gMid=std?-25:(BOX_S[0]+BOX_S[TEAMS.length-1])/2;
   const garage=new THREE.Group();const gi=idxSp(gMid);garage.position.set(X[gi]-TZ[gi]*(PIT_OFF+11.5),0,Z[gi]+TX[gi]*(PIT_OFF+11.5));garage.rotation.y=-ANG[gi];scene.add(garage);
   const gb=new THREE.Mesh(new THREE.BoxGeometry(gLen,9,8),mat({color:DAY?0x3a404c:0x2b2f3a,roughness:.8}));gb.position.y=4.5;garage.add(gb);
   const roof=new THREE.Mesh(new THREE.BoxGeometry(gLen+4,.5,10),new THREE.MeshBasicMaterial({color:0xeaf2ff}));roof.position.y=9.2;garage.add(roof);
@@ -281,8 +288,13 @@ async function buildOSM(){
     for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++){const l=hash.get((cx+a)+','+(cz+b));if(l)for(const i of l){
       // clearance = this sample's own barrier offset plus the fence; the pit complex only needs the extra
       // room on its own (right-hand) side — the far side of the road keeps its buildings (BEXCO hall 1)
-      const sp=spI(i),pit=sp>PIT_A-60&&sp<PIT_D+60,right=(x-X[i])*-TZ[i]+(z-Z[i])*TX[i]>0;
-      const r=(pit&&(right||TRACK_ID!=='busan')?PIT_OFF+22:Math.max(WL[i],WR[i])+3)+extra;
+      // (Busan, where the paddock is squeezed between the BEXCO corner and the auditorium: the full allowance
+      // only alongside the garages, elsewhere just the pit lane itself plus a margin)
+      const sp=spI(i),pit=sp>PIT_A-60&&sp<PIT_D+60,lat=(x-X[i])*-TZ[i]+(z-Z[i])*TX[i],right=lat>0;
+      const busan=TRACK_ID==='busan',gar=sp>=BOX_S[0]-12&&sp<=BOX_S[BOX_S.length-1]+12,po=pitOffSp(sp);
+      // the garage block itself is a strip beside the lane: test it square to the track, not as a circle
+      if(busan&&gar&&right){if(Math.abs((x-X[i])*TX[i]+(z-Z[i])*TZ[i])<1.5&&lat<PIT_OFF+17+extra)return true;continue;}
+      const r=(!pit||(busan&&!right)?Math.max(WL[i],WR[i])+3:busan?Math.max(WR[i],(po??0)+PIT_HW)+2.5:PIT_OFF+22)+extra;
       if(Math.hypot(X[i]-x,Z[i]-z)<r)return true;}}return false;};
   const W2=(x,y)=>[x*SC,-y*SC];
   // A building is kept only if NO part of it reaches the circuit. Testing its corners alone missed
@@ -389,7 +401,8 @@ async function buildOSM(){
   // 4 dark panelled commercial — Triple Street's charcoal fins, billboards and signage
   const ST=[{tw:26,th:26,rough:.72,metal:.05,env:.22},{tw:26,th:34,rough:.15,metal:.72,env:1.05},
     {tw:22,th:22,rough:.68,metal:.05,env:.2},{tw:26,th:26,rough:.8,metal:.05,env:.22},
-    {tw:20,th:20,rough:.72,metal:.04,env:.18}];
+    {tw:20,th:20,rough:.72,metal:.04,env:.18},
+    {tw:44,th:64,rough:.82,metal:.02,env:.15}]; // 5: Shinsegae Centum City — sandstone panels, almost no windows
   // facades are drawn at 512×1024, one floor every 64 px, so mullions, balcony rails and shopfronts
   // still read as building parts at the distance you actually drive past them
   const facade=s=>{const map=canvasTex(512,1024,(x)=>{
@@ -444,6 +457,15 @@ async function buildOSM(){
           x.fillStyle='rgba(0,0,0,.3)';x.fillRect(20,r,472,6);
           x.fillStyle='rgba(255,255,255,.35)';x.fillRect(20,r+38,472,4);}
         x.strokeStyle='rgba(0,0,0,.15)';x.lineWidth=2;for(let r=0;r<1024;r+=112)x.strokeRect(0,r,512,112);
+      } else if(s===5){
+        // Shinsegae Centum City: big blank sandstone panels, each a slightly different tone, fine joints —
+        // the glazing is all at street level (a separate band) and in the frosted corner fins
+        x.fillStyle='#d9ccb4';x.fillRect(0,0,512,1024);
+        for(let r=0;r<1024;r+=64)for(let c=(r/64%2)*64;c<512+128;c+=128){const t=Math.random()*18-9|0;
+          x.fillStyle=`rgb(${214+t},${200+t},${176+t})`;x.fillRect(c-128,r,126,62);}
+        x.fillStyle='rgba(90,72,48,.28)';for(let r=0;r<1024;r+=64)x.fillRect(0,r,512,2);
+        x.fillStyle='rgba(90,72,48,.18)';for(let r=0;r<1024;r+=64)for(let c=(r/64%2)*64;c<512;c+=128)x.fillRect(c,r,2,64);
+        x.fillStyle='rgba(255,255,255,.12)';for(let r=2;r<1024;r+=64)x.fillRect(0,r,512,2);
       } else {
         // Triple Street: white panel walls between slim vertical fins, dark glazed shopfronts below
         x.fillStyle='#eeece8';x.fillRect(0,0,512,1024);
@@ -469,6 +491,7 @@ async function buildOSM(){
       else if(s===2){x.fillStyle='#ffdfae';x.fillRect(0,407,256,105);
         for(let r=60;r<390;r+=52)for(let c=6;c<256;c+=48)if(Math.random()<.24){x.fillStyle=warm();x.fillRect(c,r,40,26);}}
       else if(s===3){for(let r=22;r<512;r+=56)for(let c=10;c<246;c+=30)if(Math.random()<.14){x.fillStyle=warm();x.fillRect(c,r+2,24,16);}}
+      else if(s===5){} // blank stone: nothing lights up
       else{
         // warm shopfront glow, the deck's light line and the big graphic billboards on the facades
         x.fillStyle='#ffdca8';x.fillRect(0,410,256,102);
@@ -479,29 +502,35 @@ async function buildOSM(){
         for(let r=0;r<140;r+=32)for(let c=0;c<256;c+=24)if(Math.random()<.2){x.fillStyle='#cfe0f0';x.fillRect(c+3,r+4,17,19);}
       }},true);
     // by day only the shopfronts glow a little; the windows are just glass
-    return mat({map,emissiveMap:emi,emissive:0xffffff,emissiveIntensity:DAY?(s===2||s===4?.25:0):.8,vertexColors:true,roughness:ST[s].rough,metalness:ST[s].metal,envMap:envTex,envMapIntensity:ST[s].env,side:THREE.DoubleSide});};
+    return mat({map,emissiveMap:emi,emissive:0xffffff,emissiveIntensity:DAY?(s===2||s===4?.25:0):.8,vertexColors:true,roughness:ST[s].rough,metalness:ST[s].metal,envMap:s===1?skyEnv:envTex,envMapIntensity:ST[s].env*(DAY&&s===1?1.35:1),side:THREE.DoubleSide});};
   const TINT=[[0xffffff,0xf1ece2,0xe7e9ec,0xf6efe4,0xdfe3e6,0xece4d6,0xd9dde2,0xf7f3ea,0xe3dcd0],
     [0xffffff,0xd8e6f2,0xcfe0da,0xe4e4ea,0xbcd2e6,0xc9dcd6,0xdce8f0,0xaec6da],
     [0xffffff,0xf0d9c0,0xcf8f6a,0xb86b52,0x6d6f75,0xe9dcc6,0xd8c8a8,0xc2a184],
     [0xffffff,0xe0e0dc,0xd2d6da,0xcdd2cf,0xe8e6df],
-    [0xffffff,0xf4f2ee,0xe8e5df,0xfaf9f6,0xece9e3]];
+    [0xffffff,0xf4f2ee,0xe8e5df,0xfaf9f6,0xece9e3],
+    [0xffffff]];
   // the LED crowns Songdo's towers wear after dark (see the Central Park skyline at dusk)
   const CROWN=[0x36d67a,0xff4f8b,0xff6a2b,0x49b7ff,0xc46bff,0xffd24a,0x4ae0d0];
-  const WB_=[0,1,2,3,4].map(()=>({p:[],u:[],c:[]})),ROOF={p:[],c:[]},beacons=[],extra=[];
+  // `overhead`: structures that really do pass over the circuit (Busan's viaducts, sky bridges, footbridges).
+  // They skip the overhang check below and cast shadows onto the track.
+  const WB_=[0,1,2,3,4,5].map(()=>({p:[],u:[],c:[]})),ROOF={p:[],c:[]},beacons=[],extra=[],overhead=[];
   const col=new THREE.Color();
-  // walls between successive footprint rings [y, scale-toward-centroid]
+  // walls between successive footprint rings [y, scale-toward-centroid, twist (rad, optional)]
   const ringWalls=(pts,rings,s,tint)=>{const B=WB_[s],n=pts.length;let cx=0,cz=0;for(const [x,z] of pts){cx+=x;cz+=z;}cx/=n;cz/=n;col.setHex(tint);
-    for(let r=0;r<rings.length-1;r++){const [y0,s0]=rings[r],[y1,s1]=rings[r+1];let u=0;
+    for(let r=0;r<rings.length-1;r++){const [y0,s0,t0=0]=rings[r],[y1,s1,t1=0]=rings[r+1];let u=0;
       for(let i=0;i<n;i++){const a=pts[i],b=pts[(i+1)%n],l=Math.hypot(b[0]-a[0],b[1]-a[1]);
-        const P=(p,sc,y)=>[cx+(p[0]-cx)*sc,y,cz+(p[1]-cz)*sc],A0=P(a,s0,y0),B0=P(b,s0,y0),B1=P(b,s1,y1),A1=P(a,s1,y1);
+        const P=(p,sc,y,t=0)=>{const dx=(p[0]-cx)*sc,dz=(p[1]-cz)*sc,c=Math.cos(t),sn=Math.sin(t);return [cx+dx*c-dz*sn,y,cz+dx*sn+dz*c];};
+        const A0=P(a,s0,y0,t0),B0=P(b,s0,y0,t0),B1=P(b,s1,y1,t1),A1=P(a,s1,y1,t1);
         B.p.push(...A0,...B0,...B1,...A0,...B1,...A1);
         const u0=u/ST[s].tw,u1=(u+l)/ST[s].tw,v0=y0/ST[s].th,v1=y1/ST[s].th;B.u.push(u0,v0,u1,v0,u1,v1,u0,v0,u1,v1,u0,v1);u+=l;
         // slight ambient darkening near the ground, brighter higher up
         const sh=y=>0.72+0.28*Math.min(1,y/28),g0=sh(y0),g1=sh(y1);
         B.c.push(col.r*g0,col.g*g0,col.b*g0, col.r*g0,col.g*g0,col.b*g0, col.r*g1,col.g*g1,col.b*g1,
                  col.r*g0,col.g*g0,col.b*g0, col.r*g1,col.g*g1,col.b*g1, col.r*g1,col.g*g1,col.b*g1);}}
-    const [yt,st]=rings[rings.length-1];return {cx,cz,top:pts.map(p=>[cx+(p[0]-cx)*st,cz+(p[1]-cz)*st]),yt};};
-  const roofCap=(top,y,tint)=>{const sh=new THREE.ShapeGeometry(new THREE.Shape(top.map(([x,z])=>new THREE.Vector2(x,-z)))).rotateX(-Math.PI/2).toNonIndexed();
+    const [yt,st,tt=0]=rings[rings.length-1],c=Math.cos(tt),sn=Math.sin(tt);
+    return {cx,cz,top:pts.map(p=>{const dx=(p[0]-cx)*st,dz=(p[1]-cz)*st;return [cx+dx*c-dz*sn,cz+dx*sn+dz*c];}),yt};};
+  // (`top` is a footprint ring, or a THREE.Shape already in (x,-z) — e.g. a roof with a courtyard hole)
+  const roofCap=(top,y,tint)=>{const sh=new THREE.ShapeGeometry(top instanceof THREE.Shape?top:new THREE.Shape(top.map(([x,z])=>new THREE.Vector2(x,-z)))).rotateX(-Math.PI/2).toNonIndexed();
     const p=sh.attributes.position.array;col.setHex(tint);for(let k=0;k<p.length;k+=3){ROOF.p.push(p[k],y,p[k+2]);ROOF.c.push(col.r,col.g,col.b);}};
   const oba=pts=>{let cx=0,cz=0;for(const [x,z] of pts){cx+=x;cz+=z;}cx/=pts.length;cz/=pts.length;let a=0,b=0,c=0;for(const [x,z] of pts){const dx=x-cx,dz=z-cz;a+=dx*dx;b+=dx*dz;c+=dz*dz;}
     const ang=0.5*Math.atan2(2*b,a-c),ux=Math.cos(ang),uz=Math.sin(ang);let l0=1e9,l1=-1e9,w0=1e9,w1=-1e9;
@@ -511,6 +540,23 @@ async function buildOSM(){
     return {cx,cz,ux,uz,l0,l1,w0,w1,mx,mz,ang:-Math.atan2(uz,ux)};};
   const mWhite=mat({color:0xe9edf2,metalness:.55,roughness:.3,envMap:envTex,envMapIntensity:.8});
   const r_c=(p,pts,f)=>{let cx=0,cz=0;for(const q of pts){cx+=q[0];cz+=q[1];}cx/=pts.length;cz/=pts.length;return [cx+(p[0]-cx)*f,cz+(p[1]-cz)*f];};
+  // the facade (footprint edge) that faces a point best, weighted toward long walls: {mx,mz middle, nx,nz outward normal, len}
+  const edgeFacing=(pts,tx,tz)=>{let cx=0,cz=0;for(const [x,z] of pts){cx+=x;cz+=z;}cx/=pts.length;cz/=pts.length;let best=null,bs=-1e9;
+    for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<10)continue;
+      const mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;let nx=(b[1]-a[1])/len,nz=-(b[0]-a[0])/len;if(nx*(mx-cx)+nz*(mz-cz)<0){nx=-nx;nz=-nz;}
+      const dx=tx-mx,dz=tz-mz,dl=Math.hypot(dx,dz)||1,sc=(nx*dx+nz*dz)/dl*Math.sqrt(len);if(sc>bs){bs=sc;best={mx,mz,nx,nz,len};}}
+    return best;};
+  const nearestTrack=(x,z)=>{let bi=0,bd=1e18;for(let i=0;i<N;i+=4){const d=(X[i]-x)**2+(Z[i]-z)**2;if(d<bd){bd=d;bi=i;}}return [X[bi],Z[bi]];};
+  // a lettered sign on a facade: transparent unless `bg`; `logo` adds Shinsegae's red flower before the name
+  const signAt=(fe,text,y,w,hgt,fg,bg,wt=1,logo=false)=>{const t=canvasTex(1024,256,(x)=>{if(bg){x.fillStyle=bg;x.fillRect(0,0,1024,256);}
+      let fs=170;x.font=`900 ${fs}px Titillium Web, Arial, sans-serif`;const tw=x.measureText(text).width+(logo?220:0);if(tw>960){fs*=960/tw;x.font=`900 ${fs}px Titillium Web, Arial, sans-serif`;}
+      const full=x.measureText(text).width+(logo?fs*1.25:0);let sx=512-full/2;
+      if(logo){const cx=sx+fs*0.5,cy=128;x.fillStyle='#e8352b';
+        for(let k=0;k<5;k++){const a=k/5*Math.PI*2-Math.PI/2;x.beginPath();x.ellipse(cx+Math.cos(a)*fs*0.22,cy+Math.sin(a)*fs*0.22,fs*0.2,fs*0.11,a,0,Math.PI*2);x.fill();}
+        sx+=fs*1.25;}
+      x.fillStyle=fg;x.textBaseline='middle';x.textAlign='left';x.lineWidth=wt*2;x.fillText(text,sx,136);},false);
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,hgt),new THREE.MeshBasicMaterial({map:t,transparent:!bg,depthWrite:!!bg}));
+    m.position.set(fe.mx+fe.nx*1.1,y,fe.mz+fe.nz*1.1);m.rotation.y=Math.atan2(fe.nx,fe.nz);return m;};
   // every Triple Street block's box centre, so each one can throw a bridge to its neighbour
   const tsC=[];
   D.b.forEach((b,bi)=>{if(b[2]!==6)return;const p=[];for(let k=3;k<b.length;k+=2)p.push(W2(b[k],b[k+1]));
@@ -522,24 +568,77 @@ async function buildOSM(){
     if(h<=0)h=kind===1?(ar>250?rand(60,100):rand(9,15)):kind===2?rand(40,70):ar>1500?rand(16,26):ar>300?rand(9,18):rand(4,8);
     const s=lm===6?4:lm===7?2:lm===1||lm===2||lm===8?1:lm===3?3:kind===1?0:kind===2?1:kind===3?2:3;
     let tint=TINT[s][(bi*7)%TINT[s].length];
-    if(lm>=21&&lm<=23){ // BEXCO: glazed exhibition halls under a broad pale-metal roof that overhangs the walls
-      const hh=h||(lm===23?22:lm===21?26:28),o=oba(pts);
-      const r=ringWalls(pts,[[0,1],[hh,1]],1,lm===23?0xc4d6e4:0xd8e4ee);roofCap(r.top,hh,0xc9ced3);
-      // the roof edge follows the real footprint (a bounding-box slab reached over the circuit on hall 1's L-shaped plan)
+    /* ---------------- Busan landmarks (codes 21–34, from the aerial photos and Kakao roadview) ---------------- */
+    if(lm===21){ // BEXCO exhibition hall 1: a 26 m glass-and-metal box under three broad pale roof plates, the
+      // green-glazed front onto the plaza carrying the BEXCO letters
+      const hh=h||26,o=oba(pts);
+      const r=ringWalls(pts,[[0,1],[hh,1]],1,0xc6d9dc);roofCap(r.top,hh,0xd9dee2);
+      // the roof edge follows the real footprint (a bounding-box slab would reach over the circuit on this L-shaped plan)
+      const eave=pts.map(p=>r_c(p,pts,1.025));
+      if(!footprintHitsTrack(eave)){const e=ringWalls(eave,[[hh,1],[hh+1.8,1]],3,0xf1f3f4);roofCap(e.top,hh+1.8,0xe6e9ec);}
+      // the two dark valleys between the three roof plates (only where the plan is the rectangular body)
+      if(ar>0.8*(o.l1-o.l0)*(o.w1-o.w0)){const vg=new THREE.Group();extra.push(vg);
+        for(const f of [-1/6,1/6]){const v=new THREE.Mesh(new THREE.BoxGeometry(5,1.2,(o.w1-o.w0)*0.9),mat({color:0x59626c,roughness:.6,metalness:.3}));
+          v.position.set(o.mx+o.ux*(o.l1-o.l0)*f,hh+2.3,o.mz+o.uz*(o.l1-o.l0)*f);v.rotation.y=o.ang;vg.add(v);}}
+      const fe=edgeFacing(pts,...W2(-590,447)); // the plaza, between the auditorium and the convention hall
+      if(fe){const gl=new THREE.Mesh(new THREE.BoxGeometry(fe.len*0.86,hh*0.86,0.8),mat({color:0x6fbf96,metalness:.55,roughness:.12,envMap:skyEnv,envMapIntensity:1}));
+        gl.position.set(fe.mx+fe.nx*0.6,hh*0.45,fe.mz+fe.nz*0.6);gl.rotation.y=Math.atan2(fe.nx,fe.nz);extra.push(gl);
+        extra.push(signAt(fe,'BEXCO',hh*0.8,Math.min(46,fe.len*0.35),10,'#ffffff',null,1.4));}
+      return;}
+    if(lm===22){ // BEXCO exhibition hall 2: a long glass hall with a white roof that overhangs every side
+      const hh=h||28;const r=ringWalls(pts,[[0,1],[hh,1]],1,0xd2e1ea);roofCap(r.top,hh,0xdfe3e6);
       const eave=pts.map(p=>r_c(p,pts,1.03));
-      if(!footprintHitsTrack(eave)){const e=ringWalls(eave,[[hh,1],[hh+1.6,1]],3,0xeef1f4);roofCap(e.top,hh+1.6,0xe3e7ea);}
-      // the long trusses that ribbon the roof: one piece, so it stands or goes as a whole
-      // (only on a near-rectangular plan: on an L the box-sized trusses would run out past the walls)
-      const tr=new THREE.Group();if(ar>0.85*(o.l1-o.l0)*(o.w1-o.w0))extra.push(tr);
-      for(let k=1;k<6;k++){const rib=new THREE.Mesh(new THREE.BoxGeometry((o.l1-o.l0)*0.9,1.4,1.2),mat({color:0x9aa4ad,metalness:.6,roughness:.4}));
-        rib.position.set(o.mx-o.uz*(o.w1-o.w0)*(k/6-0.5)*0.9,hh+2.4,o.mz+o.ux*(o.w1-o.w0)*(k/6-0.5)*0.9);rib.rotation.y=o.ang;tr.add(rib);}
+      if(!footprintHitsTrack(eave)){const e=ringWalls(eave,[[hh,1],[hh+2,1]],3,0xf6f7f8);roofCap(e.top,hh+2,0xf0f2f3);}
       return;}
-    if(lm===25){ // Busan Cinema Center: the "Big Roof", a 160 m cantilevered canopy over the plaza
-      const hh=h||30,o=oba(pts);const r=ringWalls(pts,[[0,1],[hh,1]],1,0xb8c4cc);roofCap(r.top,hh,0x8f979e);
-      if(!buildOSM.bigRoof){buildOSM.bigRoof=true;
-        const br=new THREE.Mesh(new THREE.BoxGeometry(Math.max(160,(o.l1-o.l0)*1.3),3.5,Math.max(60,(o.w1-o.w0)*1.1)),mat({color:0xdfe3e7,metalness:.5,roughness:.3,envMap:envTex,envMapIntensity:.7}));
-        br.position.set(o.mx,hh+16,o.mz);br.rotation.y=o.ang;extra.push(br);}
+    if(lm===23){ // BEXCO convention hall: glass box with the orange band along the top
+      const hh=h||22;const r=ringWalls(pts,[[0,1],[hh-3.5,1]],1,0xc3d4df);
+      const b=ringWalls(pts,[[hh-3.5,1],[hh,1]],3,0xe0823a);roofCap(b.top,hh,0xc9ced3);return;}
+    if(lm===26){ // BEXCO auditorium: an oval silver shell that swells out above a recessed glass base, its roof a
+      // ring around an open-air garden in the middle
+      const o=oba(pts),A=(o.l1-o.l0)/2,Bm=(o.w1-o.w0)/2,hh=h||28,n=56;
+      const ell=f=>{const q=[];for(let k=0;k<n;k++){const t=k/n*Math.PI*2,u=Math.cos(t)*A*f,v=Math.sin(t)*Bm*f;q.push([o.mx+o.ux*u-o.uz*v,o.mz+o.uz*u+o.ux*v]);}return q;};
+      ringWalls(ell(0.86),[[0,1],[7,1]],1,0x55636e); // glazed ground floor, set back under the shell
+      ringWalls(ell(1),[[7,0.9],[12,0.97],[20,1],[hh,0.96]],1,0xdfe5ea);
+      const inner=ell(0.56);ringWalls(inner,[[hh*0.55,1],[hh,1]],3,0xd0d5da);
+      const ring=new THREE.Shape(ell(0.96).map(([x,z])=>new THREE.Vector2(x,-z)));ring.holes.push(new THREE.Path(inner.map(([x,z])=>new THREE.Vector2(x,-z))));
+      roofCap(ring,hh,0xe8ecef);roofCap(inner,hh*0.55,0x6d8b58); // roof ring, garden
       return;}
+    if(lm===24){ // Shinsegae Centum City, the world's largest department store: blank sandstone-clad masses (the big
+      // one stepped back near the top), dark glass shopfronts at street level, frosted-glass fins proud of the corners
+      const hh=h||25,big=hh>60;
+      const r=ringWalls(pts,big?[[0,1],[hh*0.64,1],[hh*0.64,0.9],[hh,0.9]]:[[0,1],[hh,1]],5,0xffffff);roofCap(r.top,hh,0xb8ac96);
+      if(big)roofCap(pts,hh*0.64,0xa99c84); // the terrace where the mass steps back
+      ringWalls(pts.map(p=>r_c(p,pts,1.006)),[[0,1],[9,1]],1,0x3f4a54);
+      const par=ringWalls(r.top.map(p=>r_c(p,r.top,1.004)),[[hh,1],[hh+1.4,1]],5,0xe9dfcc);roofCap(par.top,hh+1.4,0xb8ac96);
+      // frosted fins at the three sharpest corners
+      const turns=pts.map((c,i)=>{const p=pts[(i-1+pts.length)%pts.length],q=pts[(i+1)%pts.length];
+        const a1=Math.atan2(c[1]-p[1],c[0]-p[0]),a2=Math.atan2(q[1]-c[1],q[0]-c[0]);return [Math.abs(wrapA(a2-a1)),i];}).sort((a,b)=>b[0]-a[0]).slice(0,3);
+      for(const [,i] of turns){const c=pts[i],dx=c[0]-r.cx,dz=c[1]-r.cz,dl=Math.hypot(dx,dz)||1;
+        const fin=new THREE.Mesh(new THREE.BoxGeometry(1.2,hh*(big?0.62:0.9),16),mat({color:0xe9f0f4,metalness:.2,roughness:.3,transparent:true,opacity:.78}));
+        fin.position.set(c[0]+dx/dl*1.5,hh*(big?0.31:0.45),c[1]+dz/dl*1.5);fin.rotation.y=Math.atan2(dx,dz)+Math.PI/2;extra.push(fin);}
+      if(big){const fe=edgeFacing(pts,...nearestTrack(r.cx,r.cz));if(fe)extra.push(signAt(fe,'SHINSEGAE',hh*0.5,Math.min(48,fe.len*0.4),9,'#3a2a20',null,1,true));}
+      return;}
+    if(lm===25){ // Busan Cinema Center's "double cone": the hourglass column that carries the Big Roof
+      const o=oba(pts),R=Math.min(o.l1-o.l0,o.w1-o.w0)/2,top=32,prof=[];
+      for(let k=0;k<=16;k++){const y=top*k/16,f=Math.abs(k/8-1);prof.push(new THREE.Vector2(R*(0.32+0.68*f*f),y));}
+      const dc=new THREE.Mesh(new THREE.LatheGeometry(prof,32),mat({color:0xa6b6c3,metalness:.6,roughness:.2,envMap:skyEnv,envMapIntensity:1,side:THREE.DoubleSide}));
+      dc.position.set(o.mx,0,o.mz);extra.push(dc);return;}
+    if(lm>=31&&lm<=34){const o=oba(pts); // Marine City: the glass towers along the Suyeong Bay shore
+      if(lm===31){ // Doosan We've the Zenith: floor plates that swell and pull in as the towers rise, dark blue glass
+        // behind fine silver mullions, a lighter crown
+        const rs=[];for(let k=0;k<=14;k++)rs.push([h*0.95*k/14,1-0.05*Math.sin(k/14*Math.PI*2.3)]);
+        const r=ringWalls(pts,rs,1,0x7c95b4);roofCap(r.top,h*0.95,0x5b6c80);
+        const cr=ringWalls(r.top,[[h*0.95,1],[h,0.95]],1,0xcad6e0);roofCap(cr.top,h,0x77889a);beacons.push([r.cx,h+1,r.cz]);return;}
+      if(lm===32){ // I'Park Marina: sail-shaped blue glass towers whose curtain wall runs up past the roof in a raked crown
+        const r=ringWalls(pts,[[0,1],[h*0.84,1],[h*0.9,0.95]],1,0x95bce6);roofCap(r.top,h*0.9,0x6c86a3);
+        const Ls=(o.l1-o.l0)*0.92,th=h*0.1+10,sh=new THREE.Shape([new THREE.Vector2(-Ls/2,0),new THREE.Vector2(Ls/2,0),new THREE.Vector2(Ls/2,th)]);
+        const g=new THREE.ExtrudeGeometry(sh,{depth:2.4,bevelEnabled:false});g.translate(0,0,-1.2);
+        const fin=new THREE.Mesh(g,mat({color:0x9fc3ea,metalness:.65,roughness:.14,envMap:skyEnv,envMapIntensity:1.1}));
+        fin.position.set(o.mx-o.uz*(o.w1-o.w0)*0.32,h*0.9,o.mz+o.ux*(o.w1-o.w0)*0.32);fin.rotation.y=o.ang;extra.push(fin);beacons.push([r.cx,h*0.9+th,r.cz]);return;}
+      if(lm===33){ // Park Hyatt Busan: a glass prism that twists a quarter of the way round as it rises
+        const rs=[];for(let k=0;k<=10;k++)rs.push([h*k/10,1-0.05*k/10,k/10*0.45]);const r=ringWalls(pts,rs,1,0xb4c8d8);roofCap(r.top,h,0x8094a6);return;}
+      const t=[0x9cb3c9,0x8ea8c2,0xa9bccc,0x86a1bd][bi%4];
+      const r=ringWalls(pts,[[0,1],[h*0.9,1],[h*0.9,0.94],[h,0.94]],1,t);roofCap(r.top,h,0x6b7c8d);if(h>100)beacons.push([r.cx,h+1,r.cz]);return;}
     if(lm===1){ // POSCO Tower-Songdo (305 m): dark blue-green glass, slender taper, angled crown, spire
       const r=ringWalls(pts,[[0,1],[h*0.30,0.97],[h*0.72,0.86],[h*0.95,0.72]],1,0x5f7581);roofCap(r.top,h*0.95,0x43505c);
       const o=oba(pts),side=Math.max(o.l1-o.l0,o.w1-o.w0)*0.72;
@@ -671,16 +770,40 @@ async function buildOSM(){
     if(h<45&&ar>600){for(let q=0;q<2;q++){const bx=new THREE.Mesh(new THREE.BoxGeometry(rand(3,7),rand(1.5,3),rand(3,6)),mat({color:0x4a4e57,roughness:.9}));
       bx.position.set(r.cx+rand(-6,6),h+1.2,r.cz+rand(-6,6));bx.rotation.y=rand(0,3);extra.push(bx);}} // rooftop plant
   });
-  // elevated expressways (Busan's Gwangan-daero): a deck on round piers, the double-deck bridge one storey per layer
-  if(D.br){const deckM=mat({color:0xb9bec4,roughness:.8}),pierM=mat({color:0x9ea4aa,roughness:.85}),railM=mat({color:0xe6e9ec,roughness:.6});
-    for(const e of D.br){const w=e[0],lay=e[1],y=e[2]?16+lay*8:7*lay,pts=[];for(let k=3;k<e.length;k+=2)pts.push(W2(e[k],e[k+1]));
+  // ---- what passes OVER the circuit (it only ever runs on the street below) ----
+  // Elevated expressways — Gwangan-daero and the Jangsan-ro / Haeundae-ro viaducts, which cross the lap four times
+  // (twice at BEXCO, twice by the Suyeong river mouth): a deck with concrete parapets, the green-and-yellow noise
+  // walls seen from roadview, round piers that are never planted on the track. The double-deck sea bridge sits higher.
+  if(D.br){const deckM=mat({color:0xb9bec4,roughness:.8}),pierM=mat({color:0x9ea4aa,roughness:.85}),railM=mat({color:0xd9dcdf,roughness:.7}),
+      noiseM=mat({color:0x9cc3a8,roughness:.4,metalness:.1}),noiseTopM=mat({color:0xd9c45c,roughness:.5});
+    for(const e of D.br){const w=e[0],lay=e[1],pts=[];let sea=false;for(let k=3;k<e.length;k+=2){pts.push(W2(e[k],e[k+1]));if(e[k+1]<-1300)sea=true;}
+      const y=e[2]&&sea?16+lay*8:5+lay*4.5;
       for(let k=1;k<pts.length;k++){const [ax,az]=pts[k-1],[bx,bz]=pts[k],dx=bx-ax,dz=bz-az,l=Math.hypot(dx,dz);if(l<1)continue;
-        const ang=-Math.atan2(dz,dx);
-        // deck and parapets as one piece, so the overhang check keeps or drops them together
-        const seg=new THREE.Group();seg.position.set((ax+bx)/2,y,(az+bz)/2);seg.rotation.y=ang;extra.push(seg);
-        seg.add(new THREE.Mesh(new THREE.BoxGeometry(l+0.5,2.2,w),deckM));
-        for(const sd of [-1,1]){const rl=new THREE.Mesh(new THREE.BoxGeometry(l+0.5,1.1,0.4),railM);rl.position.set(0,1.6,sd*w/2);seg.add(rl);}
-        for(let s=0;s<l;s+=48){const t=s/l,p=new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.6,y-1,10),pierM);p.position.set(ax+dx*t,(y-1)/2,az+dz*t);extra.push(p);}}}}
+        const seg=new THREE.Group();seg.position.set((ax+bx)/2,y,(az+bz)/2);seg.rotation.y=-Math.atan2(dz,dx);overhead.push(seg);
+        seg.add(new THREE.Mesh(new THREE.BoxGeometry(l+0.6,2.2,w),deckM));
+        for(const sd of [-1,1]){const rl=new THREE.Mesh(new THREE.BoxGeometry(l+0.6,1.1,0.5),railM);rl.position.set(0,1.6,sd*(w/2-0.25));seg.add(rl);
+          if(!sea){const nw=new THREE.Mesh(new THREE.BoxGeometry(l+0.6,2.6,0.2),noiseM);nw.position.set(0,3.4,sd*(w/2-0.2));seg.add(nw);
+            const nt=new THREE.Mesh(new THREE.BoxGeometry(l+0.6,0.7,0.24),noiseTopM);nt.position.set(0,4.9,sd*(w/2-0.2));seg.add(nt);}}
+        for(let s=0;s<l;s+=36){const t=s/l,px=ax+dx*t,pz=az+dz*t;if(blocked(px,pz,2))continue;
+          const p=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.5,y-1.1,10),pierM);p.position.set(px,(y-1.1)/2,pz);extra.push(p);}}}}
+  // enclosed sky bridges: BEXCO's glass link from hall 2 over the road to hall 1 (white roof), and Shinsegae's
+  // 3rd-floor bridge from the main store over the street to its annex — both span the circuit
+  if(D.bb)for(const e of D.bb){const lo=Math.max(7.5,e[0]),hi=Math.max(lo+4,e[1]),bex=e[2]===1,pts=[];for(let k=3;k<e.length;k+=2)pts.push(W2(e[k],e[k+1]));
+    const r=ringWalls(pts,[[lo,1],[hi,1]],1,bex?0xd6e6ee:0xbfc8cf);roofCap(r.top,lo,0x8d959d);
+    const rim=ringWalls(pts.map(p=>r_c(p,pts,1.02)),[[hi,1],[hi+1,1]],bex?3:5,bex?0xf4f5f6:0xe6dccb);roofCap(rim.top,hi+1,bex?0xf2f3f4:0xd8cdb8);}
+  // pedestrian overpasses (Haeundae-ro): a deck at 6.5 m with railings, a stair tower at each end
+  if(D.fb){const fM=mat({color:0xc9cdd1,roughness:.7}),rM=mat({color:0x7c8792,roughness:.5,metalness:.5});
+    for(const e of D.fb){const pts=[];for(let k=0;k<e.length;k+=2)pts.push(W2(e[k],e[k+1]));
+      for(let k=1;k<pts.length;k++){const [ax,az]=pts[k-1],[bx,bz]=pts[k],dx=bx-ax,dz=bz-az,l=Math.hypot(dx,dz);if(l<1)continue;
+        const seg=new THREE.Group();seg.position.set((ax+bx)/2,6.5,(az+bz)/2);seg.rotation.y=-Math.atan2(dz,dx);overhead.push(seg);
+        seg.add(new THREE.Mesh(new THREE.BoxGeometry(l+0.4,0.9,3.6),fM));
+        for(const sd of [-1,1]){const rl=new THREE.Mesh(new THREE.BoxGeometry(l+0.4,1.2,0.12),rM);rl.position.set(0,1.05,sd*1.75);seg.add(rl);}}
+      for(const [x,z] of [pts[0],pts[pts.length-1]])if(!blocked(x,z,1)){const st=new THREE.Mesh(new THREE.BoxGeometry(4.5,7.4,6),fM);st.position.set(x,3.7,z);extra.push(st);}}}
+  // the Busan Cinema Center's roofs: the 140 × 167 m Big Roof on its double cone, and the Small Roof
+  if(D.rf)for(const e of D.rf){const [lo,th,big]=e,sh=[];for(let k=3;k<e.length;k+=2){const [x,z]=W2(e[k],e[k+1]);sh.push(new THREE.Vector2(x,-z));}
+    const g=new THREE.ExtrudeGeometry(new THREE.Shape(sh),{depth:th,bevelEnabled:false}).rotateX(-Math.PI/2);
+    const m=new THREE.Mesh(g,[mat({color:big?0xdfe3e7:0xe6e9ec,metalness:.45,roughness:.3,envMap:envTex,envMapIntensity:.7}),mat({color:0x8c959e,roughness:.5,metalness:.3})]);
+    m.position.y=lo;extra.push(m);}
   // Split the merged city into ~600 m tiles: one giant mesh can never be frustum-culled, so the GPU used to
   // transform every building on the map on every frame (and again for every extra pass such as the mirror).
   // (Tiles were 300 m; at that size draw-call submission on the CPU cost more than the GPU saved by culling.)
@@ -692,7 +815,7 @@ async function buildOSM(){
   const chunkMeshes=(P,U,C,material)=>{for(const e of chunked(P,U,C).values()){const g=new THREE.BufferGeometry();
       g.setAttribute('position',new THREE.Float32BufferAttribute(e.p,3));if(U)g.setAttribute('uv',new THREE.Float32BufferAttribute(e.u,2));g.setAttribute('color',new THREE.Float32BufferAttribute(e.c,3));
       g.computeVertexNormals();g.computeBoundingSphere();scene.add(new THREE.Mesh(g,material));}};
-  for(let s=0;s<5;s++){const B=WB_[s];if(!B.p.length)continue;chunkMeshes(B.p,B.u,B.c,facade(s));}
+  for(let s=0;s<6;s++){const B=WB_[s];if(!B.p.length)continue;chunkMeshes(B.p,B.u,B.c,facade(s));}
   if(ROOF.p.length)chunkMeshes(ROOF.p,null,ROOF.c,mat({vertexColors:true,roughness:.9,side:THREE.DoubleSide}));
   // Nothing decorative may hang over the circuit. Roofs, signage bands, LED crowns and billboards are
   // all sized from a building's bounding box, and on an L-shaped plan that box reaches well past the
@@ -708,23 +831,24 @@ async function buildOSM(){
        if(blocked(bb.min.x+(bb.max.x-bb.min.x)*a/nx,bb.min.z+(bb.max.z-bb.min.z)*b/nz,-2.5))hit=true;
      if(hit){extra.splice(k,1);dropped++;}}
    if(dropped)console.info('scenery:',dropped,'decorations dropped for overhanging the circuit');}
+  for(const o of overhead){o.userData.overhead=true;extra.push(o);}
   // The decorations used to be ~450 separate meshes, nearly every one with its own material (≈1000 draw calls in view
   // on this circuit). Materials that differ only in colour are folded together (colour → vertex colour), and the pieces
   // are merged per tile like the buildings, so each tile costs a handful of draw calls. Transparent pieces
   // (bridge glass) stay separate so they keep sorting correctly.
   {const shared=new Map(),groups=new Map(),col=new THREE.Color();
-   const keyOf=m=>m.isMeshBasicMaterial?'B'+m.side:m.isMeshStandardMaterial?['S',m.side,m.metalness.toFixed(2),m.roughness.toFixed(2),m.envMap?m.envMapIntensity.toFixed(2):'-'].join('|'):null;
+   const keyOf=m=>m.isMeshBasicMaterial?'B'+m.side:m.isMeshStandardMaterial?['S',m.side,m.metalness.toFixed(2),m.roughness.toFixed(2),m.envMap?m.envMap.uuid+m.envMapIntensity.toFixed(2):'-'].join('|'):null;
    const sharedFor=(k,m)=>{let s=shared.get(k);if(!s){s=m.isMeshBasicMaterial?new THREE.MeshBasicMaterial({vertexColors:true,side:m.side})
        :mat({vertexColors:true,side:m.side,metalness:m.metalness,roughness:m.roughness,envMap:m.envMap,envMapIntensity:m.envMapIntensity});shared.set(k,s);}return s;};
-   for(const root of extra){root.updateMatrixWorld(true);root.traverse(o=>{if(!o.isMesh)return;const m=o.material,k=keyOf(m);
-     if(!k||m.transparent||m.map){const c=o.clone();o.getWorldPosition(c.position);o.getWorldQuaternion(c.quaternion);o.getWorldScale(c.scale);scene.add(c);return;}
+   for(const root of extra){root.updateMatrixWorld(true);const cast=!!root.userData.overhead;root.traverse(o=>{if(!o.isMesh)return;const m=o.material,k0=keyOf(m),k=k0&&(cast?k0+'|cast':k0);
+     if(!k||m.transparent||m.map){const c=o.clone();o.getWorldPosition(c.position);o.getWorldQuaternion(c.quaternion);o.getWorldScale(c.scale);c.castShadow=cast&&!m.transparent;scene.add(c);return;}
      let g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(o.matrixWorld);
      for(const a of Object.keys(g.attributes))if(a!=='position'&&a!=='normal')g.deleteAttribute(a);
      if(!g.attributes.normal)g.computeVertexNormals();
      vColor(g,col.copy(m.color));
      const wp=o.getWorldPosition(_v3),tk=k+'#'+Math.floor(wp.x/CHUNK)+','+Math.floor(wp.z/CHUNK);
-     let e=groups.get(tk);if(!e)groups.set(tk,e={m:sharedFor(k,m),geos:[]});e.geos.push(g);});}
-   for(const e of groups.values()){const me=new THREE.Mesh(mergeGeometries(e.geos),e.m);me.geometry.computeBoundingSphere();scene.add(me);}}
+     let e=groups.get(tk);if(!e)groups.set(tk,e={m:sharedFor(k0,m),geos:[],cast});e.geos.push(g);});}
+   for(const e of groups.values()){const me=new THREE.Mesh(mergeGeometries(e.geos),e.m);me.geometry.computeBoundingSphere();me.castShadow=e.cast;me.receiveShadow=e.cast;scene.add(me);}}
   {const im=new THREE.InstancedMesh(new THREE.SphereGeometry(.8,6,4),new THREE.MeshBasicMaterial({color:0xff2020}),beacons.length);const m4=new THREE.Matrix4();
    beacons.forEach(([x,y,z],k)=>{m4.makeTranslation(x,y,z);im.setMatrixAt(k,m4);});addTiled(im);} // aviation warning lights
   console.info('OSM scenery:',kept,'buildings,',skipped,'skipped (inside the circuit walls),',lampPos.length,'street lamps');
@@ -792,7 +916,7 @@ function buildBusanLandmarks(){
   // Haeundae LCT: the 411 m landmark tower between two 339 m residential towers, blue-silver glass with
   // rounded corners, the tall one with a slanted crown
   if(TR.lct){const [lx,lz]=rw(...TR.lct),g=new THREE.Group();g.position.set(lx,0,lz);g.rotation.y=0.55;scene.add(g);
-    const glass=mat({color:0x9db8cf,metalness:.6,roughness:.18,envMap:envTex,envMapIntensity:1.1});
+    const glass=mat({color:0x9db8cf,metalness:.6,roughness:.18,envMap:skyEnv,envMapIntensity:1.1});
     const band=mat({color:0xe8eef3,metalness:.3,roughness:.4});
     for(const [off,h,r] of [[-95,339,22],[0,411,27],[92,339,22]]){
       const t=new THREE.Mesh(new THREE.CylinderGeometry(r*0.86,r,h,24,1),glass);t.scale.z=0.62;t.position.set(off,h/2,0);g.add(t);
@@ -1808,8 +1932,9 @@ function chip(label,sub,on,fn){const b=document.createElement('button');b.classN
   b.innerHTML=label+(sub?'<small>'+sub+'</small>':'');b.onclick=fn;return b;}
 /* ---- lobby circuit map: the sampled centre line drawn the way a TV circuit map is — the lap split
    into its three timed sectors, the DRS activation zones on top, and the detection points marked ---- */
-function drawTrackMap(){
-  const cv=$('trkMap');if(!cv)return;const g=cv.getContext('2d'),W=cv.width,H=cv.height,pad=34;
+// `hi` (0–2): the intro's sector card — that sector drawn bright, the rest dimmed
+function drawTrackMap(cv=$('trkMap'),hi=-1){
+  if(!cv)return;const g=cv.getContext('2d'),W=cv.width,H=cv.height,pad=34;
   g.clearRect(0,0,W,H);
   let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;
   for(let i=0;i<N;i++){x0=Math.min(x0,X[i]);x1=Math.max(x1,X[i]);z0=Math.min(z0,Z[i]);z1=Math.max(z1,Z[i]);}
@@ -1823,8 +1948,8 @@ function drawTrackMap(){
   const SCOL=['#8e9ab5','#5d6b8c','#8e9ab5'];
   g.strokeStyle='#05070d';g.lineWidth=13;g.beginPath();
   for(let k=0;k<=N;k++){const i=k%N;k?g.lineTo(PX(i),PZ(i)):g.moveTo(PX(i),PZ(i));}g.stroke();
-  for(let k=0;k<3;k++)run(S[k],S[k+1],SCOL[k],9);
-  for(const z of DRSZ){let a=Math.round(z.a/DS),b=Math.round(z.b/DS);if(b<a)b+=N;run(a,b,'#1be26b',9);}
+  for(let k=0;k<3;k++)run(S[k],S[k+1],hi<0?SCOL[k]:k===hi?'#ffffff':'#2c3449',hi===k?11:9);
+  for(const z of DRSZ){let a=Math.round(z.a/DS),b=Math.round(z.b/DS);if(b<a)b+=N;run(a,b,'#1be26b',hi<0||secOf((a%N)*DS)===hi?9:5);}
   // sector boundary lines across the circuit, then the sector number beside the middle of each sector
   const tick=(i,col,w,len)=>{const nx=-TZ[i],nz=TX[i],l=len*sc;g.strokeStyle=col;g.lineWidth=w;
     g.beginPath();g.moveTo(PX(i)+nx*l,PZ(i)+nz*l);g.lineTo(PX(i)-nx*l,PZ(i)-nz*l);g.stroke();};
@@ -1843,6 +1968,51 @@ function drawTrackMap(){
   {const i=0,nx=-TZ[i],nz=TX[i],l=22*sc;g.strokeStyle='#fff';g.lineWidth=5;
    g.beginPath();g.moveTo(PX(i)+nx*l,PZ(i)+nz*l);g.lineTo(PX(i)-nx*l,PZ(i)-nz*l);g.stroke();}
 }
+/* ================= CIRCUIT INTRO =================
+   A ~50 s fly-over when a session starts (and from the lobby): which city and region the circuit is in, the lap
+   at a glance, one chase shot per sector from above the racing line, then the pit lane and grid. The camera paths
+   come from the track model, so every circuit gets one; the words come from INTROS in tracks.js. */
+const INTRO=INTROS[TRACK_ID];let intro=null;
+const SH=[{d:7.5,k:'place'},{d:7,k:'lap'},{d:10,k:'sec',n:0},{d:10,k:'sec',n:1},{d:10,k:'sec',n:2},{d:6.5,k:'pit'}];
+const INTRO_T=SH.reduce((a,s)=>a+s.d,0);
+const sAt=(s,arr)=>{const f=(((s%L)+L)%L)/DS,i=Math.floor(f)%N,j=(i+1)%N,u=f-Math.floor(f);return arr[i]+(arr[j]-arr[i])*u;};
+const easeIO=u=>u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+function introFacts(){let vmax=0,vmin=1e9;for(let i=0;i<N;i++){vmax=Math.max(vmax,VP[i]);vmin=Math.min(vmin,VP[i]);}
+  return [(L/1000).toFixed(3)+' km',TR.fullLaps+' LAPS · '+(TR.fullLaps*L/1000).toFixed(1)+' km',/anti-clockwise/.test(TR.sub)?'ANTI-CLOCKWISE':'CLOCKWISE',
+    DRSZ.length+' DRS ZONES','TOP ~'+Math.round(vmax*3.6/5)*5+' km/h','SLOWEST CORNER ~'+Math.round(vmin*3.6/5)*5+' km/h'];}
+function playIntro(done){if(!INTRO){done();return;}
+  intro={t:0,t0:performance.now(),done,cur:-1};$('menu').hidden=true;$('intro').hidden=false;
+  $('iPlaceEn').textContent=INTRO.placeEn;$('iPlace').textContent=INTRO.place;}
+function endIntro(){if(!intro)return;const d=intro.done;intro=null;$('intro').hidden=true;$('iCap').classList.add('out');d();}
+function introCard(sh,first){const c=$('iCap');c.classList.add('out');
+  const m=$('iMap');drawTrackMap(m,sh.k==='sec'?sh.n:-1);m.classList.toggle('out',sh.k==='place');
+  setTimeout(()=>{if(!intro)return;let eye,title,text,facts=[];
+    if(sh.k==='place'){eye=INTRO.placeEn;title=TR.title;text=INTRO.about;}
+    else if(sh.k==='lap'){eye='CIRCUIT · '+TR.label;title='Lap <em>'+(L/1000).toFixed(3)+' km</em>';text=INTRO.layout;facts=introFacts();}
+    else if(sh.k==='sec'){const a=sh.n?SEC[sh.n-1]:0,b=sh.n<2?SEC[sh.n]:L;
+      eye='SECTOR '+(sh.n+1)+' · '+(a/1000).toFixed(2)+' – '+(b/1000).toFixed(2)+' km';[title,text]=INTRO.sectors[sh.n];}
+    else{eye='PIT LANE · GRID';title=INTRO.pitTitle;text=INTRO.pit;}
+    $('iEye').textContent=eye;$('iTitle').innerHTML=title;$('iText').textContent=text;
+    $('iFacts').innerHTML=facts.map(f=>'<span>'+f+'</span>').join('');c.classList.remove('out');},first?60:450);}
+function introFrame(){intro.t=(performance.now()-intro.t0)/1000; // wall clock: a slow frame rate must not slow the film down
+  let t=intro.t,k=0;while(k<SH.length&&t>=SH[k].d){t-=SH[k].d;k++;}
+  if(k>=SH.length){endIntro();return;}
+  const sh=SH[k],u=t/sh.d;if(k!==intro.cur){introCard(sh,intro.cur<0);intro.cur=k;}
+  $('iProg').style.width=(intro.t/INTRO_T*100).toFixed(2)+'%';
+  let px,py,pz,tx,ty,tz;
+  if(sh.k==='place'){ // the city: a slow descending orbit round the whole circuit
+    const a=0.7+u*0.9,r=ORB*(1.3-0.3*u);px=CX+Math.cos(a)*r;pz=CZ+Math.sin(a)*r;py=ORB*(0.62-0.2*u);tx=CX;ty=0;tz=CZ;}
+  else if(sh.k==='lap'){ // the lap from high above, drifting round
+    const a=1.6+u*0.3;px=CX+Math.cos(a)*ORB*0.4;pz=CZ+Math.sin(a)*ORB*0.4;py=ORB*(1.75-0.15*u);tx=CX;ty=0;tz=CZ;}
+  else if(sh.k==='sec'){ // chase the lap through the sector from above and behind, looking well down the road
+    const a=sh.n?SEC[sh.n-1]:0,b=sh.n<2?SEC[sh.n]:L,s=a+(b-a)*easeIO(u);
+    const nx=-sAt(s,TZ),nz=sAt(s,TX);px=sAt(s-55,X)+nx*6;pz=sAt(s-55,Z)+nz*6;py=72;tx=sAt(s+150,X);ty=0;tz=sAt(s+150,Z);}
+  else{ // the pit lane and grid: a slow crane move above the far side of the straight, looking across the grid to the garages
+    const gi=idxSp((BOX_S[0]+BOX_S[BOX_S.length-1])/2),off=-46,along=-60+110*u;
+    px=X[gi]-TZ[gi]*off+TX[gi]*along;pz=Z[gi]+TX[gi]*off+TZ[gi]*along;py=46-8*u;tx=X[gi]-TZ[gi]*PIT_OFF*1.1+TX[gi]*along*0.6;ty=0;tz=Z[gi]+TX[gi]*PIT_OFF*1.1+TZ[gi]*along*0.6;}
+  camera.position.set(px,py,pz);camera.lookAt(tx,ty,tz);camera.fov=50;camera.far=FAR_MENU;camera.updateProjectionMatrix();aimSun(tx,tz);}
+$('iSkip').onclick=()=>endIntro();
+addEventListener('keydown',e=>{if(intro&&['Escape','Enter','Space'].includes(e.code)){e.preventDefault();e.stopImmediatePropagation();endIntro();}},true);
 function buildLobby(){
   const gp=$('gpSel');gp.innerHTML='';
   for(const id in TRACKS){const T=TRACKS[id];
@@ -1866,7 +2036,10 @@ function buildLobby(){
 $('trkSub').textContent=TR.label+' · '+(TR.len/1000).toFixed(3)+' km';
 loadOpts();if(!LAP_CHOICES.includes(optLaps)&&optLaps!==TR.fullLaps)optLaps=5;buildLobby();
 
-$('startBtn').onclick=()=>{document.activeElement.blur();$('menu').hidden=true;$('hud').hidden=false;$('hud').className='lite';audioInit();setupSession();};
+// every session opens with the circuit intro (skippable); the lobby can replay it on its own
+$('startBtn').onclick=()=>{document.activeElement.blur();audioInit();
+  playIntro(()=>{$('menu').hidden=true;$('hud').hidden=false;$('hud').className='lite';setupSession();});};
+$('introBtn').onclick=()=>{document.activeElement.blur();playIntro(()=>{$('menu').hidden=false;});};
 $('qresBtn').onclick=()=>{$('qres').hidden=true;openBox('race');};
 
 /* ================= BOOT (async: the page stays responsive and shows progress while the world is built) ================= */
@@ -1875,7 +2048,7 @@ const stage=(t,p)=>{loadTxt.textContent=t;loadBar.style.width=Math.round(p*100)+
 let last=performance.now(),acc=0,hudT=0,shadowTick=0;const H=1/120;
 function frame(now){const ms=now-last,dt=Math.min(0.05,ms/1000);last=now;
   if(scaler.tick(ms))resizeAll();
-  if(phase==='menu'){menuCamera(dt);}
+  if(intro)introFrame();else if(phase==='menu'){menuCamera(dt);}
   else if(replay){replayFrame(dt);if(!replay)updateVisuals(dt);drawMinimap();}
   else{if(!paused){acc+=dt;let n=0;while(acc>=H&&n<6){step(H);acc-=H;n++;if((++recStep&1)===0)recFrame();}if(n>=6)acc=0;}
     updateVisuals(dt);updateHud();drawMinimap();hudT-=dt;if(hudT<=0){hudT=0.2;updateInfo();}}
