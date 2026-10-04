@@ -79,10 +79,13 @@ export const TRACKS={
        [[-1057,454],[-1031,319],[-805,-8]],    // Suyeonggangbyeon-daero along the river (sector 1)
        [[855,-534],[766,-419],[-10,350]]],     // Haeundae-ro (sector 3)
   stands:[[700,-690,1,180],[-1000,230,-1,140]],
-  // pit lane in the BEXCO outdoor car park: in just after the BEXCO corner, and back on the track before the
-  // BEXCO auditorium, which stands right at the roadside at the north end of the car park. The car park is
+  // pit lane in the BEXCO outdoor car park: the lane leaves APEC-ro before the BEXCO corner and takes the corner on the
+  // inside, across the corner of the car park (60 km/h from just after the entry); back on the track before the BEXCO
+  // auditorium, which stands right at the roadside at the north end of the car park. The car park is
   // ~240 m long, so the boxes are packed tighter than the usual 40 m
-  pitEntry:[-512,193],pitRamp:40,pitExit:[-628,369],pitExitLen:70,boxStart:-120,boxGap:17,
+  pitEntry:[-376,258],pitRamp:175,pitLimit:30,pitExit:[-628,369],pitExitLen:70,boxStart:-120,boxGap:17,
+  // the BEXCO corner opened from ~35 m to 55 m so the pit lane can take it on the inside at 60 km/h
+  wide:[[-495,182,55,70]],
   osm:true,
   // landmarks beyond the OpenStreetMap download, drawn by hand (raw metres)
   lct:[2639,-487], // Haeundae LCT: 411 m landmark tower with two 339 m residential towers
@@ -116,5 +119,5 @@ export const INTROS={
   sectors:[['Centum City · Suyeong River','Off the line down Centum-jungang-ro into the first left-hander. Under the Shinsegae Centum City sky bridge, then along the riverside DRS zone on Suyeonggangbyeon-daero, under the Gwangan-daero viaduct to the river mouth.'],
            ['Marine City · Haeundae hairpin','Along Haeundae-haebyeon-ro and the shoreline DRS straight beneath the We\'ve the Zenith and I\'Park Marina towers, then hard on the brakes, down to about 100 km/h, for the Dongbaek-ro hairpin near Dongbaek Island.'],
            ['Haeundae-ro · BEXCO','Out of the hairpin and flat out for 1.1 km up Haeundae-ro with DRS open. Under the Jangsan-ro viaduct, left onto APEC-ro beneath the BEXCO hall link bridge, and through the BEXCO corner to the line.']],
-  pitTitle:'Pits · BEXCO car park',pit:'The paddock is the BEXCO outdoor car park between exhibition halls 1 and 2. The pit lane leaves just after the BEXCO corner, runs past the ten team garages and rejoins the start straight in front of the auditorium.'}
+  pitTitle:'Pits · BEXCO car park',pit:'The paddock is the BEXCO outdoor car park between exhibition halls 1 and 2. The pit lane leaves APEC-ro before the BEXCO corner and takes the corner itself inside the lane, across the corner of the car park, then runs past the ten team garages and rejoins the start straight in front of the auditorium.'}
 };

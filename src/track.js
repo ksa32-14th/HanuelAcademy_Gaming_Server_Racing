@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261005a';
-import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT} from './config.js?v=20261005a';
+import {clamp,wrapA,smooth} from './util.js?v=20261005b';
+import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT} from './config.js?v=20261005b';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -65,7 +65,9 @@ export const idxOf=(rx,ry)=>{const [x,z]=rw(rx,ry);let bi=0,bd=1e18;for(let i=0;
 export const spOf=s=>s>L/2?s-L:s;
 export const idxSp=sp=>((Math.round(((sp%L)+L)%L/DS))%N+N)%N;
 export const spI=i=>spOf(i*DS);
-if(TR.pitEntry){PIT_A=spI(idxOf(...TR.pitEntry));PIT_B=PIT_A+(TR.pitRamp||200);PIT_L=Math.max(PIT_B,-300);}
+if(TR.pitEntry){PIT_A=spI(idxOf(...TR.pitEntry));PIT_B=PIT_A+(TR.pitRamp||200);PIT_L=Math.max(PIT_B,-300);
+  // `pitLimit`: the 60 km/h line this far past the entry (a lane that turns a corner is speed-limited through it)
+  if(TR.pitLimit!=null)PIT_L=PIT_A+TR.pitLimit;}
 // …and the exit (`pitExit`: where the lane starts to bend back, `pitExitLen`: how long the merge is)
 if(TR.pitExit){PIT_C=spI(idxOf(...TR.pitExit));PIT_D=PIT_C+(TR.pitExitLen||80);}
 export function pitOffSp(sp){if(sp<PIT_A||sp>PIT_D)return null;if(sp<PIT_B)return PIT_OFF*smooth((sp-PIT_A)/(PIT_B-PIT_A));if(sp>PIT_C)return PIT_OFF*(1-smooth((sp-PIT_C)/(PIT_D-PIT_C)));return PIT_OFF;}

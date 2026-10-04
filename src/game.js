@@ -6,18 +6,18 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,hex,fmt,fmtRace} from './util.js?v=20261005a';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261005a';
-import {TRACK_ID,TR,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005a';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005a';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261005a';
+import {$,clamp,wrapA,smooth,rand,hex,fmt,fmtRace} from './util.js?v=20261005b';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261005b';
+import {TRACK_ID,TR,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005b';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005b';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261005b';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005a';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005b';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005a'):import('./data/osm-songdo.js?v=20261005a')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005b'):import('./data/osm-songdo.js?v=20261005b')))[0]:null;
 const DAY=!!TR.day; // daylight circuits (Busan): bright sky, haze instead of night fog, unlit windows
 
 /* ================= RENDERER / SCENE / QUALITY ================= */
@@ -235,7 +235,7 @@ async function buildWorld(){
    strip(idxSp(A0),rangeN(A0,E),i=>lIn(spI(i)),i=>lOut(spI(i)),0.035,0.035,red,1,false);
    // the speed-limit line across the lane, where the limiter actually cuts in
    const chev=mat({color:0xffffff,roughness:.55,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-8});
-   flatAt(idxSp(PIT_L),PIT_OFF,0.7,PIT_HW*2,0.04,chev);
+   flatAt(idxSp(PIT_L),pitOffSp(PIT_L)??PIT_OFF,0.7,PIT_HW*2,0.04,chev);
   }
   await stage("Pit lane & stands…",.15);
   // pit boxes, garages
@@ -274,10 +274,45 @@ async function buildWorld(){
     m4.compose(new THREE.Vector3(X[i]-TZ[i]*off,6,Z[i]+TX[i]*off),q,one);poles.setMatrixAt(k,m4);
     m4.compose(new THREE.Vector3(X[i]-TZ[i]*hoff,12,Z[i]+TX[i]*hoff),q,one);heads.setMatrixAt(k,m4);}
   addTiled(poles,heads);
+  buildBrakingBoards();
   flushBatch();
   await stage("Scenery…",.2);if(TR.osm)await buildOSM();
   await stage("Skyline…",.75);await buildCity(); // real footprints first, then the generic skyline out past where OSM was downloaded
 }
+
+/* ---- braking boards: the 150 / 100 / 50 m countdown to the corner, as at Yas Marina ----
+   Placed wherever a fast stretch ends in a real stop: a minimum of the speed profile with at least 230 km/h in the
+   700 m before it and a 90 km/h+ drop. The distances count down to the corner entry — where the braking ends and the
+   car reaches its cornering speed; a long braking zone gets a 200 m board too. They stand on the barrier on the outside of the corner, facing
+   the cars, and are merged into one mesh through a 2 × 2 number atlas. */
+function brakingZones(){const zones=[],lim=Math.round(700/DS);
+  for(let i=0;i<N;i++){const v=VP[i];if(!(v<=VP[(i-1+N)%N]&&v<VP[(i+1)%N]))continue;
+    // back from the apex while the speed keeps rising: that is where this braking zone starts (a window maximum
+    // could reach past the previous corner into an earlier, faster straight)
+    let jmax=0;while(jmax<lim&&VP[(i-jmax-1+N)%N]>=VP[(i-jmax+N)%N]-0.01)jmax++;const vmax=VP[(i-jmax+N)%N];
+    if(vmax*3.6<230||(vmax-v)*3.6<90)continue;
+    let k=0;while(k<jmax&&VP[(i-k+N)%N]<v*1.08)k++; // back from the apex to where the braking ends (corner entry speed)
+    const z={apex:i,turn:(i-k+N)%N,brake:(jmax-k)*DS,v,vmax,side:K[i]>0?-1:1};
+    const dup=zones.find(o=>Math.min(Math.abs(o.apex-i),N-Math.abs(o.apex-i))*DS<200);
+    if(dup){if(v<dup.v)Object.assign(dup,z);}else zones.push(z);}
+  return zones;}
+function buildBrakingBoards(){
+  const atlas=canvasTex(512,512,(x)=>{['200','150','100','50'].forEach((t,n)=>{const cx=(n%2)*256,cy=(n>>1)*256;
+      x.fillStyle='#0d1a3a';x.fillRect(cx,cy,256,256);x.fillStyle='#e10600';x.fillRect(cx,cy,256,30); // navy board, red header
+      x.strokeStyle='#ffffff';x.lineWidth=10;x.strokeRect(cx+14,cy+44,228,198);
+      x.fillStyle='#ffffff';x.font='900 128px Titillium Web, Arial, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(t,cx+128,cy+148);});},false);
+  const face=new THREE.MeshBasicMaterial({map:atlas}),frame=mat({color:0x2a2f3a,roughness:.6,metalness:.3});
+  const BW=2.6,BH=2.3,BY=1.25; // a board 2.6 × 2.3 m standing on the 1.05 m barrier
+  for(const z of brakingZones()){const dists=z.brake>220?[200,150,100,50]:[150,100,50];
+    for(const d of dists){const i=(z.turn-Math.round(d/DS)+N)%N,cell=d===200?0:d===150?1:d===100?2:3;
+      if(spOf(i*DS)>PIT_A-20&&spOf(i*DS)<PIT_D+20&&z.side>0)continue; // never in the pit lane
+      const off=z.side<0?-(WL[i]-0.25):WR[i]-0.25,px=X[i]-TZ[i]*off,pz=Z[i]+TX[i]*off,ry=Math.atan2(-TX[i],-TZ[i]);
+      const m=_fm.makeRotationY(ry).setPosition(px,0,pz);
+      const pl=new THREE.PlaneGeometry(BW,BH).translate(0,BY+BH/2,0.08),uv=pl.attributes.uv;
+      for(let q=0;q<uv.count;q++){const u=uv.getX(q),v=uv.getY(q),col=cell%2,row=cell>>1;uv.setXY(q,(col+u)/2,(1-row+v)/2);} // 2 × 2 atlas, row 0 = top
+      batchAdd(pl.applyMatrix4(m),face,false);
+      batchAdd(new THREE.BoxGeometry(BW+0.2,BH+0.2,0.12).translate(0,BY+BH/2,0).applyMatrix4(m),frame,false);
+      for(const sx of [-0.9,0.9])batchAdd(new THREE.BoxGeometry(0.12,BY,0.12).translate(sx,BY/2,0).applyMatrix4(m),frame,false);}}}
 
 /* ---- real-world scenery from OpenStreetMap (Songdo) ---- */
 async function buildOSM(){
@@ -1396,22 +1431,44 @@ function aiDrive(c,dt){
   else c.stuck=0;
   const sp=spOf(c.s);
   if(!c.pitPlan&&c.pitLap===c.lapCount+1&&sp>-800&&sp<-420&&!c.finished)c.pitPlan=true;
-  const look=Math.max(12,6+c.v*0.45),ia=(c.idx+Math.round(look/DS))%N,spa=spI(ia);
-  let vcap=1e9,passT=null,yielding=false;
-  for(const o of cars){if(o===c)continue;let a=o.s-c.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L;const lat=o.d-c.d;
+  const look=Math.max(12,6+c.v*0.45+Math.max(0,c.v-50)*0.35),ia=(c.idx+Math.round(look/DS))%N,spa=spI(ia);
+  let vcap=1e9,passT=null,yielding=false,ahead=null,aheadA=1e9,beside=null;
+  for(const o of cars){if(o===c||o.parked)continue;let a=o.s-c.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L;const lat=o.d-c.d;
     if(a>0&&a<30+c.v*1.8&&Math.abs(lat)<3.0&&o.pitSide===c.pitSide){
-      if(!c.pitPlan&&c.v>o.v-1&&a<40+c.v*0.6){const hwc=HWa[c.idx];const lr=o.d+hwc-1.4,rr=hwc-1.4-o.d,side=rr>lr?1:-1;if(Math.max(lr,rr)>4.0)passT=o.d+side*3.8-RL[c.idx];}
+      if(a<aheadA){aheadA=a;ahead=o;} // the car directly ahead in our lane (the nearest one, not whichever came last)
       // keep a braking-safe gap (reaction margin + car length) to the car ahead in our lane
       // gap = one car length + margin; 9 m used to freeze the whole grid behind cars 8 m apart
       // keep a car length + ~0.3 s of headway, and assume a conservative braking rate
       vcap=Math.min(vcap,Math.sqrt(o.v*o.v+2*14*Math.max(0,a-7.5-c.v*(c.lapCount<1?0.55:0.3)))+(c.v<8&&o.v<8?2.5:0));}
-    if(Math.abs(a)<7&&Math.abs(lat)<3.5&&passT==null&&!c.pitPlan){const side=-Math.sign(lat)||1;passT=clamp(o.d+side*3.6,-(HWa[c.idx]-1.4),HWa[c.idx]-1.4)-RL[c.idx];} // give room alongside
+    if(Math.abs(a)<7&&Math.abs(lat)<3.5&&o.pitSide===c.pitSide&&(!beside||Math.abs(lat)<Math.abs(beside.d-c.d)))beside=o;
     if(a<0&&a>-45&&o.progress>c.progress+L*0.5)yielding=true;}
-  if(yielding)passT=(RL[c.idx]>0?-HWa[c.idx]+2.2:HWa[c.idx]-2.2)-RL[c.idx];
-  if(yellowAt(c.s)&&!c.pitPlan)passT=null; // no overtaking under yellow
+  // ---- lateral plan. Every decision is COMMITTED: the side is picked once and held until the move is over. The old
+  // code re-picked the passing side every frame from whichever side looked roomier, so two cars nose to tail swung
+  // 7–8 m across the road and back again and again down every straight (and a lapped car's yielding side followed
+  // the sign of the racing line, which flips as the line crosses the road). ----
+  const hwc=HWa[c.idx],edge=hwc-1.4;
+  if(c.passCar){let a=c.passCar.s-c.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L; // done (we are past) or dropped back
+    if(a<-8||a>70+c.v*0.6||c.passCar.pitSide!==c.pitSide)c.passCar=null;}
+  if(yielding){if(!c.yieldSide)c.yieldSide=c.d>=0?1:-1;passT=c.yieldSide*(hwc-2.2)-RL[c.idx];}
+  else{c.yieldSide=0;
+    if(!c.pitPlan&&!yellowAt(c.s)){ // no overtaking under yellow
+      const o=ahead&&c.v>ahead.v-1&&aheadA<40+c.v*0.6?ahead:null;
+      if(o&&c.passCar!==o){ // a new pass: choose the roomier side; if it is close, the inside of the next corner
+        const lr=o.d+edge,rr=edge-o.d;let side=rr>lr?1:-1;
+        if(Math.abs(rr-lr)<1.5){for(let j=0;j<Math.round(400/DS);j++){const kk=K[(c.idx+j)%N];if(Math.abs(kk)>1/300){side=kk>0?1:-1;break;}}}
+        c.passCar=o;c.passSide=side;c.passT0=simTime;}
+      if(c.passCar){const p=c.passCar,room=c.passSide>0?edge-p.d:p.d+edge,other=c.passSide>0?p.d+edge:edge-p.d;
+        if(room>4.0)passT=clamp(p.d+c.passSide*3.8,-edge,edge)-RL[c.idx];
+        // our side has closed up: wait in line behind; swap sides only if the other is clearly open, and not often
+        else if(other>5.5&&simTime-c.passT0>1.5){c.passSide=-c.passSide;c.passT0=simTime;}}
+      // a car alongside: keep to the side we are already on (a tiny lateral gap must not flip it)
+      if(passT==null&&beside){const lat=beside.d-c.d,side=Math.abs(lat)<0.5?(c.besideSide||1):-Math.sign(lat);
+        c.besideSide=side;passT=clamp(beside.d+side*3.6,-edge,edge)-RL[c.idx];}}}
   if(passT!=null)vcap=Math.max(vcap,4);
   if(passT!=null){c.laneOffT=passT;c.laneHold=1.3;}else if((c.laneHold-=dt)<=0)c.laneOffT=0;
-  c.laneOff+=clamp(c.laneOffT-c.laneOff,-2.2*dt,2.2*dt);
+  // lateral moves are slower at speed: a 3.8 m step takes ~2.5 s at 300 km/h instead of a flick
+  const lrate=clamp(1.2+28/Math.max(c.v,10),1.2,2.2);
+  c.laneOff+=clamp(c.laneOffT-c.laneOff,-lrate*dt,lrate*dt);
   let off=clamp(RL[ia]+c.laneOff,-(HWa[ia]-1.4),HWa[ia]-1.4);
   // pitting: keep the normal line into the entry and simply follow the lane as it peels away — never
   // snap across the track (the entry now sits in a corner complex, where that meant the wall)
@@ -1425,10 +1482,13 @@ function aiDrive(c,dt){
       if(a>-7.5&&a<7.5&&Math.abs(o.d-c.d)<5){if(o.d>=c.d)offC=Math.min(offC,o.d-3.4);else offC=Math.max(offC,o.d+3.4);}}
     c.sep=(c.sep||0)+clamp((offC-off)-(c.sep||0),-3*dt,3*dt);off+=c.sep;}
   const tx=X[ia]-TZ[ia]*off,tz=Z[ia]+TX[ia]*off,dx=tx-c.x,dz=tz-c.z;
-  const alpha=wrapA(Math.atan2(dz,dx)-c.yaw);
+  // aim from the direction the car is actually TRAVELLING (chi), not where the body points: at 300 km/h the body
+  // leads the path by a yaw lag of ~0.25 s, and aiming off the body made the AI snake ±3 m down every straight
+  const ld=Math.hypot(dx,dz),alpha=wrapA(Math.atan2(dz,dx)-(c.chi??c.yaw)),kap=2*Math.sin(alpha)/Math.max(ld,1);
   // pure pursuit + cross-track correction, so the car actually sits on its line instead of drifting wide
   const err=c.d-(RL[c.idx]+c.laneOff+(c.sep||0));
-  c.deltaCmd=Math.atan2(2*WB*Math.sin(alpha),Math.hypot(dx,dz))-clamp(err*0.004,-0.02,0.02);
+  // …plus yaw-rate damping: steer against any yaw rate beyond what the pursuit arc asks for
+  c.deltaCmd=Math.atan(WB*kap)-clamp(err*0.004,-0.02,0.02)-0.5*(c.r-c.v*kap)*WB/Math.max(c.v,10);
   let vt=1e9;for(let j=0;j<4;j++)vt=Math.min(vt,VP[(c.idx+j)%N]);
   vt*=c.skill*Math.sqrt(tyreGrip(c)/0.975)*(1-0.12*c.damage);
   if(yielding)vt*=0.95;if(c.finished)vt*=0.6;vt=Math.min(vt,vcap);
