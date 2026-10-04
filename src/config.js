@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261005c';
-import {clamp} from './util.js?v=20261005c';
+import {TRACKS} from './data/tracks.js?v=20261006a';
+import {clamp} from './util.js?v=20261006a';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -20,7 +20,10 @@ export const G=9.81, RHO=1.2, MASS=798, POWER=700000, CDA=1.514, CLA=5.0, MU=1.5
 export const BRK=0.90;
 // mechanical grip is lower at low speed (no downforce to lean on, tyres slide more easily)
 export const gripV=v=>0.84+0.16*Math.min(1,v/55);
-export const PITWALL=HW+3.5, PIT_HW=4.5, PIT_OFF=PITWALL+1+PIT_HW+1, PIT_LIMIT=60/3.6;
+export const PITWALL=HW+3.5, PIT_HW=6, PIT_OFF=PITWALL+1+PIT_HW+1, PIT_LIMIT=60/3.6;
+// the 12 m lane is split in two: the fast lane by the pit wall and the working lane in front of the garages, where
+// each team's box is painted (BOX_D = lateral offset of the box centre from the lane centre)
+export const BOX_D=3.0, FAST_D=-2.6;
 // pit lane (signed metres from start line): A = where it peels off the circuit, B = fully alongside
 // behind the pit wall, L = 60 km/h limiter line, C/D = merge back. A track may move the entry
 // (`pitEntry`) — then A/B are worked out from the geometry once the circuit exists.
@@ -29,7 +32,8 @@ export const COMP={S:{name:'SOFT',grip:1.0,rate:1/(18*5.063),col:'#ff2d2d',hex:0
             H:{name:'HARD',grip:0.95,rate:1/(40*5.063),col:'#f2f2f2',hex:0xf2f2f2}};
 export const POINTS=[25,18,15,12,10,8,6,4,2,1];
 export const DRS_GAP=3.0, DRS_FROM_LAP=1; // house rule: DRS within 3 s, available from lap 1
-export const GEARS=[84,122,158,192,226,260,298,342];
+// top speed of each gear (km/h): 1st to 100, 2nd 140, 3rd 180, 4th 220, 5th 260, 6th 290, 7th 320, 8th above that
+export const GEARS=[100,140,180,220,260,290,320,370];
 export const FUEL_PER_LAP=1.72*TRACK_LEN/5063;
 
 export const TEAMS=[
