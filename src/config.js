@@ -1,9 +1,13 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261006a';
-import {clamp} from './util.js?v=20261006a';
+import {TRACKS} from './data/tracks.js?v=20261006b';
+import {clamp} from './util.js?v=20261006b';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
+// time of day: a circuit may offer several (`times`, the first is its default); the choice is read once at load
+export const TIMES=TR.times||[TR.day?'day':'night'];
+export let TOD=TIMES[0];
+try{const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(o.tod&&o.tod[TRACK_ID]&&TIMES.includes(o.tod[TRACK_ID]))TOD=o.tod[TRACK_ID];}catch(e){}
 
 /* ================= REGULATION / VEHICLE CONSTANTS ================= */
 export const TRACK_LEN=TR.len, W=20, HW=W/2, GRID_D=5.2, KERB_W=1.6;

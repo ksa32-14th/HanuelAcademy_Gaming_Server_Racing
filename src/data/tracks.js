@@ -16,7 +16,9 @@ export const TRACKS={
   water:[[-800,400],[-700,470],[-560,450],[-340,420],[-310,300],[-300,100],[-310,-120],[-420,-250],[-850,-250],[-980,300]],
   tall:(x,y)=>x<-880&&y<500},
  songdo:{title:'Songdo <em>Street</em> GP',label:'Incheon · Songdo',
-  sub:'Songdo Street Circuit · 7.450 km · anti-clockwise · 3 DRS zones · GPS-traced',len:7450,fullLaps:41,start:[911,120],simp:12,fillet:140,minR:62,
+  sub:'Songdo Street Circuit · 7.450 km · anti-clockwise · 3 DRS zones · GPS-traced',len:7450,fullLaps:41,start:[911,120],
+  times:['dusk','night','day'], // selectable in the lobby; blue-hour dusk is the default
+ simp:12,fillet:140,minR:62,
   // traced from the gmap-pedometer route "Songdo Grand-Prix" (metres from 37.3854 N, 126.6435 E)
   raw:[[13.1,506.4],[-151.6,312.4],[-222.6,367.5],[-305.1,431.6],[-355.5,372.5],[-435.4,279],[-476.1,354.4],[-493.6,386.6],[-531.7,457.2],[-495.3,502.7],
    [-457.5,550],[-463.8,554.7],[-469.3,559.5],[-534.2,609.6],[-564.4,632.9],[-608.5,667.2],[-621.8,677.6],[-644.1,682.6],[-658.7,688.6],[-596,573.8],
@@ -107,7 +109,7 @@ export const INTROS={
            ['Esplanade · Marina Bay Sands','Around the twin domes of the Esplanade theatres and along the bay, with Marina Bay Sands across the water, then the main-straight DRS zone to the line.']],
   pitTitle:'Pit lane · Grid',pit:'The pit lane runs to the right of the main straight with a 60 km/h limit. Twenty cars line up on the grid, and the race starts when the five red lights go out.'},
  songdo:{place:'Songdo International City · Yeonsu-gu · Incheon',placeEn:'INCHEON · REPUBLIC OF KOREA',
-  about:'Songdo is an international business district built on land reclaimed from the Yellow Sea tidal flats. The race runs between the towers around Central Park at blue hour, as the sun sets over the sea.',
+  about:'Songdo is an international business district built on land reclaimed from the Yellow Sea tidal flats. The race runs on the boulevards between the towers around Central Park and its seawater lake.',
   layout:'A 7.450 km anti-clockwise street circuit, GPS-traced from the real roads. Wide boulevards and long-radius corners give it a high average speed.',
   sectors:[['Convensia · POSCO Tower','Straight after the start, past the silver roofs of Songdo Convensia and the 305 m POSCO Tower-Songdo, heading for the west side of Central Park.'],
            ['West section · Michuhol Park straight','Out of the zig-zag blocks on the west side and down the 550 m Michuhol Park straight. Overtakes are made at the right-hander at the end of its DRS zone.'],
