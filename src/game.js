@@ -6,7 +6,8 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,hex,fmt,fmtRace} from './util.js?v=20261006b';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006b';
+import {perf} from './perf.js?v=20261006b';
 import {TRACKS,INTROS} from './data/tracks.js?v=20261006b';
 import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006b';
 import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006b';
@@ -28,6 +29,12 @@ let qName=qState.mode==='auto'?detectPreset(renderer.getContext()):qState.mode;
 let Q=PRESETS[qName];
 const BUILT_TEX=Q.texRes; // texture resolution is baked at load; everything else can change live
 const scaler=new ResolutionScaler();scaler.enabled=true;
+// measurement flags (see src/perf.js): ?noscaler pins the render scale, ?autopilot lets the AI drive the player's car
+const URLQ=new URLSearchParams(location.search),NOSCALER=URLQ.has('noscaler'),AUTOPILOT=URLQ.has('autopilot');
+if(NOSCALER)scaler.enabled=false;
+$('gl').addEventListener('webglcontextlost',()=>perf.ctx('lost'));
+$('gl').addEventListener('webglcontextrestored',()=>perf.ctx('restored'));
+if(perf.on)renderer.info.autoReset=false; // count every pass of a frame (composer, mirror), reset once per frame
 renderer.setPixelRatio(pixelRatioFor(Q,scaler.scale));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -120,7 +127,7 @@ try{await Promise.race([document.fonts.load('900 22px "Titillium Web"'),new Prom
 const texSet=createTextures(BUILT_TEX,Math.min(Q.aniso,MAXANI));
 const {texAsphalt,texAsphaltN,texAsphaltR,texKerb,texCheck,texRubber,texConcrete,texConcreteN,texFence,texAds,texCrowd}=texSet;
 function setQualityMode(mode){qState.mode=mode;qName=mode==='auto'?detectPreset(renderer.getContext()):mode;Q=PRESETS[qName];
-  scaler.enabled=true;scaler.reset();saveMode(mode);applyQuality();}
+  scaler.enabled=!NOSCALER;scaler.reset();saveMode(mode);applyQuality();}
 
 const mat=(o)=>new THREE.MeshStandardMaterial(o);
 // Flat ground layers (ground, footways, parks, sea, car parks, streets) lie centimetres apart, and seen from a
@@ -1238,11 +1245,11 @@ function placeInBox(c){const i=idxSp(BOX_S[c.team]);c.idx=i;
 function setupSession(){
   totalLaps=targetLaps=optLaps;wearMult=1;
   const pt=optTeam,diff=optAI;
-  const nums=[...Array(98).keys()].map(n=>n+2).sort(()=>Math.random()-.5);
+  const nums=[...Array(98).keys()].map(n=>n+2).sort(()=>rnd()-.5);
   const ai=[];let di=0;
   for(let t=0;t<10;t++)for(let s=0;s<2;s++){if(t===pt&&s===0)continue;const perf=1-t*0.0035+rand(-0.006,0.004);ai.push({team:t,drv:DRIVERS[di++],skill:diff*perf});}
   ai.sort((a,b)=>b.skill-a.skill);
-  cars=[];player=makeCar(0,pt,['YOU','You'],true,1,'S',7);cars.push(player);
+  cars=[];player=makeCar(0,pt,['YOU','You'],true,1,'S',7);player.auto=AUTOPILOT;cars.push(player);
   ai.forEach((a,k)=>cars.push(makeCar(k+1,a.team,a.drv,false,a.skill,'S',nums[k])));
   qTimes=new Map();
   for(const c of cars)if(!c.isPlayer){qTimes.set(c,IDEAL_LAP*QUALI_K/c.skill*(1+rand(-0.003,0.010)));parkInGarage(c);}
@@ -1321,9 +1328,9 @@ function startRace(){
   session='race';phase='grid';
   qGrid.forEach((c,slot)=>{
     c.parked=false;c.mesh.root.visible=true;
-    if(!c.isPlayer){const comp=slot<10?(Math.random()<.5?'S':'M'):(Math.random()<.5?'M':'H');
+    if(!c.isPlayer){const comp=slot<10?(rnd()<.5?'S':'M'):(rnd()<.5?'M':'H');
       c.comp=comp;c.nextComp=comp==='H'?'M':'H';c.mesh.band.color.setHex(COMP[comp].hex);
-      if(totalLaps>=2){const lo=Math.max(1,Math.floor(totalLaps*0.3)),hi=Math.max(lo,Math.ceil(totalLaps*0.7)-1);c.pitLap=lo+Math.floor(Math.random()*(hi-lo+1));}
+      if(totalLaps>=2){const lo=Math.max(1,Math.floor(totalLaps*0.3)),hi=Math.max(lo,Math.ceil(totalLaps*0.7)-1);c.pitLap=lo+Math.floor(rnd()*(hi-lo+1));}
       else c.pitLap=1;}
     c.used=new Set([c.comp]);c.fuel=Math.min(110,totalLaps*FUEL_PER_LAP+2.5);
     c.wear=0;c.damage=0;c.tl=0;c.tlOut=false;c.pen=0;c.finished=false;c.finishT=null;
@@ -1364,7 +1371,7 @@ function physics(c,dt){
   // for ~30 % more than the grip limit, which now makes the car slide instead of tracking on rails
   const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=0.26/(1+v/70); // ~13.5 m minimum turning radius, and still limited at speed
   const dmax=Math.max(0.03,Math.min(dPhys,dGrip*(c.isPlayer?1.2:1.1)));
-  const want=c.isPlayer?c.steerIn*dmax:clamp(c.deltaCmd,-dmax,dmax);
+  const want=c.isPlayer&&!c.auto?c.steerIn*dmax:clamp(c.deltaCmd,-dmax,dmax);
   c.delta+=clamp(want-c.delta,-8*dt,8*dt);
   let axT=(Fp-Fb)/m;if(v<0.05&&axT<0)axT=0;
   // heading (yaw) and travel direction (chi) are separate: the body can rotate faster than the
@@ -1543,7 +1550,7 @@ function computeTow(){for(const c of cars){c.tow=0;if(c.parked)continue;for(cons
   if(a>3&&a<45&&Math.abs(o.d-c.d)<1.8)c.tow=Math.max(c.tow,1-a/45);}}}
 
 /* ================= DRIVER INPUT / AI ================= */
-function playerControl(dt){const c=player;const tg=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+function playerControl(dt){const c=player;if(c.auto){aiDrive(c,dt);return;}const tg=(keys.KeyD?1:0)-(keys.KeyA?1:0);
   // near-instant response: full input in ~60–100 ms (just enough smoothing to avoid a digital twitch)
   // centring stays quick; winding on lock slows with speed so taps give partial steering at 300 km/h
   const rate=(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?16:6/(1+c.v/25);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
@@ -1653,7 +1660,7 @@ function aiDrive(c,dt){
   if(session==='race'&&yellowAt(c.s)){vt*=0.72;c.drsOpen=false;}
   if(sc)vt=Math.min(vt,scCap(c));
   // now and then a driver overcooks a braking zone (≈ once per 300 car-laps): too fast into the corner for ~1.5 s
-  if(session==='race'&&!sc&&c.lapCount>=0){if(c.mLap!==c.lapCount){c.mLap=c.lapCount;c.mAt=Math.random()<0.0035?Math.random()*L:null;}
+  if(session==='race'&&!sc&&c.lapCount>=0){if(c.mLap!==c.lapCount){c.mLap=c.lapCount;c.mAt=rnd()<0.0035?rnd()*L:null;}
     if(c.mAt!=null&&fwd(c.mAt,c.s)>=0&&fwd(c.mAt,c.s)<30){c.mArm=true;c.mAt=null;} // armed: the next big stop goes wrong
     if(c.mArm&&VP[(c.idx+Math.round(80/DS))%N]<c.v*0.7){c.mArm=false;c.mT=simTime+1.5;}
     if(c.mT>simTime)vt=Math.max(vt,c.v*0.985);}
@@ -1772,12 +1779,15 @@ function step(dt){
       // the player two or three places off the line every time)
       for(const c of cars)c.releaseAt=c.isPlayer?simTime:simTime+rand(.02,.12);msg('LIGHTS OUT','AND AWAY WE GO!');}}
   if(phase==='race')for(const c of cars)if(c.held&&simTime>=c.releaseAt)c.held=false;
+  const pt0=perf.on?performance.now():0;
   playerControl(dt);
   for(const c of cars)if(!c.isPlayer&&!c.parked)aiDrive(c,dt);
+  const pt1=perf.on?performance.now():0;
   computeTow();
   for(const c of cars)if(!c.parked)physics(c,dt);
   collide();
   for(const c of cars)if(!c.parked)post(c);
+  if(perf.on){const pt2=performance.now();perf.acc('ai',pt1-pt0);perf.acc('physics+post',pt2-pt1);}
   if(phase==='race'){
     let lead=cars[0];for(const c of cars)if(c.progress>lead.progress)lead=c;
     if(!drsEnabled&&!scActive()&&lead.lapCount>=DRS_FROM_LAP-1){drsEnabled=true;msg('DRS ENABLED');}
@@ -2412,20 +2422,26 @@ $('qresBtn').onclick=()=>{$('qres').hidden=true;openBox('race');};
 const loadEl=$('loading'),loadBar=$('loadBar'),loadTxt=$('loadTxt');
 const stage=(t,p)=>{loadTxt.textContent=t;loadBar.style.width=Math.round(p*100)+'%';return new Promise(r=>{requestAnimationFrame(()=>setTimeout(r,0));setTimeout(r,60);});};
 let last=performance.now(),acc=0,hudT=0,shadowTick=0;const H=1/120;
-function frame(now){const ms=now-last,dt=Math.min(0.05,ms/1000);last=now;
-  if(scaler.tick(ms))resizeAll();
+function frame(now){const ms=now-last,dt=Math.min(0.05,ms/1000);last=now;let n=0;
+  if(scaler.tick(ms)){perf.scaler(scaler.scale,'tick');resizeAll();}
   if(intro)introFrame();else if(phase==='menu'){menuCamera(dt);}
   else if(replay){replayFrame(dt);if(!replay)updateVisuals(dt);drawMinimap();}
-  else{if(!paused){acc+=dt;let n=0;while(acc>=H&&n<6){step(H);acc-=H;n++;if((++recStep&1)===0)recFrame();}if(n>=6)acc=0;}
-    updateVisuals(dt);updateHud();drawMinimap();hudT-=dt;if(hudT<=0){hudT=0.2;updateInfo();}}
+  else{const f0=perf.on?performance.now():0;
+    if(!paused){acc+=dt;while(acc>=H&&n<6){step(H);acc-=H;n++;if((++recStep&1)===0)recFrame();}if(n>=6)acc=0;}
+    const f1=perf.on?performance.now():0;
+    updateVisuals(dt);updateHud();drawMinimap();hudT-=dt;if(hudT<=0){hudT=0.2;updateInfo();}
+    if(perf.on){perf.acc('frame:steps',f1-f0);perf.acc('frame:visuals+hud',performance.now()-f1);}}
   if(fitViewport()){
+    if(perf.on)renderer.info.reset();
+    const r0=perf.on?performance.now():0;
     if((shadowTick++%Q.shadowEvery)===0)renderer.shadowMap.needsUpdate=true;
     if(stars){stars.position.copy(camera.position);stars.updateMatrix();}
     cullByDistance();
     gpuTimer.begin();
     if(usePost)composer.render();else{renderer.setRenderTarget(null);renderer.render(scene,camera);}
     if(phase!=='menu'&&!replay){renderMirror();updateProximity();}
-    gpuTimer.end();scaler.gpu(gpuTimer.poll());}
+    gpuTimer.end();const gms=gpuTimer.poll();scaler.gpu(gms);
+    if(perf.on){perf.acc('frame:render',performance.now()-r0);perf.gpu(gms);perf.frame(ms,n,renderer.info.render.calls,renderer.info.render.triangles);}}
   requestAnimationFrame(frame);}
 const gpuTimer=new GpuTimer(renderer.getContext());
 // street clutter tiles past their draw distance are hidden (all shown in the lobby, whose camera orbits far away)
@@ -2444,7 +2460,36 @@ async function boot(){
   try{await renderer.compileAsync(scene,camera);}catch(e){}
   {const w=window.__warm;if(w){w.far.visible=false;scene.remove(w.root);delete window.__warm;}}
   loadEl.classList.add('done');setTimeout(()=>loadEl.remove(),600);
+  fitViewport();perf.boot(bootInfo());
+  perf.mark('lobby');
   requestAnimationFrame(frame);
 }
+function bootInfo(){const gl=renderer.getContext();let gpu='';
+  try{const e=gl.getExtension('WEBGL_debug_renderer_info');gpu=String(e?gl.getParameter(e.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER));}catch(e){}
+  return {gpu,detectPreset:detectPreset(gl),mode:qState.mode,preset:qName,devicePixelRatio:window.devicePixelRatio||1,pixelRatio:renderer.getPixelRatio(),
+    canvas:[renderer.domElement.width,renderer.domElement.height],gpuTimer:gpuTimer.ok,scaler:scaler.enabled,track:TRACK_ID,tod:TOD};}
+// render-target memory, estimated from the targets' actual sizes: colour (resolve texture + multisampled renderbuffer)
+// and depth/stencil, per owner
+function rtBytes(rt){if(!rt||!rt.isWebGLRenderTarget)return 0;const px=rt.width*rt.height,s=rt.samples||0,t=rt.texture.type;
+  const bpp=t===THREE.HalfFloatType?8:t===THREE.FloatType?16:4;
+  return px*bpp*(s>0?1+s:1)+(rt.depthBuffer?px*4*(s>0?1+s:1):0);}
+function ownRTs(o){let b=0;for(const v of Object.values(o||{})){if(v&&v.isWebGLRenderTarget)b+=rtBytes(v);else if(Array.isArray(v))for(const x of v)if(x&&x.isWebGLRenderTarget)b+=rtBytes(x);}return b;}
+function rtEstimate(){const pr=renderer.getPixelRatio(),c=renderer.domElement;
+  return {canvas:c.width*c.height*(4+4+4),composer:rtBytes(composer.renderTarget1)+rtBytes(composer.renderTarget2),
+    bloom:ownRTs(bloom),smaa:ownRTs(smaa),fxaa:ownRTs(fxaa),gtao:gtao?ownRTs(gtao):0,shadow:rtBytes(sun.shadow.map),mirror:rtBytes(mirrorRT),
+    get total(){return this.canvas+this.composer+this.bloom+this.smaa+this.fxaa+this.gtao+this.shadow+this.mirror;},pixelRatio:pr};}
+perf.attach({renderer,rtBytes:()=>{const e=rtEstimate(),o={};for(const k of ['canvas','composer','bloom','smaa','fxaa','gtao','shadow','mirror','total'])o[k]=e[k];return o;},phase:()=>phase});
+// measurement helpers (tools/perf-scenario.md): straight into a race from the lobby, and the determinism hash
+function quickRace(){if(intro)endIntro();$('menu').hidden=true;$('hud').hidden=false;$('hud').className='lite';
+  setupSession();finishQuali(null);$('qres').hidden=true;$('box').hidden=true;startRace();perf.mark('race start');}
+function detHash(seed=1,n=6000){
+  for(const c of cars)scene.remove(c.mesh.root);
+  reseed(seed);optLaps=5;optAI=1.02;optTeam=3;lastHist=0;lastContact=-9;
+  setupSession();player.auto=true;finishQuali(null);$('qres').hidden=true;startRace();
+  for(let k=0;k<n;k++)step(H);
+  const f=new Float64Array(1),u=new Uint32Array(f.buffer);let h=2166136261;
+  for(const c of cars)for(const v of [c.x,c.z,c.v]){f[0]=v;h=Math.imul(h^u[0],16777619);h=Math.imul(h^u[1],16777619);}
+  reseed(null);
+  return {hash:(h>>>0).toString(16).padStart(8,'0'),seed,steps:n,simTime:+simTime.toFixed(4),laps:cars.map(c=>c.lapCount),best:cars.map(c=>c.bestLap&&+c.bestLap.toFixed(3))};}
 boot();
-window.hrc={gpuTimer,cullByDistance,finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene};
+window.hrc={quickRace,detHash,reseed,rtEstimate,get player(){return player;},get simTime(){return simTime;},gpuTimer,cullByDistance,finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene};
