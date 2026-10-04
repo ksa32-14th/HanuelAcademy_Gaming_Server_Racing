@@ -48,5 +48,40 @@ export const TRACKS={
   // line in the lane itself
   pitEntry:[1525,-234],pitRamp:320,
   osm:true, // real buildings, water, parks and roads from OpenStreetMap
+  tall:()=>true},
+ busan:{title:'Busan <em>Grand</em> Prix',label:'Busan · Centum City',
+  sub:'Busan Street Circuit · 5.790 km · anti-clockwise · BEXCO pit lane · GPS-traced',len:5790,fullLaps:53,start:[-606,335],simp:6,fillet:90,minR:34,
+  day:true, // a clear autumn afternoon on the Suyeong Bay
+  // traced from the "Busan_GP" GPX route (metres from 35.1650 N, 129.1400 E): APEC-ro past BEXCO (start/finish and
+  // pits), round Centum City, down to the Suyeong river mouth, east along the Marine City shore to the Haeundae hairpin
+  // and back up Haeundae-ro to BEXCO
+  raw:[[441.8,-601.1],[525.6,-630.8],[679.3,-685.2],[849.2,-743.2],[902.8,-762.6],[976.5,-789.3],[1000.8,-797.3],[1022.4,-799.8],
+   [1052.6,-790.4],[1068.5,-776.2],[1077.2,-768.4],[1081.8,-761.4],[1083.4,-755],[1083.5,-747.4],[1080.5,-724.7],[1038.7,-672],
+   [1016.8,-652.9],[921.9,-582.7],[856.3,-536.6],[846.4,-529.8],[839.2,-514.8],[834,-489.7],[820.5,-460.3],[789.9,-438.9],[740,-403.7],
+   [714.3,-379.7],[636.8,-329.5],[531.6,-266.3],[418.3,-193.7],[378.6,-168.7],[341.4,-144.3],[303,-118.9],[266.8,-87.2],[242.3,-60.3],
+   [200.6,4.2],[131.6,126.4],[74.4,223.6],[64.3,239.5],[46.9,278.4],[33.2,302.8],[15.7,324.6],[-2.3,344.3],[-23.7,365.6],[-46.8,390],
+   [-100.6,433.2],[-122.4,451.4],
+   // BEXCO: down the side of exhibition hall 1, then the right-hander onto APEC-ro
+   [-144.8,428.3],[-168.4,403.3],[-192,381],[-239.2,349.6],[-288.2,317.3],[-377.2,259.3],[-407.2,238.7],[-476.6,189.5],[-495.9,168],
+   // start/finish straight along APEC-ro, the BEXCO outdoor car park (the paddock) on the right
+   [-524,211.7],[-578.6,296.8],[-631.7,376.6],[-688.7,464.9],[-787.5,612.2],[-800.3,631.2],
+   [-816.9,620.2],[-951.4,531.9],[-986.8,509.1],[-1093.2,440.5],[-1108.2,430.2],
+   [-1100.8,420.3],[-1047.5,342.1],[-1008.7,285.2],[-991.6,260.1],[-929.8,166.9],[-880.9,93],[-841.3,36.6],[-794.5,-24.9],[-763.9,-68.2],
+   [-741.9,-98.5],[-720.3,-116.7],[-693.6,-125.9],[-667.1,-139.7],
+   // (the trace jinks ~10 m sideways here where it crosses a junction; the jog is dropped)
+   [-625.7,-201.4],[-595.1,-220.3],[-565.3,-229.3],[-529.9,-239],[-498,-242],[-479.5,-240.1],[-442.5,-232.3],[-328,-192.7],[-269.2,-181.1],
+   [-226.3,-178.5],[-182.3,-184],[-127.7,-196.9],[-62.6,-226.7],[-26.3,-252.3],[18.8,-293.4],[50,-325.4],[121.3,-400.6],[178.5,-461],
+   [243,-529.8],[282.6,-543.9]],
+  drs:'auto',
+  stands:[[700,-690,1,180],[-1000,230,-1,140]],
+  // pit lane in the BEXCO outdoor car park: in just after the BEXCO corner, out before the end of APEC-ro.
+  // The car park is ~240 m long, so the boxes are packed tighter than the usual 40 m
+  pitEntry:[-512,193],pitRamp:80,pitExit:[-655,410],pitExitLen:80,boxStart:-82,boxGap:17,
+  osm:true,
+  // landmarks beyond the OpenStreetMap download, drawn by hand (raw metres)
+  lct:[2639,-487], // Haeundae LCT: 411 m landmark tower with two 339 m residential towers
+  gwangan:[[-777,-1770],[-1340,-2483]], // the suspension span of Gwangan Bridge (between its two towers)
+  // the mountains that ring the city: [x, y, height m, radius m] — Jangsan, Geumnyeonsan, Hwangnyeongsan, Baesan, Dalmaji hill
+  hills:[[3695,2974,634,1700],[-3276,-995,415,1300],[-5170,-1040,427,1400],[-3040,1725,256,1000],[3367,-830,140,520]],
   tall:()=>true}
 };

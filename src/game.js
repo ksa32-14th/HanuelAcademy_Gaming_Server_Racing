@@ -6,17 +6,19 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,hex,fmt,fmtRace} from './util.js?v=20260930b';
-import {TRACKS} from './data/tracks.js?v=20260930b';
-import {TRACK_ID,TR,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20260930b';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20260930b';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20260930b';
+import {$,clamp,wrapA,smooth,rand,hex,fmt,fmtRace} from './util.js?v=20261004a';
+import {TRACKS} from './data/tracks.js?v=20261004a';
+import {TRACK_ID,TR,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261004a';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261004a';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261004a';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20260930b';
-const {OSM_SONGDO}=TR.osm?await import('./data/osm-songdo.js?v=20260930b'):{OSM_SONGDO:null};
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261004a';
+// OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261004a'):import('./data/osm-songdo.js?v=20261004a')))[0]:null;
+const DAY=!!TR.day; // daylight circuits (Busan): bright sky, haze instead of night fog, unlit windows
 
 /* ================= RENDERER / SCENE / QUALITY ================= */
 const qState={mode:loadMode()};
@@ -29,26 +31,28 @@ renderer.setPixelRatio(pixelRatioFor(Q,scaler.scale));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate=false; // the shadow map is refreshed once per frame by frame(); the mirror pass reuses it
-renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=DAY?0.92:1.05;
 const MAXANI=renderer.capabilities.getMaxAnisotropy();
 const scene=new THREE.Scene();
 {const c=document.createElement('canvas');c.width=4;c.height=256;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,256);
  const DUSK=TRACK_ID==='songdo'; // Songdo: blue-hour dusk over the West Sea, as in the skyline photos
- (DUSK?[[0,'#16204a'],[.34,'#34407e'],[.5,'#7a5c93'],[.6,'#d7847f'],[.66,'#f3ae7c'],[.7,'#f6c592'],[1,'#2b2735']]
+ // Busan by day: deep autumn blue overhead fading into the sea haze on the horizon
+ (DAY?[[0,'#2a66b8'],[.3,'#4f8bd2'],[.48,'#93bce4'],[.58,'#c9dcec'],[.64,'#d3e1ec'],[1,'#b9c7d2']]
+  :DUSK?[[0,'#16204a'],[.34,'#34407e'],[.5,'#7a5c93'],[.6,'#d7847f'],[.66,'#f3ae7c'],[.7,'#f6c592'],[1,'#2b2735']]
       :[[0,'#02030a'],[.45,'#0a1030'],[.62,'#2a1f3e'],[.72,'#4a2f3a'],[1,'#0c0d14']]).forEach(([p,c])=>g.addColorStop(p,c));x.fillStyle=g;x.fillRect(0,0,4,256);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;scene.background=t;}
-scene.fog=TRACK_ID==='songdo'?new THREE.Fog(0x8a6d8c,500,3600):new THREE.Fog(0x1a1530,350,2800);
+scene.fog=DAY?new THREE.Fog(0xc6d8e7,700,5600):TRACK_ID==='songdo'?new THREE.Fog(0x8a6d8c,500,3600):new THREE.Fog(0x1a1530,350,2800);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.3,8000);
 // On track nothing past the fog's far distance can be seen (it is exactly the fog colour), so the far plane is pulled in
 // to just beyond it: distant city tiles are frustum-culled instead of being drawn fully fogged. The lobby's orbiting
 // camera keeps the long far plane. The stars ride along with the camera inside that range.
 const FAR_RACE=scene.fog.far+250,FAR_MENU=8000,STAR_R=Math.min(2600,scene.fog.far*0.9);
-scene.add(TRACK_ID==='songdo'?new THREE.HemisphereLight(0xc2a9d6,0x2e2b36,1.35):new THREE.HemisphereLight(0x8a96c8,0x1c1a22,0.9));
-const sun=new THREE.DirectionalLight(TRACK_ID==='songdo'?0xffd2b0:0xfff1dc,2.4);sun.castShadow=true;
+scene.add(DAY?new THREE.HemisphereLight(0xdcebff,0x5d5a4f,1.25):TRACK_ID==='songdo'?new THREE.HemisphereLight(0xc2a9d6,0x2e2b36,1.35):new THREE.HemisphereLight(0x8a96c8,0x1c1a22,0.9));
+const sun=new THREE.DirectionalLight(DAY?0xfff4e2:TRACK_ID==='songdo'?0xffd2b0:0xfff1dc,DAY?3.1:2.4);sun.castShadow=true;
 sun.shadow.camera.near=1;sun.shadow.camera.far=260;sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.02;
 scene.add(sun,sun.target);
 // stars for the night circuit (a hard-edged point cloud on a huge sphere, unaffected by fog)
-const stars=(()=>{if(TRACK_ID==='songdo')return null;const n=1600,p=new Float32Array(n*3);
+const stars=(()=>{if(TRACK_ID==='songdo'||DAY)return null;const n=1600,p=new Float32Array(n*3);
   for(let i=0;i<n;i++){const u=Math.random()*2-1,a=Math.random()*Math.PI*2,r=Math.sqrt(1-u*u),y=Math.abs(u)*.92+.08;p[i*3]=Math.cos(a)*r*STAR_R;p[i*3+1]=y*STAR_R;p[i*3+2]=Math.sin(a)*r*STAR_R;}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));
   const s=new THREE.Points(g,new THREE.PointsMaterial({color:0xcfd8ff,size:1.6,sizeAttenuation:false,fog:false,transparent:true,opacity:.75,depthWrite:false}));
@@ -56,7 +60,8 @@ const stars=(()=>{if(TRACK_ID==='songdo')return null;const n=1600,p=new Float32A
 // post-processing: MSAA scene target → (GTAO) → bloom → tone-map/output.
 // The old build rendered into a non-multisampled target, so `antialias:true` did nothing at all and every edge crawled.
 const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.26,0.4,0.95);composer.addPass(bloom);composer.addPass(new OutputPass());
+// (by day sunlit concrete and sky already reach 1.0, so only real highlights may bloom)
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.26,0.4,DAY?1.6:0.95);composer.addPass(bloom);composer.addPass(new OutputPass());
 let gtao=null;
 const smaa=new SMAAPass(innerWidth,innerHeight);composer.addPass(smaa); // post AA for HIGH: hardware MSAA on half-float targets cost ~9 ms/frame on integrated GPUs
 // FXAA for MEDIUM: one full-screen pass. Measured on Iris Xe at 720p: SMAA ~6 ms, FXAA ~1.5 ms.
@@ -91,7 +96,7 @@ function applyQuality(){
   if(sun.shadow.mapSize.x!==Q.shadow){sun.shadow.mapSize.set(Q.shadow,Q.shadow);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}
   // MSAA on the scene targets (ping-pong buffers, so both)
   for(const rt of [composer.renderTarget1,composer.renderTarget2])if(rt.samples!==Q.msaa){rt.samples=Q.msaa;rt.dispose();}
-  bloom.enabled=Q.bloom>0;bloom.strength=Q.bloom;smaa.enabled=!!Q.smaa;fxaa.enabled=!!Q.fxaa;
+  bloom.enabled=Q.bloom>0;bloom.strength=Q.bloom*(DAY?0.6:1);smaa.enabled=!!Q.smaa;fxaa.enabled=!!Q.fxaa;
   if(Q.ao&&!gtao){try{gtao=new GTAOPass(scene,camera,vw||innerWidth,vh||innerHeight);
       gtao.output=GTAOPass.OUTPUT.Default;gtao.blendIntensity=1;
       gtao.updateGtaoMaterial({radius:1.6,distanceExponent:1.4,thickness:2,scale:1.1,samples:12,distanceFallOff:1,screenSpaceRadius:false});
@@ -111,6 +116,11 @@ function setQualityMode(mode){qState.mode=mode;qName=mode==='auto'?detectPreset(
   scaler.enabled=true;scaler.reset();saveMode(mode);applyQuality();}
 
 const mat=(o)=>new THREE.MeshStandardMaterial(o);
+// Flat ground layers (ground, footways, parks, sea, car parks, streets) lie centimetres apart, and seen from a
+// kilometre away the depth buffer cannot tell them apart. By day the sea against pale ground shows that as
+// stripes, so there they are painted bottom-up in a fixed order without writing depth: the higher layer simply
+// draws last, and everything standing on them still depth-tests against the track and buildings as usual.
+function groundLayer(me){if(!DAY)return;me.renderOrder=-100+Math.round((me.position.y+1)*100);me.material.depthWrite=false;}
 const po=f=>({polygonOffset:true,polygonOffsetFactor:f,polygonOffsetUnits:f});
 const asphaltMaps={map:texAsphalt,normalMap:texAsphaltN,normalScale:new THREE.Vector2(.9,.9),roughnessMap:texAsphaltR,roughness:1,metalness:0};
 const matRunoff=mat({...asphaltMaps,color:0x9aa2b4,...po(-1)});
@@ -172,8 +182,8 @@ const gantryLamps=[];
 async function buildWorld(){
   batch=new Map(); // see batchAdd(): static dressing is merged per material at the end of this block
   // ground & water
-  const ground=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000).rotateX(-Math.PI/2),mat({color:0x111318,roughness:1}));ground.position.y=-0.06;ground.receiveShadow=true;scene.add(ground);
-  const matWater=mat({color:0x071226,metalness:.8,roughness:.18});
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(DAY?16000:9000,DAY?16000:9000).rotateX(-Math.PI/2),mat({color:DAY?0x6c6f72:0x111318,roughness:1}));ground.position.y=DAY?-0.6:-0.06;ground.receiveShadow=true;groundLayer(ground);scene.add(ground);
+  const matWater=mat({color:DAY?0x2a5d80:0x071226,metalness:DAY?.35:.8,roughness:DAY?.22:.18});
   const addWater=shape=>{const w=new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI/2),matWater);w.position.y=-0.03;scene.add(w);};
   if(TR.water)addWater(new THREE.Shape(TR.water.map(p=>new THREE.Vector2(p[0]*SC,p[1]*SC))));
   for(const [px,py,r] of TR.ponds||[]){const s=new THREE.Shape();s.absarc(px*SC,py*SC,r*SC,0,Math.PI*2,false);addWater(s);}
@@ -222,13 +232,15 @@ async function buildWorld(){
   }
   await stage("Pit lane & stands…",.15);
   // pit boxes, garages
-  const garage=new THREE.Group();const gi=idxSp(-25);garage.position.set(X[gi]-TZ[gi]*(PIT_OFF+11.5),0,Z[gi]+TX[gi]*(PIT_OFF+11.5));garage.rotation.y=-ANG[gi];scene.add(garage);
-  const gb=new THREE.Mesh(new THREE.BoxGeometry(440,9,8),mat({color:0x2b2f3a,roughness:.8}));gb.position.y=4.5;garage.add(gb);
-  const roof=new THREE.Mesh(new THREE.BoxGeometry(444,.5,10),new THREE.MeshBasicMaterial({color:0xeaf2ff}));roof.position.y=9.2;garage.add(roof);
+  // the garage block spans the boxes (with the standard 40 m boxes that is the usual 440 m building centred 25 m before the line)
+  const std=BOX_GAP===40,gLen=std?440:BOX_GAP*(TEAMS.length+1),gMid=std?-25:(BOX_S[0]+BOX_S[TEAMS.length-1])/2;
+  const garage=new THREE.Group();const gi=idxSp(gMid);garage.position.set(X[gi]-TZ[gi]*(PIT_OFF+11.5),0,Z[gi]+TX[gi]*(PIT_OFF+11.5));garage.rotation.y=-ANG[gi];scene.add(garage);
+  const gb=new THREE.Mesh(new THREE.BoxGeometry(gLen,9,8),mat({color:DAY?0x3a404c:0x2b2f3a,roughness:.8}));gb.position.y=4.5;garage.add(gb);
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(gLen+4,.5,10),new THREE.MeshBasicMaterial({color:0xeaf2ff}));roof.position.y=9.2;garage.add(roof);
   // team garage doors and box markings: team colours live in the vertices, so all ten share one material each
   {const doorMat=new THREE.MeshBasicMaterial({vertexColors:true}),boxMat=mat({vertexColors:true,roughness:.6,...po(-6)}),tc=new THREE.Color();
    TEAMS.forEach((t,j)=>{const i=idxSp(BOX_S[j]);tc.setHex(t.c);
-     const door=new THREE.BoxGeometry(14,5,.3).applyMatrix4(_fm.makeRotationY(-ANG[i]).setPosition(X[i]-TZ[i]*(PIT_OFF+7.35),2.6,Z[i]+TX[i]*(PIT_OFF+7.35)));
+     const door=new THREE.BoxGeometry(Math.min(14,BOX_GAP-3),5,.3).applyMatrix4(_fm.makeRotationY(-ANG[i]).setPosition(X[i]-TZ[i]*(PIT_OFF+7.35),2.6,Z[i]+TX[i]*(PIT_OFF+7.35)));
      batchAdd(vColor(door,tc),doorMat,false);
      flatAt(i,PIT_OFF+2,6,3.4,0.045,boxMat,tc);});}
   // start gantry
@@ -262,13 +274,15 @@ async function buildWorld(){
 
 /* ---- real-world scenery from OpenStreetMap (Songdo) ---- */
 async function buildOSM(){
-  const D=OSM_SONGDO,cell=50,hash=new Map();
+  const D=OSM,cell=50,hash=new Map();
   for(let i=0;i<N;i+=2){const k=Math.floor(X[i]/cell)+','+Math.floor(Z[i]/cell);if(!hash.has(k))hash.set(k,[]);hash.get(k).push(i);}
   // clearance a real object needs from the circuit: walls + runoff, more around the pit complex
   const blocked=(x,z,extra=0)=>{const cx=Math.floor(x/cell),cz=Math.floor(z/cell);
     for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++){const l=hash.get((cx+a)+','+(cz+b));if(l)for(const i of l){
-      // clearance = this sample's own barrier offset plus the fence
-      const sp=spI(i),r=(sp>PIT_A-60&&sp<PIT_D+60?PIT_OFF+22:Math.max(WL[i],WR[i])+3)+extra;
+      // clearance = this sample's own barrier offset plus the fence; the pit complex only needs the extra
+      // room on its own (right-hand) side — the far side of the road keeps its buildings (BEXCO hall 1)
+      const sp=spI(i),pit=sp>PIT_A-60&&sp<PIT_D+60,right=(x-X[i])*-TZ[i]+(z-Z[i])*TX[i]>0;
+      const r=(pit&&(right||TRACK_ID!=='busan')?PIT_OFF+22:Math.max(WL[i],WR[i])+3)+extra;
       if(Math.hypot(X[i]-x,Z[i]-z)<r)return true;}}return false;};
   const W2=(x,y)=>[x*SC,-y*SC];
   // A building is kept only if NO part of it reaches the circuit. Testing its corners alone missed
@@ -284,12 +298,33 @@ async function buildOSM(){
     for(let cx=Math.floor(x0/cell);cx<=Math.floor(x1/cell);cx++)for(let cz=Math.floor(z0/cell);cz<=Math.floor(z1/cell);cz++){
       const l=hash.get(cx+','+cz);if(l)for(const i of l)if(inPolyXZ(pts,X[i],Z[i]))return true;}
     return false;};
-  // ground layers: parks, water, city streets (all below the circuit surface)
+  // ground layers: parks, water, city streets (all below the circuit surface). By day the layers are spread a few
+  // centimetres apart: a 5 mm gap z-fights at a few hundred metres, which the dark night palettes hide but
+  // pale concrete against blue sea does not
+  const LY=DAY?{road:-0.035,lot:-0.05,isl:-0.06,sand:-0.08,water:-0.10,green:-0.12,walk:-0.14}
+    :{road:-0.035,lot:-0.035,isl:-0.036,sand:-0.038,water:-0.04,green:-0.045,walk:-0.055};
   const flatPoly=(arr,m,y)=>{const geos=[];for(const p of arr){const pts=[];for(let k=0;k<p.length;k+=2)pts.push(new THREE.Vector2(p[k]*SC,p[k+1]*SC));
       if(pts.length<3)continue;geos.push(new THREE.ShapeGeometry(new THREE.Shape(pts)).rotateX(-Math.PI/2));}
-    if(geos.length){const me=new THREE.Mesh(mergeGeometries(geos),m);me.position.y=y;me.receiveShadow=true;scene.add(me);}};
-  flatPoly(D.g,mat({color:0x0d2415,roughness:1,...po(1)}),-0.045);
-  flatPoly(D.w,mat({color:0x071226,metalness:.8,roughness:.16,...po(0.5)}),-0.04);
+    if(geos.length){const me=new THREE.Mesh(mergeGeometries(geos),m);me.position.y=y;me.receiveShadow=true;groundLayer(me);scene.add(me);}};
+  flatPoly(D.g,mat({color:DAY?0x48703a:0x0d2415,roughness:1,...po(1)}),LY.green);
+  const waterMat=DAY?mat({color:0x2a5d80,metalness:.35,roughness:.22,...po(0.5)}):mat({color:0x071226,metalness:.8,roughness:.16,...po(0.5)});
+  flatPoly(D.w,waterMat,LY.water);
+  if(D.s)flatPoly(D.s,mat({color:0xd8c7a2,roughness:1,...po(0.4)}),LY.sand); // Gwangalli / Haeundae beach sand
+  if(D.isl)flatPoly(D.isl,mat({color:0x8d8a80,roughness:1,...po(0.3)}),LY.isl); // breakwaters and rocks in the bay
+  // surface car parks (BEXCO's is the paddock): asphalt with white bays, the bays squared to each lot's long side
+  if(D.p){const tex=canvasTex(256,256,(x)=>{x.fillStyle='#55585e';x.fillRect(0,0,256,256);
+      for(let i=0;i<3000;i++){const v=70+Math.random()*30|0;x.fillStyle=`rgba(${v},${v},${v+3},.5)`;x.fillRect(Math.random()*256,Math.random()*256,1.5,1.5);}
+      x.fillStyle='#e8e8e2';for(const r of [0,128]){x.fillRect(0,r+50,256,2);for(let c=0;c<256;c+=32){x.fillRect(c,r,2,50);x.fillRect(c,r+52,2,50);}}},true);
+    const geos=[];
+    for(const p of D.p){const pts=[];for(let k=0;k<p.length;k+=2)pts.push([p[k]*SC,-p[k+1]*SC]);if(pts.length<3)continue;
+      // long axis = the longest edge
+      let ax=1,az=0,best=0;for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(l>best){best=l;ax=(b[0]-a[0])/l;az=(b[1]-a[1])/l;}}
+      const g=new THREE.ShapeGeometry(new THREE.Shape(pts.map(([x,z])=>new THREE.Vector2(x,-z)))).rotateX(-Math.PI/2);
+      const pa=g.attributes.position,uv=g.attributes.uv;
+      // one texture tile = 8 bays × 2 rows: 20 m along the lot, 26 m across
+      for(let k=0;k<pa.count;k++){const x=pa.getX(k),z=pa.getZ(k);uv.setXY(k,(x*ax+z*az)/20,(-x*az+z*ax)/26);}
+      geos.push(g);}
+    if(geos.length){const me=new THREE.Mesh(mergeGeometries(geos),mat({map:tex,roughness:.9,...po(0.15)}));me.position.y=LY.lot;me.receiveShadow=true;groundLayer(me);scene.add(me);}}
   await stage("City streets…",.3);
   // ---- city streets: OSM width (lanes) with lane markings, kerbs/footways, lamps and street trees ----
   // markings are drawn into the surface texture; UVs are (distance / width, across 0…1) so a wide
@@ -321,9 +356,9 @@ async function buildOSM(){
         const lx=x+dz*sd*(w/2+1.6),lz=z-dx*sd*(w/2+1.6);if(!blocked(lx,lz,-1)&&!blocked(lx-dz*sd*2.2,lz+dx*sd*2.2,-1))lampPos.push([lx,lz,Math.atan2(dz,dx),sd]);}
       if(treeGap)for(let s=8;s<seg;s+=treeGap){const t=s/seg,x=pts[k-1][0]+ax*t,z=pts[k-1][1]+az*t;
         for(const sd of [-1,1]){const tx=x+dz*sd*(w/2+3.4),tz=z-dx*sd*(w/2+3.4);if(!blocked(tx,tz,-3)&&treePos.length<7000)treePos.push([tx,tz,rand(.75,1.15)]);}}}}
-  if(walkG.length){const m=new THREE.Mesh(mergeGeometries(walkG),mat({color:0x6b6e75,map:texConcrete,normalMap:texConcreteN,roughness:.95,side:THREE.DoubleSide,...po(0.1)}));m.position.y=-0.055;m.receiveShadow=true;scene.add(m);}
-  for(const cls of [2,3,4])if(roadG[cls].length){const m=new THREE.Mesh(mergeGeometries(roadG[cls]),roadMats[cls]);m.position.y=-0.035;m.receiveShadow=true;scene.add(m);}
-  if(waterG.length){const m=new THREE.Mesh(mergeGeometries(waterG),mat({color:0x071226,metalness:.8,roughness:.16,side:THREE.DoubleSide,...po(0.5)}));m.position.y=-0.04;scene.add(m);}
+  if(walkG.length){const m=new THREE.Mesh(mergeGeometries(walkG),mat({color:0x6b6e75,map:texConcrete,normalMap:texConcreteN,roughness:.95,side:THREE.DoubleSide,...po(0.1)}));m.position.y=LY.walk;m.receiveShadow=true;groundLayer(m);scene.add(m);}
+  for(const cls of [2,3,4])if(roadG[cls].length){const m=new THREE.Mesh(mergeGeometries(roadG[cls]),roadMats[cls]);m.position.y=LY.road;m.receiveShadow=true;groundLayer(m);scene.add(m);}
+  if(waterG.length){const m=new THREE.Mesh(mergeGeometries(waterG),waterMat);m.material.side=THREE.DoubleSide;m.position.y=LY.water;scene.add(m);}
   {const poles=new THREE.InstancedMesh(new THREE.CylinderGeometry(.11,.15,8.5,6).translate(0,4.25,0),mat({color:0x41464f,roughness:.5,metalness:.5}),lampPos.length);
    const arms=new THREE.InstancedMesh(new THREE.BoxGeometry(1.8,.18,.18),mat({color:0x41464f,roughness:.5,metalness:.5}),lampPos.length);
    const heads=new THREE.InstancedMesh(new THREE.BoxGeometry(1.1,.22,.5),new THREE.MeshBasicMaterial({color:0xffe9c4}),lampPos.length);
@@ -334,7 +369,7 @@ async function buildOSM(){
      m4.compose(v3.set(x+Math.sin(ang)*sd*1.7,8.2,z-Math.cos(ang)*sd*1.7),q,one);heads.setMatrixAt(k,m4);});
    addTiledT(520,800,poles,arms,heads);}
   {const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.26,3,5).translate(0,1.5,0),mat({color:0x3b2f25,roughness:1}),treePos.length);
-   const crown=new THREE.InstancedMesh(new THREE.SphereGeometry(2.6,7,5),mat({color:0x1d3a22,roughness:1}),treePos.length);
+   const crown=new THREE.InstancedMesh(new THREE.SphereGeometry(2.6,7,5),mat({color:DAY?0x355f2c:0x1d3a22,roughness:1}),treePos.length);
    const m4=new THREE.Matrix4(),v3=new THREE.Vector3(),q=new THREE.Quaternion();
    treePos.forEach(([x,z,s],k)=>{m4.compose(v3.set(x,0,z),q,new THREE.Vector3(s,s,s));trunk.setMatrixAt(k,m4);
      m4.compose(v3.set(x,3.2*s+1.6,z),q,new THREE.Vector3(s,s*1.15,s));crown.setMatrixAt(k,m4);});addTiledT(520,700,trunk,crown);}
@@ -343,7 +378,7 @@ async function buildOSM(){
   {const trees=[];const inP=(p,x,y)=>{let c=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2){const xi=p[i],yi=p[i+1],xj=p[j],yj=p[j+1];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c;}return c;};
    for(const p of D.g){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(let k=0;k<p.length;k+=2){x0=Math.min(x0,p[k]);x1=Math.max(x1,p[k]);y0=Math.min(y0,p[k+1]);y1=Math.max(y1,p[k+1]);}
      const n=Math.min(400,Math.floor((x1-x0)*(y1-y0)/350));for(let t=0;t<n&&trees.length<5000;t++){const x=rand(x0,x1),y=rand(y0,y1);if(!inP(p,x,y))continue;const [wx,wz]=W2(x,y);if(!blocked(wx,wz,-2))trees.push([wx,wz,rand(.7,1.4)]);}}
-   const im=new THREE.InstancedMesh(new THREE.ConeGeometry(2.6,8,7).translate(0,4.6,0),mat({color:0x16331d,roughness:.9}),trees.length);const m4=new THREE.Matrix4();
+   const im=new THREE.InstancedMesh(new THREE.ConeGeometry(2.6,8,7).translate(0,4.6,0),mat({color:DAY?0x2d5229:0x16331d,roughness:.9}),trees.length);const m4=new THREE.Matrix4();
    trees.forEach(([x,z,s],k)=>{m4.makeScale(s,s,s);m4.setPosition(x,0,z);im.setMatrixAt(k,m4);});addTiledT(520,700,im);}
   await stage("Buildings…",.5);
   // ---- buildings: real OSM footprints and heights, dressed by type like present-day Songdo ----
@@ -443,7 +478,8 @@ async function buildOSM(){
           x.fillStyle=sign[(Math.random()*sign.length)|0];x.fillRect(Math.random()*(256-w),150+Math.random()*250,w,h2);}
         for(let r=0;r<140;r+=32)for(let c=0;c<256;c+=24)if(Math.random()<.2){x.fillStyle='#cfe0f0';x.fillRect(c+3,r+4,17,19);}
       }},true);
-    return mat({map,emissiveMap:emi,emissive:0xffffff,emissiveIntensity:.8,vertexColors:true,roughness:ST[s].rough,metalness:ST[s].metal,envMap:envTex,envMapIntensity:ST[s].env,side:THREE.DoubleSide});};
+    // by day only the shopfronts glow a little; the windows are just glass
+    return mat({map,emissiveMap:emi,emissive:0xffffff,emissiveIntensity:DAY?(s===2||s===4?.25:0):.8,vertexColors:true,roughness:ST[s].rough,metalness:ST[s].metal,envMap:envTex,envMapIntensity:ST[s].env,side:THREE.DoubleSide});};
   const TINT=[[0xffffff,0xf1ece2,0xe7e9ec,0xf6efe4,0xdfe3e6,0xece4d6,0xd9dde2,0xf7f3ea,0xe3dcd0],
     [0xffffff,0xd8e6f2,0xcfe0da,0xe4e4ea,0xbcd2e6,0xc9dcd6,0xdce8f0,0xaec6da],
     [0xffffff,0xf0d9c0,0xcf8f6a,0xb86b52,0x6d6f75,0xe9dcc6,0xd8c8a8,0xc2a184],
@@ -486,6 +522,24 @@ async function buildOSM(){
     if(h<=0)h=kind===1?(ar>250?rand(60,100):rand(9,15)):kind===2?rand(40,70):ar>1500?rand(16,26):ar>300?rand(9,18):rand(4,8);
     const s=lm===6?4:lm===7?2:lm===1||lm===2||lm===8?1:lm===3?3:kind===1?0:kind===2?1:kind===3?2:3;
     let tint=TINT[s][(bi*7)%TINT[s].length];
+    if(lm>=21&&lm<=23){ // BEXCO: glazed exhibition halls under a broad pale-metal roof that overhangs the walls
+      const hh=h||(lm===23?22:lm===21?26:28),o=oba(pts);
+      const r=ringWalls(pts,[[0,1],[hh,1]],1,lm===23?0xc4d6e4:0xd8e4ee);roofCap(r.top,hh,0xc9ced3);
+      // the roof edge follows the real footprint (a bounding-box slab reached over the circuit on hall 1's L-shaped plan)
+      const eave=pts.map(p=>r_c(p,pts,1.03));
+      if(!footprintHitsTrack(eave)){const e=ringWalls(eave,[[hh,1],[hh+1.6,1]],3,0xeef1f4);roofCap(e.top,hh+1.6,0xe3e7ea);}
+      // the long trusses that ribbon the roof: one piece, so it stands or goes as a whole
+      // (only on a near-rectangular plan: on an L the box-sized trusses would run out past the walls)
+      const tr=new THREE.Group();if(ar>0.85*(o.l1-o.l0)*(o.w1-o.w0))extra.push(tr);
+      for(let k=1;k<6;k++){const rib=new THREE.Mesh(new THREE.BoxGeometry((o.l1-o.l0)*0.9,1.4,1.2),mat({color:0x9aa4ad,metalness:.6,roughness:.4}));
+        rib.position.set(o.mx-o.uz*(o.w1-o.w0)*(k/6-0.5)*0.9,hh+2.4,o.mz+o.ux*(o.w1-o.w0)*(k/6-0.5)*0.9);rib.rotation.y=o.ang;tr.add(rib);}
+      return;}
+    if(lm===25){ // Busan Cinema Center: the "Big Roof", a 160 m cantilevered canopy over the plaza
+      const hh=h||30,o=oba(pts);const r=ringWalls(pts,[[0,1],[hh,1]],1,0xb8c4cc);roofCap(r.top,hh,0x8f979e);
+      if(!buildOSM.bigRoof){buildOSM.bigRoof=true;
+        const br=new THREE.Mesh(new THREE.BoxGeometry(Math.max(160,(o.l1-o.l0)*1.3),3.5,Math.max(60,(o.w1-o.w0)*1.1)),mat({color:0xdfe3e7,metalness:.5,roughness:.3,envMap:envTex,envMapIntensity:.7}));
+        br.position.set(o.mx,hh+16,o.mz);br.rotation.y=o.ang;extra.push(br);}
+      return;}
     if(lm===1){ // POSCO Tower-Songdo (305 m): dark blue-green glass, slender taper, angled crown, spire
       const r=ringWalls(pts,[[0,1],[h*0.30,0.97],[h*0.72,0.86],[h*0.95,0.72]],1,0x5f7581);roofCap(r.top,h*0.95,0x43505c);
       const o=oba(pts),side=Math.max(o.l1-o.l0,o.w1-o.w0)*0.72;
@@ -606,7 +660,7 @@ async function buildOSM(){
       }
     }
     else if(h<60&&lm!==6&&lm!==7){const p=ringWalls(out(1.008),[[h,1],[h+1.1,1]],3,new THREE.Color(tint).multiplyScalar(0.8).getHex());roofCap(p.top,h+1.1,rc);} // roof parapet
-    if(h>78&&(bi*7+Math.round(h))%5<3){
+    if(!DAY&&h>78&&(bi*7+Math.round(h))%5<3){
       // the LED crown band the Songdo towers light up at dusk
       const o=oba(pts),cc=CROWN[(bi*3+Math.round(h))%CROWN.length];
       const bd=new THREE.Mesh(new THREE.BoxGeometry((o.l1-o.l0)*0.94,2.0,(o.w1-o.w0)*0.94+0.6),new THREE.MeshBasicMaterial({color:cc}));
@@ -617,6 +671,16 @@ async function buildOSM(){
     if(h<45&&ar>600){for(let q=0;q<2;q++){const bx=new THREE.Mesh(new THREE.BoxGeometry(rand(3,7),rand(1.5,3),rand(3,6)),mat({color:0x4a4e57,roughness:.9}));
       bx.position.set(r.cx+rand(-6,6),h+1.2,r.cz+rand(-6,6));bx.rotation.y=rand(0,3);extra.push(bx);}} // rooftop plant
   });
+  // elevated expressways (Busan's Gwangan-daero): a deck on round piers, the double-deck bridge one storey per layer
+  if(D.br){const deckM=mat({color:0xb9bec4,roughness:.8}),pierM=mat({color:0x9ea4aa,roughness:.85}),railM=mat({color:0xe6e9ec,roughness:.6});
+    for(const e of D.br){const w=e[0],lay=e[1],y=e[2]?16+lay*8:7*lay,pts=[];for(let k=3;k<e.length;k+=2)pts.push(W2(e[k],e[k+1]));
+      for(let k=1;k<pts.length;k++){const [ax,az]=pts[k-1],[bx,bz]=pts[k],dx=bx-ax,dz=bz-az,l=Math.hypot(dx,dz);if(l<1)continue;
+        const ang=-Math.atan2(dz,dx);
+        // deck and parapets as one piece, so the overhang check keeps or drops them together
+        const seg=new THREE.Group();seg.position.set((ax+bx)/2,y,(az+bz)/2);seg.rotation.y=ang;extra.push(seg);
+        seg.add(new THREE.Mesh(new THREE.BoxGeometry(l+0.5,2.2,w),deckM));
+        for(const sd of [-1,1]){const rl=new THREE.Mesh(new THREE.BoxGeometry(l+0.5,1.1,0.4),railM);rl.position.set(0,1.6,sd*w/2);seg.add(rl);}
+        for(let s=0;s<l;s+=48){const t=s/l,p=new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.6,y-1,10),pierM);p.position.set(ax+dx*t,(y-1)/2,az+dz*t);extra.push(p);}}}}
   // Split the merged city into ~600 m tiles: one giant mesh can never be frustum-culled, so the GPU used to
   // transform every building on the map on every frame (and again for every extra pass such as the mirror).
   // (Tiles were 300 m; at that size draw-call submission on the CPU cost more than the GPU saved by culling.)
@@ -668,8 +732,13 @@ async function buildOSM(){
 
 async function buildCity(){
   const wpoly=(TR.water||[]).map(p=>[p[0]*SC,-p[1]*SC]);
-  const inPoly=(x,z)=>{let c=false;for(let i=0,j=wpoly.length-1;i<wpoly.length;j=i++){const [xi,zi]=wpoly[i],[xj,zj]=wpoly[j];if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi)c=!c;}
-    for(const [px,py,r] of TR.ponds||[])if(Math.hypot(x-px*SC,z+py*SC)<r*SC+25)return true;return c;};
+  const inP=(poly,x,z)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,zi]=poly[i],[xj,zj]=poly[j];if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi)c=!c;}return c;};
+  // OSM water (Busan's sea and river) keeps the filler skyline out of the bay too
+  const owater=TRACK_ID==='busan'?OSM.w.map(p=>{const o=[];for(let k=0;k<p.length;k+=2)o.push([p[k]*SC,-p[k+1]*SC]);return o;}):[];
+  const hillsW=(TR.hills||[]).map(([x,y,h,r])=>[x*SC,-y*SC,h,r*SC]);
+  const inPoly=(x,z)=>{if(inP(wpoly,x,z))return true;for(const p of owater)if(inP(p,x,z))return true;
+    for(const [hx,hz,,hr] of hillsW)if(Math.hypot(x-hx,z-hz)<hr*0.8)return true;
+    for(const [px,py,r] of TR.ponds||[])if(Math.hypot(x-px*SC,z+py*SC)<r*SC+25)return true;return false;};
   const cell=50,hash=new Map();for(let i=0;i<N;i+=3){const k=Math.floor(X[i]/cell)+','+Math.floor(Z[i]/cell);if(!hash.has(k))hash.set(k,[]);hash.get(k).push(i);}
   const near=(x,z,r)=>{const cx=Math.floor(x/cell),cz=Math.floor(z/cell);let m=1e9;for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++){const l=hash.get((cx+a)+','+(cz+b));if(l)for(const i of l){const d=Math.hypot(X[i]-x,Z[i]-z);if(d<m)m=d;}}return m<r;};
   const land=TRACK_ID==='singapore'?[[rw(90,720),110],[rw(-520,530),60],[rw(-455,510),60],[rw(-640,-340),200],[rw(40,150),60]]:[[rw(164,781),70]];
@@ -679,19 +748,26 @@ async function buildCity(){
   // far skyline beyond the mapped area, which is why the reach is much wider here.
   let osmBox=null,pad=600;
   if(TR.osm){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
-    for(const b of OSM_SONGDO.b)for(let k=3;k<b.length;k+=2){x0=Math.min(x0,b[k]);x1=Math.max(x1,b[k]);y0=Math.min(y0,b[k+1]);y1=Math.max(y1,b[k+1]);}
+    for(const b of OSM.b)for(let k=3;k<b.length;k+=2){x0=Math.min(x0,b[k]);x1=Math.max(x1,b[k]);y0=Math.min(y0,b[k+1]);y1=Math.max(y1,b[k+1]);}
     const a=rw(x0,y0),b2=rw(x1,y1);
     osmBox=[Math.min(a[0],b2[0]),Math.max(a[0],b2[0]),Math.min(a[1],b2[1]),Math.max(a[1],b2[1])];pad=2800;}
   const list=[];
   for(let x=minX-pad;x<maxX+pad;x+=58)for(let z=minZ-pad;z<maxZ+pad+100;z+=58){const px=x+rand(-14,14),pz=z+rand(-14,14);
     if(osmBox&&px>osmBox[0]-30&&px<osmBox[1]+30&&pz>osmBox[2]-30&&pz<osmBox[3]+30)continue;
     if(near(px,pz,52)||inPoly(px,pz)||land.some(([p,r])=>Math.hypot(px-p[0],pz-p[1])<r))continue;
-    const tall=TR.tall(px/SC,-pz/SC);const h=tall?rand(TRACK_ID==='songdo'?35:60,TRACK_ID==='songdo'?190:240):rand(14,110);list.push([px,pz,rand(20,42),h,rand(20,42)]);}
-  const mats=[mat({color:0x0d111b,roughness:.8,emissive:0xffffff,emissiveMap:winTex(true),emissiveIntensity:.85}),mat({color:0x0d111b,roughness:.8,emissive:0xffffff,emissiveMap:winTex(false),emissiveIntensity:.85})];
+    // Busan's outer districts: rows of 25–45 storey apartment towers, lower blocks in between
+    const tall=TR.tall(px/SC,-pz/SC);const h=TRACK_ID==='busan'?(Math.random()<.55?rand(60,135):rand(12,40))
+      :tall?rand(TRACK_ID==='songdo'?35:60,TRACK_ID==='songdo'?190:240):rand(14,110);list.push([px,pz,rand(20,42),h,rand(20,42)]);}
+  // by day the filler blocks are pale concrete with dark glazing instead of lit windows on black
+  const dayTex=warm=>{const t=canvasTex(64,128,(x)=>{x.fillStyle=warm?'#d9d4c9':'#c9cfd5';x.fillRect(0,0,64,128);
+      for(let j=0;j<32;j++){x.fillStyle=warm?'#5d646c':'#4b5866';x.fillRect(2,j*4+1,60,2);}},true);t.repeat.set(2,6);return t;};
+  const mats=DAY?[mat({color:0xffffff,map:dayTex(true),roughness:.85}),mat({color:0xffffff,map:dayTex(false),roughness:.7,metalness:.1})]
+    :[mat({color:0x0d111b,roughness:.8,emissive:0xffffff,emissiveMap:winTex(true),emissiveIntensity:.85}),mat({color:0x0d111b,roughness:.8,emissive:0xffffff,emissiveMap:winTex(false),emissiveIntensity:.85})];
   const geo=new THREE.BoxGeometry(1,1,1).translate(0,.5,0);
   mats.forEach((m,mi)=>{const part=list.filter((_,k)=>k%2===mi);const im=new THREE.InstancedMesh(geo,m,part.length);const m4=new THREE.Matrix4();
     part.forEach((b,k)=>{m4.makeScale(b[2],b[3],b[4]);m4.setPosition(b[0],0,b[1]);im.setMatrixAt(k,m4);});addTiledT(1600,0,im);});
   if(TRACK_ID==='songdo')return; // Central Park's towers come from the OSM footprints, not a stand-in
+  if(TRACK_ID==='busan'){buildBusanLandmarks();return;}
   // Marina Bay Sands
   const [mx,mz]=rw(-640,-340);const mbs=new THREE.Group();mbs.position.set(mx,0,mz);mbs.rotation.y=0.25;scene.add(mbs);
   const tm=mat({color:0x151a26,roughness:.5,metalness:.3,emissive:0xffffff,emissiveMap:winTex(true),emissiveIntensity:.9});
@@ -709,6 +785,50 @@ async function buildCity(){
   // Esplanade domes
   const dm=mat({color:0x8e939c,roughness:.5,metalness:.4,emissive:0x302a20,emissiveIntensity:.6});
   for(const [rx,ry] of [[-520,530],[-455,510]]){const [x,z]=rw(rx,ry);const d=new THREE.Mesh(new THREE.SphereGeometry(34,28,14,0,Math.PI*2,0,Math.PI/2),dm);d.scale.set(1.25,.7,1);d.position.set(x,0,z);scene.add(d);}
+}
+
+/* ---- Busan: what the OpenStreetMap download does not reach, but every lap looks at ---- */
+function buildBusanLandmarks(){
+  // Haeundae LCT: the 411 m landmark tower between two 339 m residential towers, blue-silver glass with
+  // rounded corners, the tall one with a slanted crown
+  if(TR.lct){const [lx,lz]=rw(...TR.lct),g=new THREE.Group();g.position.set(lx,0,lz);g.rotation.y=0.55;scene.add(g);
+    const glass=mat({color:0x9db8cf,metalness:.6,roughness:.18,envMap:envTex,envMapIntensity:1.1});
+    const band=mat({color:0xe8eef3,metalness:.3,roughness:.4});
+    for(const [off,h,r] of [[-95,339,22],[0,411,27],[92,339,22]]){
+      const t=new THREE.Mesh(new THREE.CylinderGeometry(r*0.86,r,h,24,1),glass);t.scale.z=0.62;t.position.set(off,h/2,0);g.add(t);
+      for(let y=60;y<h-10;y+=60){const b=new THREE.Mesh(new THREE.CylinderGeometry(r*0.95,r*0.95,2,24),band);b.scale.z=0.62;b.position.set(off,y,0);g.add(b);}
+      const crown=new THREE.Mesh(new THREE.CylinderGeometry(r*0.2,r*0.84,h>400?28:14,24),glass);crown.scale.z=0.62;crown.position.set(off,h+(h>400?14:7),0);g.add(crown);}
+    const podium=new THREE.Mesh(new THREE.BoxGeometry(260,26,70),mat({color:0xd6d9db,roughness:.7}));podium.position.y=13;g.add(podium);
+    bakeGroup(g);}
+  // Gwangan Bridge: the suspension span across Suyeong Bay — two portal towers, main cables and hangers
+  // (the decks themselves come from OpenStreetMap)
+  if(TR.gwangan){const [[ax,ay],[bx,by]]=TR.gwangan,[x0,z0]=rw(ax,ay),[x1,z1]=rw(bx,by);
+    const dx=x1-x0,dz=z1-z0,span=Math.hypot(dx,dz),ux=dx/span,uz=dz/span,nx=-uz,nz=ux,deck=32,top=116,side=340;
+    const g=new THREE.Group();scene.add(g);const steel=mat({color:0xdfe4e8,metalness:.5,roughness:.35}),cab=mat({color:0xc9cfd5,metalness:.6,roughness:.4});
+    const tower=(x,z)=>{for(const s of [-1,1]){const leg=new THREE.Mesh(new THREE.BoxGeometry(4,top,5),steel);leg.position.set(x+nx*s*14,top/2,z+nz*s*14);leg.rotation.y=-Math.atan2(uz,ux);g.add(leg);}
+      for(const y of [deck+10,top-14,top-2]){const bm=new THREE.Mesh(new THREE.BoxGeometry(3,3,32),steel);bm.position.set(x,y,z);bm.rotation.y=-Math.atan2(uz,ux);g.add(bm);}};
+    tower(x0,z0);tower(x1,z1);
+    for(const s of [-1,1]){const pts=[];
+      // side span down to the anchorage, the main span sagging between the towers, side span again
+      for(let k=0;k<=8;k++){const t=k/8;pts.push(new THREE.Vector3(x0-ux*side*(1-t),deck+4+(top-deck-6)*t*t,z0-uz*side*(1-t)));}
+      for(let k=1;k<=24;k++){const t=k/24,sag=4*t*(1-t);pts.push(new THREE.Vector3(x0+dx*t,top-2-(top-deck-8)*sag,z0+dz*t));}
+      for(let k=1;k<=8;k++){const t=k/8;pts.push(new THREE.Vector3(x1+ux*side*t,top-2-(top-deck-6)*t*t,z1+uz*side*t));}
+      const c=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),120,0.9,5,false),cab);c.position.set(nx*s*14,0,nz*s*14);g.add(c);
+      for(let t=0.04;t<0.97;t+=0.024){const y=top-2-(top-deck-8)*4*t*(1-t),hg=new THREE.Mesh(new THREE.BoxGeometry(.35,y-deck,.35),cab);
+        hg.position.set(x0+dx*t+nx*s*14,(y+deck)/2,z0+dz*t+nz*s*14);g.add(hg);}}
+    bakeGroup(g);}
+  // the mountains that ring Busan (Jangsan behind Haeundae, Geumnyeonsan and Hwangnyeongsan to the west):
+  // forested domes with a little ridge noise, rock showing near the summits
+  if(TR.hills){const geos=[],c=new THREE.Color(),lo=new THREE.Color(0x3d5c34),hi=new THREE.Color(0x7d7f6a);
+    for(const [hx,hy,h,R] of TR.hills){const [cx,cz]=rw(hx,hy),NR=36,NA=72,pos=[],col=[],ix=[],ph=hx*0.013+hy*0.007;
+      for(let i=0;i<=NR;i++)for(let j=0;j<NA;j++){const r=i/NR,a=j/NA*Math.PI*2,rr=r*R*SC*(1+0.18*Math.sin(a*3+ph)+0.08*Math.sin(a*7+ph*2));
+        const ridge=1+0.12*Math.sin(a*5+r*9+ph)+0.06*Math.sin(a*13+r*21);
+        const y=Math.max(0,h*Math.pow(Math.max(0,1-r*r),1.6)*ridge)-(i===NR?2:0);
+        pos.push(cx+Math.cos(a)*rr,y,cz+Math.sin(a)*rr);c.copy(lo).lerp(hi,Math.min(1,Math.max(0,(y/h-0.62)*2.4)));col.push(c.r,c.g,c.b);
+        if(i<NR){const p=i*NA+j,q=i*NA+(j+1)%NA;ix.push(p,q,p+NA,q,q+NA,p+NA);}}
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+      g.setIndex(ix);g.computeVertexNormals();geos.push(g);}
+    const m=new THREE.Mesh(mergeGeometries(geos),mat({vertexColors:true,roughness:1,side:THREE.DoubleSide}));m.receiveShadow=false;scene.add(m);}
 }
 
 /* ================= CAR MODEL (Hypercar-style body, F1 dimensions) ================= */
@@ -899,7 +1019,8 @@ function leaveBox(){
 }
 
 // how far before the line the last straight begins: walk back until the road bends
-function straightBack(){let d=900;for(let k=6;k<N;k++){const i=(N-k)%N;if(Math.abs(K[i])>1/200){d=(k-6)*DS;break;}}return clamp(d,200,1500);}
+// (Busan's line is only ~160 m past the BEXCO corner: a 200 m floor would drop the car mid-corner)
+function straightBack(){let d=900;for(let k=6;k<N;k++){const i=(N-k)%N;if(Math.abs(K[i])>1/200){d=(k-6)*DS;break;}}return clamp(d,120,1500);}
 function rollingStart(c,back){const sp=-back,i=idxSp(sp),off=RL[i];
   c.idx=i;c.x=X[i]-TZ[i]*off;c.z=Z[i]+TX[i]*off;c.yaw=c.chi=ANG[i];
   c.v=VP[i]*0.94;c.delta=0;c.r=0;c.slip=0;c.laneOff=0;c.laneOffT=0;c.sep=0;

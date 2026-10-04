@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20260930b';
-import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT} from './config.js?v=20260930b';
+import {clamp,wrapA,smooth} from './util.js?v=20261004a';
+import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT} from './config.js?v=20261004a';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -66,6 +66,8 @@ export const spOf=s=>s>L/2?s-L:s;
 export const idxSp=sp=>((Math.round(((sp%L)+L)%L/DS))%N+N)%N;
 export const spI=i=>spOf(i*DS);
 if(TR.pitEntry){PIT_A=spI(idxOf(...TR.pitEntry));PIT_B=PIT_A+(TR.pitRamp||200);PIT_L=Math.max(PIT_B,-300);}
+// …and the exit (`pitExit`: where the lane starts to bend back, `pitExitLen`: how long the merge is)
+if(TR.pitExit){PIT_C=spI(idxOf(...TR.pitExit));PIT_D=PIT_C+(TR.pitExitLen||80);}
 export function pitOffSp(sp){if(sp<PIT_A||sp>PIT_D)return null;if(sp<PIT_B)return PIT_OFF*smooth((sp-PIT_A)/(PIT_B-PIT_A));if(sp>PIT_C)return PIT_OFF*(1-smooth((sp-PIT_C)/(PIT_D-PIT_C)));return PIT_OFF;}
 
 // half width per sample: the circuit is W metres wide, but a track can list stretches that are
@@ -96,7 +98,8 @@ export function autoDRS(){const th=1/220,runs=[];let s0=0;while(s0<N&&Math.abs(K
     .map(([a,b])=>{const ia=a+Math.round(40/DS),ib=b-Math.round(90/DS);return {det:((ia-Math.round(150/DS))%N+N)%N*DS,a:(ia%N)*DS,b:(ib%N)*DS};});}
 export const DRSZ=TR.drs==='auto'?autoDRS():TR.drs.map(z=>({det:idxOf(...z[0])*DS,a:idxOf(...z[1])*DS,b:idxOf(...z[2])*DS}));
 export const SEC=[L/3,2*L/3];
-export const BOX_S=TEAMS.map((_,j)=>-215+j*40);
+// a track with a short paddock can pack its boxes tighter (`boxStart`, `boxGap`)
+export const BOX_GAP=TR.boxGap||40,BOX_S=TEAMS.map((_,j)=>(TR.boxStart??-215)+j*BOX_GAP);
 export function drsZoneOf(s){for(let k=0;k<DRSZ.length;k++){const z=DRSZ[k];if(z.a<z.b?(s>=z.a&&s<=z.b):(s>=z.a||s<=z.b))return k;}return -1;}
 
 // racing line: MINIMUM-CURVATURE path. Rather than placing turn-in/apex/track-out by hand, the line
