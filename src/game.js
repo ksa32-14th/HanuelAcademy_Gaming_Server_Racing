@@ -1146,11 +1146,36 @@ function makeFarLOD(car,root,g){
     const n=geo.attributes.position.count,col=new Float32Array(n*3),c=o.material.color||{r:1,g:1,b:1};
     for(let i=0;i<n;i++){col[i*3]=c.r*(vc?vc[i*3]:1);col[i*3+1]=c.g*(vc?vc[i*3+1]:1);col[i*3+2]=c.b*(vc?vc[i*3+2]:1);}
     geo.setAttribute('color',new THREE.BufferAttribute(col,3));geos.push(geo);});
-  const far=new THREE.Mesh(mergeGeometries(geos),farMat);far.visible=false;far.castShadow=true;root.add(far);
+  const far=new THREE.Mesh(mergeGeometries(geos),farMat);far.name='far';far.visible=false;far.castShadow=true;root.add(far);
   car.far=far;car.isFar=false;car.nearObjs=[g,...car.pivs];}
 function setFar(car,far){if(car.isFar===far)return;car.isFar=far;car.far.visible=far;for(const o of car.nearObjs)o.visible=!far;}
+// Every car is the same model; only the paint, the number and two lamp colours differ. The model is built once, painted
+// in two sentinel colours, and each car is a clone of it that shares the template's position/normal/uv buffers (on the
+// GPU too): a car's own data is the colour buffer of the painted parts, its number texture and its tail/band materials.
+// (building ~65 parts and merging them took ~90 ms per car, all twenty in the frame the session started)
+const SENT_B=0xff0000,SENT_A=0x00ff00;let carTpl=null;
+function carTemplate(){if(carTpl)return carTpl;
+  const car=buildCar(SENT_B,SENT_A,0),recol=new Map();
+  car.root.traverse(o=>{if(!o.isMesh)return;if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();
+    const ca=o.geometry.attributes.color;if(!ca)return;const a=ca.array,b=[],c=[];
+    for(let i=0;i<a.length;i+=3){if(a[i]>0.99&&a[i+1]<0.01&&a[i+2]<0.01)b.push(i);else if(a[i]<0.01&&a[i+1]>0.99&&a[i+2]<0.01)c.push(i);}
+    if(b.length||c.length)recol.set(o.geometry,{b:Int32Array.from(b),a:Int32Array.from(c)});});
+  return carTpl={car,recol};}
 function carMesh(col,acc,num){
-  const root=new THREE.Group(),g=new THREE.Group();root.add(g);g.scale.set(CAR_SX,CAR_SY,CAR_SZ);const car={root,body:g};
+  const T=carTemplate(),src=T.car,root=src.root.clone(true),cB=new THREE.Color(col),cA=new THREE.Color(acc);
+  const nm=new THREE.MeshBasicMaterial({map:numTex(num,hex(col)),transparent:true}),tail=src.tail.clone(),band=src.band.clone();
+  root.traverse(o=>{if(!o.isMesh)return;const r=T.recol.get(o.geometry);
+    if(r){const s=o.geometry,g=new THREE.BufferGeometry(),a=s.attributes.color.array.slice();
+      for(const k in s.attributes)if(k!=='color')g.setAttribute(k,s.attributes[k]);if(s.index)g.setIndex(s.index);
+      for(const i of r.b){a[i]=cB.r;a[i+1]=cB.g;a[i+2]=cB.b;}for(const i of r.a){a[i]=cA.r;a[i+1]=cA.g;a[i+2]=cA.b;}
+      g.setAttribute('color',new THREE.BufferAttribute(a,3));g.boundingSphere=s.boundingSphere;o.geometry=g;}
+    if(o.material===src.nm)o.material=nm;else if(o.material===src.tail)o.material=tail;else if(o.material===src.band)o.material=band;});
+  const car={root,body:root.getObjectByName('body'),flap:root.getObjectByName('flap'),far:root.getObjectByName('far'),tail,band,isFar:false};
+  car.pivs=[0,1,2,3].map(k=>root.getObjectByName('piv'+k));car.steer=car.pivs.slice(0,2);car.wheels=car.pivs.map(p=>p.children[0]);
+  car.nearObjs=[car.body,...car.pivs];
+  root.position.y=0.02;scene.add(root);return car;}
+function buildCar(col,acc,num){
+  const root=new THREE.Group(),g=new THREE.Group();g.name='body';root.add(g);g.scale.set(CAR_SX,CAR_SY,CAR_SZ);const car={root,body:g};
   // matte race finish: the paint used to act like chrome and threw hard highlights around at speed
   const env={envMap:envTex,envMapIntensity:.25};
   const mB=mat({color:col,metalness:.2,roughness:.45,...env}),mA=mat({color:acc,metalness:.15,roughness:.5,...env}),mC=mat({color:0x121316,roughness:.6,metalness:.15,...env});
@@ -1173,7 +1198,7 @@ function carMesh(col,acc,num){
   const nt=numTex(num,hex(col));const nm=new THREE.MeshBasicMaterial({map:nt,transparent:true});
   for(const s of [-1,1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(.9,.22),nm);p.position.set(-1.75,.82,s*.018);if(s<0)p.rotation.y=Math.PI;g.add(p);}
   add(new THREE.BoxGeometry(.34,.04,1.92),mA,-2.62,.84,0);
-  const flap=new THREE.Group();flap.position.set(-2.46,.9,0);g.add(flap);add(new THREE.BoxGeometry(.24,.03,1.9),mB,-.12,0,0,flap);flap.rotation.z=-.45;car.flap=flap;
+  const flap=new THREE.Group();flap.name='flap';flap.position.set(-2.46,.9,0);g.add(flap);add(new THREE.BoxGeometry(.24,.03,1.9),mB,-.12,0,0,flap);flap.rotation.z=-.45;car.flap=flap;
   for(const s of [-1,1]){add(new THREE.BoxGeometry(.6,.36,.03),mC,-2.6,.76,s*.96);add(new THREE.BoxGeometry(.3,.26,.04),mC,-2.45,.73,s*.2);
     const hl=add(new THREE.BoxGeometry(.1,.06,.34),mHead,2.64,.47,s*.77,g,false);hl.rotation.z=.5;}
   add(new THREE.BoxGeometry(.3,.22,1.6),mC,-2.72,.2,0);
@@ -1181,7 +1206,7 @@ function carMesh(col,acc,num){
   const mT=mat({color:0x161616,roughness:.85}),mR=mat({color:0x9aa0aa,metalness:.8,roughness:.3});const mBand=new THREE.MeshBasicMaterial({color:0xffd200});
   car.wheels=[];car.steer=[];car.pivs=[];
   for(const [x,z,w,front] of [[1.8,.8,.305,1],[1.8,-.8,.305,1],[-1.8,.77,.405,0],[-1.8,-.77,.405,0]]){
-    const piv=new THREE.Group();piv.position.set(x*CAR_SX,.36*WHEEL_S,z*CAR_SZ);piv.scale.setScalar(WHEEL_S);root.add(piv);const spin=new THREE.Group();piv.add(spin);
+    const piv=new THREE.Group();piv.name='piv'+car.pivs.length;piv.position.set(x*CAR_SX,.36*WHEEL_S,z*CAR_SZ);piv.scale.setScalar(WHEEL_S);root.add(piv);const spin=new THREE.Group();piv.add(spin);
     add(new THREE.CylinderGeometry(.36,.36,w,22).rotateX(Math.PI/2),mT,0,0,0,spin,false); // no own shadow: the bodywork over it already casts one (4 fewer shadow draws per car)
     add(new THREE.CylinderGeometry(.23,.23,w+.012,6).rotateX(Math.PI/2),mR,0,0,0,spin,false);
     add(new THREE.TorusGeometry(.3,.014,6,28),mBand,0,0,Math.sign(z)*(w/2+.004),spin,false);
@@ -1190,7 +1215,7 @@ function carMesh(col,acc,num){
   for(const w of car.wheels)bakeGroup(w,wheel);bakeGroup(flap,paint);bakeGroup(g,paint);
   for(const m of [mB,mA,mC,mT,mR])m.dispose();
   makeFarLOD(car,root,g);
-  car.tail=mTail;car.band=mBand;root.position.y=0.02;scene.add(root);return car;}
+  car.tail=mTail;car.band=mBand;car.nm=nm;return car;}
 
 /* ---- pit crew: jacks front and rear, a gunner and a fresh tyre at each corner, and the lollipop.
    Built lazily into a small pool and parked on whichever cars are stationary in their box. ---- */
