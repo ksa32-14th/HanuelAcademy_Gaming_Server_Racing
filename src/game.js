@@ -1845,14 +1845,17 @@ function updateTower(){const o=order();$('twLap').textContent=Math.max(1,Math.mi
 const mm=$('minimap'),mctx=mm.getContext('2d'),MMR=Math.min(2,Math.max(1,window.devicePixelRatio||1));
 mm.width=mm.height=Math.round(230*MMR);mm.style.width=mm.style.height='230px';mctx.setTransform(MMR,0,0,MMR,0,0);let mmBase=null,mmT=null;
 function buildMinimap(){let a=1e9,b=-1e9,c=1e9,d=-1e9;for(let i=0;i<N;i++){a=Math.min(a,X[i]);b=Math.max(b,X[i]);c=Math.min(c,Z[i]);d=Math.max(d,Z[i]);}
-  const s=200/Math.max(b-a,d-c);mmT=(x,z)=>[15+(x-a)*s+(200-(b-a)*s)/2,15+(z-c)*s+(200-(d-c)*s)/2];
+  const s=200/Math.max(b-a,d-c),mp=[0,0];mmT=(x,z)=>{mp[0]=15+(x-a)*s+(200-(b-a)*s)/2;mp[1]=15+(z-c)*s+(200-(d-c)*s)/2;return mp;}; // one reused result array
   const off=document.createElement('canvas');off.width=off.height=Math.round(230*MMR);const x=off.getContext('2d');x.setTransform(MMR,0,0,MMR,0,0);x.lineJoin='round';
   x.beginPath();for(let i=0;i<=N;i+=3){const [px,pz]=mmT(X[i%N],Z[i%N]);i?x.lineTo(px,pz):x.moveTo(px,pz);}x.closePath();x.strokeStyle='#55607a';x.lineWidth=5;x.stroke();
   for(const z of DRSZ){x.beginPath();let st=Math.round(z.a/DS),en=Math.round(z.b/DS);if(en<st)en+=N;for(let i=st;i<=en;i+=2){const [px,pz]=mmT(X[i%N],Z[i%N]);i===st?x.moveTo(px,pz):x.lineTo(px,pz);}x.strokeStyle='rgba(27,226,107,.75)';x.lineWidth=5;x.stroke();}
   const [sx,sz]=mmT(X[0],Z[0]);x.fillStyle='#fff';x.fillRect(sx-4,sz-1.5,8,3);mmBase=off;}
-function drawMinimap(){mctx.clearRect(0,0,230,230);mctx.drawImage(mmBase,0,0,230,230);
-  for(const c of cars){if(c===player||c.parked)continue;const [x,z]=mmT(c.x,c.z);mctx.fillStyle=hex(c.col);mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
-  const [x,z]=mmT(player.x,player.z);mctx.fillStyle='#fff';mctx.beginPath();mctx.arc(x,z,5.5,0,7);mctx.fill();mctx.fillStyle='#e10600';mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
+// redrawn at 15 Hz: a dot moves a pixel or two between redraws, and the canvas upload was paid every frame
+let mmAcc=1;
+function drawMinimap(dt){mmAcc+=dt;if(mmAcc<1/15)return;mmAcc=0;
+  mctx.clearRect(0,0,230,230);mctx.drawImage(mmBase,0,0,230,230);
+  for(const c of cars){if(c===player||c.parked)continue;const p=mmT(c.x,c.z);mctx.fillStyle=c.hexCol||(c.hexCol=hex(c.col));mctx.beginPath();mctx.arc(p[0],p[1],3.4,0,7);mctx.fill();}
+  const p=mmT(player.x,player.z),x=p[0],z=p[1];mctx.fillStyle='#fff';mctx.beginPath();mctx.arc(x,z,5.5,0,7);mctx.fill();mctx.fillStyle='#e10600';mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
 
 function gearOf(v){const k=v*3.6;let g=0;while(g<7&&k>GEARS[g])g++;return g;}
 // HUD writes are guarded: touching the DOM every frame with an unchanged value still dirties style/layout next to a WebGL canvas
@@ -2438,11 +2441,11 @@ let last=performance.now(),acc=0,hudT=0,shadowTick=0;const H=1/120;
 function frame(now){const ms=now-last,dt=Math.min(0.05,ms/1000);last=now;let n=0;
   if(scaler.tick(ms)){perf.scaler(scaler.scale,'tick');resizeAll();}
   if(intro)introFrame();else if(phase==='menu'){menuCamera(dt);}
-  else if(replay){replayFrame(dt);if(!replay)updateVisuals(dt);drawMinimap();}
+  else if(replay){replayFrame(dt);if(!replay)updateVisuals(dt);drawMinimap(dt);}
   else{const f0=perf.on?performance.now():0;
     if(!paused){acc+=dt;while(acc>=H&&n<6){step(H);acc-=H;n++;if((++recStep&1)===0)recFrame();}if(n>=6)acc=0;}
     const f1=perf.on?performance.now():0;
-    updateVisuals(dt);updateHud();drawMinimap();hudT-=dt;if(hudT<=0){hudT=0.2;updateInfo();}
+    updateVisuals(dt);updateHud();drawMinimap(dt);hudT-=dt;if(hudT<=0){hudT=0.2;updateInfo();}
     if(perf.on){perf.acc('frame:steps',f1-f0);perf.acc('frame:visuals+hud',performance.now()-f1);}}
   if(!ctxLost&&fitViewport()){
     if(perf.on)renderer.info.reset();
