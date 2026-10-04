@@ -2492,8 +2492,9 @@ function bootInfo(){const gl=renderer.getContext();let gpu='';
   return {gpu,detectPreset:detectPreset(gl),mode:qState.mode,preset:qName,devicePixelRatio:window.devicePixelRatio||1,pixelRatio:renderer.getPixelRatio(),
     canvas:[renderer.domElement.width,renderer.domElement.height],gpuTimer:gpuTimer.ok,scaler:scaler.enabled,track:TRACK_ID,tod:TOD};}
 // render-target memory, estimated from the targets' actual sizes: colour (resolve texture + multisampled renderbuffer)
-// and depth/stencil, per owner
-function rtBytes(rt){if(!rt||!rt.isWebGLRenderTarget)return 0;const px=rt.width*rt.height,s=rt.samples||0,t=rt.texture.type;
+// and depth/stencil, per owner. Only targets that were actually drawn into count: three allocates GPU storage on first use,
+// so a disabled pass's targets (SMAA on MEDIUM, the composer on LOW) cost nothing.
+function rtBytes(rt){if(!rt||!rt.isWebGLRenderTarget||renderer.properties.get(rt).__webglFramebuffer===undefined)return 0;const px=rt.width*rt.height,s=rt.samples||0,t=rt.texture.type;
   const bpp=t===THREE.HalfFloatType?8:t===THREE.FloatType?16:4;
   return px*bpp*(s>0?1+s:1)+(rt.depthBuffer?px*4*(s>0?1+s:1):0);}
 function ownRTs(o){let b=0;for(const v of Object.values(o||{})){if(v&&v.isWebGLRenderTarget)b+=rtBytes(v);else if(Array.isArray(v))for(const x of v)if(x&&x.isWebGLRenderTarget)b+=rtBytes(x);}return b;}
