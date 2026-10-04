@@ -32,8 +32,18 @@ const scaler=new ResolutionScaler();scaler.enabled=true;
 // measurement flags (see src/perf.js): ?noscaler pins the render scale, ?autopilot lets the AI drive the player's car
 const URLQ=new URLSearchParams(location.search),NOSCALER=URLQ.has('noscaler'),AUTOPILOT=URLQ.has('autopilot');
 if(NOSCALER)scaler.enabled=false;
-$('gl').addEventListener('webglcontextlost',()=>perf.ctx('lost'));
-$('gl').addEventListener('webglcontextrestored',()=>perf.ctx('restored'));
+// WebGL context loss (GPU driver reset, memory pressure, the browser's GPU watchdog): three.js rebuilds its own GL state
+// on restore. Meanwhile nothing is drawn, the frozen/black canvas is covered and a running session is paused; on restore
+// the render targets are re-sized and the shadow map redrawn.
+const ctxOv=document.createElement('div');
+ctxOv.style.cssText='position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:#05070d;'+
+  'color:#c9d3ea;font:700 16px/1.5 Titillium Web,sans-serif;letter-spacing:.14em';
+ctxOv.textContent='GRAPHICS RESET · RESTORING…';document.body.appendChild(ctxOv);
+let ctxLost=false;
+$('gl').addEventListener('webglcontextlost',e=>{e.preventDefault();ctxLost=true;ctxOv.style.display='flex';perf.ctx('lost');
+  if(!paused)togglePause();});
+$('gl').addEventListener('webglcontextrestored',()=>{ctxLost=false;gpuTimer.reset();resizeAll();renderer.shadowMap.needsUpdate=true;
+  ctxOv.style.display='none';perf.ctx('restored');});
 if(perf.on)renderer.info.autoReset=false; // count every pass of a frame (composer, mirror), reset once per frame
 renderer.setPixelRatio(pixelRatioFor(Q,scaler.scale));
 renderer.setSize(innerWidth,innerHeight);
@@ -2431,7 +2441,7 @@ function frame(now){const ms=now-last,dt=Math.min(0.05,ms/1000);last=now;let n=0
     const f1=perf.on?performance.now():0;
     updateVisuals(dt);updateHud();drawMinimap();hudT-=dt;if(hudT<=0){hudT=0.2;updateInfo();}
     if(perf.on){perf.acc('frame:steps',f1-f0);perf.acc('frame:visuals+hud',performance.now()-f1);}}
-  if(fitViewport()){
+  if(!ctxLost&&fitViewport()){
     if(perf.on)renderer.info.reset();
     const r0=perf.on?performance.now():0;
     if((shadowTick++%Q.shadowEvery)===0)renderer.shadowMap.needsUpdate=true;

@@ -114,6 +114,8 @@ export class GpuTimer {
     try { this.ext = gl.getExtension('EXT_disjoint_timer_query_webgl2'); } catch (e) {}
   }
   get ok() { return !!this.ext; }
+  // after a context restore: the old queries are gone and the extension object belongs to the lost context
+  reset() { this.pending = []; this.open = null; try { this.ext = this.gl.getExtension('EXT_disjoint_timer_query_webgl2'); } catch (e) { this.ext = null; } }
   begin() {
     if (!this.ext || this.open || this.pending.length > 4) return;
     const q = this.gl.createQuery(); this.gl.beginQuery(this.ext.TIME_ELAPSED_EXT, q); this.open = q;
