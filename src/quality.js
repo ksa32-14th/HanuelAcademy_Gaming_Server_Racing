@@ -15,8 +15,8 @@ const dpr = () => window.devicePixelRatio || 1;
 export const PRESETS = {
   low:    {label:'LOW',    maxPR:1,   msaa:0, fxaa:false, smaa:false, shadow:1024, shadowSpan:60, shadowEvery:2, bloom:0,    bloomScale:0.5,  ao:false, aniso:4,  texRes:512,  mirror:3, mirrorScale:0.75, mirrorFar:260, stars:false},
   medium: {label:'MEDIUM', maxPR:1.5, msaa:0, fxaa:true,  smaa:false, shadow:2048, shadowSpan:80, shadowEvery:1, bloom:0.20, bloomScale:0.5,  ao:false, aniso:8,  texRes:1024, mirror:2, mirrorScale:0.85, mirrorFar:380, stars:true},
-  high:   {label:'HIGH',   maxPR:2,   msaa:0, fxaa:false, smaa:true,  shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomScale:0.75, ao:false, aniso:16, texRes:1024, mirror:2, mirrorScale:1,    mirrorFar:520, stars:true},
-  ultra:  {label:'ULTRA',  maxPR:2,   msaa:4, fxaa:false, smaa:false, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomScale:1,    ao:true,  aniso:16, texRes:2048, mirror:1, mirrorScale:1,    mirrorFar:900, stars:true},
+  high:   {label:'HIGH',   maxPR:1.5,  msaa:0, fxaa:false, smaa:true,  shadow:2048, shadowSpan:90, shadowEvery:1, bloom:0.26, bloomScale:0.75, ao:false, aniso:16, texRes:1024, mirror:2, mirrorScale:1,    mirrorFar:520, stars:true},
+  ultra:  {label:'ULTRA',  maxPR:1.5,  msaa:4, fxaa:false, smaa:false, shadow:4096, shadowSpan:90, shadowEvery:1, bloom:0.28, bloomScale:1,    ao:true,  aniso:16, texRes:2048, mirror:1, mirrorScale:1,    mirrorFar:900, stars:true},
 };
 export const ORDER = ['low', 'medium', 'high', 'ultra'];
 export const MODES = ['auto', ...ORDER];
@@ -40,9 +40,15 @@ export function detectPreset(gl) {
   const mobile = /android|iphone|ipad|mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /mac/i.test(navigator.platform));
   if (mobile) return 'low';
   if (/swiftshader|llvmpipe|software|basic render/.test(n)) return 'low';
-  if (/rtx|rx 6[6-9]|rx 7|radeon pro|apple m[2-9]|arc a[5-9]|gtx 1[0-9]|gtx 16|rx 5[6-9]|rx 6/.test(n)) return 'high';
-  if (/intel|uhd|iris|apple m1|mali|adreno|vega|radeon\(tm\)|microsoft/.test(n)) return 'medium';
+  // integrated GPUs share system RAM, and HIGH/ULTRA's render targets alone are ~0.4–1 GB there: never above MEDIUM.
+  // (checked first: Apple M2+ used to be on the HIGH list)
+  if (isIntegrated(n)) return 'medium';
   return 'high';
+}
+export function isIntegrated(n) {
+  n = String(n).toLowerCase();
+  if (/arc(\(tm\))? a\d{3}/.test(n)) return false; // Intel Arc A-series cards are discrete (integrated Arc has no model number)
+  return /intel|uhd|iris|apple m\d|apple gpu|mali|adreno|radeon\(tm\)|radeon graphics|microsoft/.test(n);
 }
 
 // Dynamic resolution: keeps a moving average of the frame interval; if the GPU cannot hold the
