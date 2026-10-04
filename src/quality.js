@@ -57,6 +57,7 @@ export class ResolutionScaler {
     this.slow = 0; this.fast = 0; this.enabled = true;
     this.failedAt = this.levels.map(() => -1e9);
     this.deltas = [];
+    this.lastChange = -1e9;
   }
   get scale() { return this.levels[this.idx]; }
   set scale(v) { let b = 0; this.levels.forEach((l, i) => { if (Math.abs(l - v) < Math.abs(this.levels[b] - v)) b = i; }); this.idx = b; }
@@ -90,17 +91,20 @@ export class ResolutionScaler {
       else { this.slow = this.fast = 0; }
     }
     const now = performance.now();
+    // every change re-allocates the composer targets: at most one change per COOLDOWN, whichever direction
+    if (now - this.lastChange < ResolutionScaler.COOLDOWN) return false;
     if (this.slow > 25 && this.idx < this.levels.length - 1) {
       this.failedAt[this.idx] = now;
       this.idx = Math.min(this.levels.length - 1, this.idx + (this.avg > this.budget * 1.8 ? 2 : 1));
-      this.slow = 0; this.avg = this.budget; this.gpuAvg = null; return true;
+      this.slow = 0; this.avg = this.budget; this.gpuAvg = null; this.lastChange = now; return true;
     }
     // GPU-measured headroom is reliable, so it may climb back after ~3 s instead of ~10 s
     if (this.fast > (g != null ? 180 : 600) && this.idx > 0 && now - this.failedAt[this.idx - 1] > 60000) {
-      this.idx--; this.fast = 0; this.avg = this.budget; this.gpuAvg = null; return true;
+      this.idx--; this.fast = 0; this.avg = this.budget; this.gpuAvg = null; this.lastChange = now; return true;
     }
     return false;
   }
+  static COOLDOWN = 10000;
   // feed one frame's measured GPU time (ms)
   gpu(ms) { if (!(ms > 0 && ms < 250)) return; this.gpuAvg = this.gpuAvg == null ? ms : this.gpuAvg + (ms - this.gpuAvg) * 0.1; }
   reset() { this.idx = 0; this.slow = this.fast = 0; this.gpuAvg = null; this.failedAt = this.levels.map(() => -1e9); }

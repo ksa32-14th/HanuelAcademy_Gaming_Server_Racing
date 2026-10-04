@@ -42,7 +42,7 @@ ctxOv.textContent='GRAPHICS RESET · RESTORING…';document.body.appendChild(ctx
 let ctxLost=false;
 $('gl').addEventListener('webglcontextlost',e=>{e.preventDefault();ctxLost=true;ctxOv.style.display='flex';perf.ctx('lost');
   if(!paused)togglePause();});
-$('gl').addEventListener('webglcontextrestored',()=>{ctxLost=false;gpuTimer.reset();resizeAll();renderer.shadowMap.needsUpdate=true;
+$('gl').addEventListener('webglcontextrestored',()=>{ctxLost=false;gpuTimer.reset();scaler.enabled=scalerAllowed();resizeAll();renderer.shadowMap.needsUpdate=true;
   ctxOv.style.display='none';perf.ctx('restored');});
 if(perf.on)renderer.info.autoReset=false; // count every pass of a frame (composer, mirror), reset once per frame
 renderer.setPixelRatio(pixelRatioFor(Q,scaler.scale));
@@ -137,7 +137,10 @@ try{await Promise.race([document.fonts.load('900 22px "Titillium Web"'),new Prom
 const texSet=createTextures(BUILT_TEX,Math.min(Q.aniso,MAXANI));
 const {texAsphalt,texAsphaltN,texAsphaltR,texKerb,texCheck,texRubber,texConcrete,texConcreteN,texFence,texAds,texCrowd}=texSet;
 function setQualityMode(mode){qState.mode=mode;qName=mode==='auto'?detectPreset(renderer.getContext()):mode;Q=PRESETS[qName];
-  scaler.enabled=!NOSCALER;scaler.reset();saveMode(mode);applyQuality();}
+  scaler.enabled=scalerAllowed();scaler.reset();saveMode(mode);applyQuality();}
+// Dynamic resolution only with GPU timings: judged on frame intervals alone it also shrank CPU-bound frames, which only
+// blurs them, and every step re-allocates the render targets (a hitch)
+function scalerAllowed(){return !NOSCALER&&gpuTimer.ok;}
 
 const mat=(o)=>new THREE.MeshStandardMaterial(o);
 // Flat ground layers (ground, footways, parks, sea, car parks, streets) lie centimetres apart, and seen from a
@@ -2464,6 +2467,7 @@ async function boot(){
   buildMinimap();
   // world geometry never moves: skip per-frame matrix recomputation for all of it (cars are added later and stay dynamic)
   scene.traverse(o=>{if(o.isMesh||o.isInstancedMesh||o.isPoints){o.matrixAutoUpdate=false;o.updateMatrix();}});
+  scaler.enabled=scalerAllowed();
   applyQuality();
   await stage('Compiling shaders…',.95);
   {const w=carMesh(0xd90008,0xf6f6f6,7);w.root.position.set(X[0],0,Z[0]);w.far.visible=true;window.__warm=w;} // one throw-away car so its programs are compiled now, not on the first race frame
