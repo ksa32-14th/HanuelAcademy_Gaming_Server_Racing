@@ -2434,15 +2434,13 @@ $('qresBtn').onclick=()=>{$('qres').hidden=true;openBox('race');};
 /* ================= BOOT (async: the page stays responsive and shows progress while the world is built) ================= */
 const loadEl=$('loading'),loadBar=$('loadBar'),loadTxt=$('loadTxt');
 const stage=(t,p)=>{loadTxt.textContent=t;loadBar.style.width=Math.round(p*100)+'%';return new Promise(r=>{requestAnimationFrame(()=>setTimeout(r,0));setTimeout(r,60);});};
-let last=performance.now(),acc=0,hudT=0,shadowTick=0;const H=1/120,MAX_SUB=3;
+let last=performance.now(),acc=0,hudT=0,shadowTick=0;const H=1/120;
 function frame(now){const ms=now-last,dt=Math.min(0.05,ms/1000);last=now;let n=0;
   if(scaler.tick(ms)){perf.scaler(scaler.scale,'tick');resizeAll();}
   if(intro)introFrame();else if(phase==='menu'){menuCamera(dt);}
   else if(replay){replayFrame(dt);if(!replay)updateVisuals(dt);drawMinimap();}
   else{const f0=perf.on?performance.now():0;
-    // at most MAX_SUB physics steps per frame, and a frame that hits the cap drops the time it could not simulate:
-    // catching up on a slow frame made the next frame slower still (6 steps in every long frame of the baseline run)
-    if(!paused){acc+=dt;while(acc>=H&&n<MAX_SUB){step(H);acc-=H;n++;if((++recStep&1)===0)recFrame();}if(n>=MAX_SUB)acc=0;}
+    if(!paused){acc+=dt;while(acc>=H&&n<6){step(H);acc-=H;n++;if((++recStep&1)===0)recFrame();}if(n>=6)acc=0;}
     const f1=perf.on?performance.now():0;
     updateVisuals(dt);updateHud();drawMinimap();hudT-=dt;if(hudT<=0){hudT=0.2;updateInfo();}
     if(perf.on){perf.acc('frame:steps',f1-f0);perf.acc('frame:visuals+hud',performance.now()-f1);}}
