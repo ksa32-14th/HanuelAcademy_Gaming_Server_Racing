@@ -2471,8 +2471,10 @@ async function boot(){
   applyQuality();
   await stage('Compiling shaders…',.95);
   {const w=carMesh(0xd90008,0xf6f6f6,7);w.root.position.set(X[0],0,Z[0]);w.far.visible=true;window.__warm=w;} // one throw-away car so its programs are compiled now, not on the first race frame
+  // the first pit crew is built now too (it used to be built, and its shaders compiled, in the frame a car first stopped in its box)
+  {const g=makeCrew();g.position.set(X[0],0,Z[0]);g.visible=true;crews.push(g);}
   try{await renderer.compileAsync(scene,camera);}catch(e){}
-  {const w=window.__warm;if(w){w.far.visible=false;scene.remove(w.root);delete window.__warm;}}
+  {const w=window.__warm;if(w){w.far.visible=false;scene.remove(w.root);delete window.__warm;}crews[0].visible=false;}
   loadEl.classList.add('done');setTimeout(()=>loadEl.remove(),600);
   fitViewport();perf.boot(bootInfo());
   perf.mark('lobby');
