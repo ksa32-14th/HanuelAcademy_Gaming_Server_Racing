@@ -184,7 +184,10 @@ function vColor(g,c){const n=g.attributes.position.count,a=new Float32Array(n*3)
 // material while buildWorld() runs and merged into one mesh per material at the end. The strips span the whole lap and
 // could never be culled anyway, so ~70 draw calls — paid again in the mirror — became ~15.
 let batch=null;
-function batchAdd(g,m,shadow){if(g.index)g=g.toNonIndexed();for(const k of Object.keys(g.attributes))if(!['position','normal','uv','color'].includes(k))g.deleteAttribute(k);
+// mergeGeometries() wants all-indexed or all-non-indexed input. Everything was un-indexed (toNonIndexed), which tripled the
+// vertices of strips and boxes; now the odd non-indexed piece gets a trivial index instead, and shared vertices stay shared.
+function indexed(g){if(!g.index){const n=g.attributes.position.count,a=new (n>65535?Uint32Array:Uint16Array)(n);for(let i=0;i<n;i++)a[i]=i;g.setIndex(new THREE.BufferAttribute(a,1));}return g;}
+function batchAdd(g,m,shadow){indexed(g);for(const k of Object.keys(g.attributes))if(!['position','normal','uv','color'].includes(k))g.deleteAttribute(k);
   const key=m.uuid+(shadow?'+s':'');let b=batch.get(key);if(!b)batch.set(key,b={m,shadow,geos:[]});b.geos.push(g);}
 function flushBatch(){for(const b of batch.values()){const me=new THREE.Mesh(mergeGeometries(b.geos),b.m);me.receiveShadow=b.shadow;scene.add(me);}batch=null;}
 // An InstancedMesh has ONE bounding sphere, so it is either fully drawn or fully skipped: 7000 tree crowns (400k triangles)
@@ -999,7 +1002,7 @@ async function buildOSM(){
        :mat({vertexColors:true,side:m.side,metalness:m.metalness,roughness:m.roughness,envMap:m.envMap,envMapIntensity:m.envMapIntensity});shared.set(k,s);}return s;};
    for(const root of extra){root.updateMatrixWorld(true);const cast=!!root.userData.overhead;root.traverse(o=>{if(!o.isMesh)return;const m=o.material,k0=keyOf(m),k=k0&&(cast?k0+'|cast':k0);
      if(!k||m.transparent||m.map||m.emissiveMap){const c=o.clone();o.getWorldPosition(c.position);o.getWorldQuaternion(c.quaternion);o.getWorldScale(c.scale);c.castShadow=cast&&!m.transparent;scene.add(c);return;}
-     let g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(o.matrixWorld);
+     let g=indexed(o.geometry.clone());g.applyMatrix4(o.matrixWorld);
      for(const a of Object.keys(g.attributes))if(a!=='position'&&a!=='normal')g.deleteAttribute(a);
      if(!g.attributes.normal)g.computeVertexNormals();
      vColor(g,col.copy(m.color));
@@ -1122,7 +1125,7 @@ function numTex(n,acc){return canvasTex(256,64,(x)=>{x.font='900 54px Titillium 
 function bakeGroup(par,recolor){
   const buckets=new Map();
   for(const m of par.children.filter(c=>c.isMesh)){
-    m.updateMatrix();let geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(m.matrix);
+    m.updateMatrix();let geo=indexed(m.geometry.clone());geo.applyMatrix4(m.matrix);
     for(const k of Object.keys(geo.attributes))if(k!=='position'&&k!=='normal'&&k!=='uv')geo.deleteAttribute(k);
     if(!geo.attributes.uv)geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*2),2));
     const target=recolor&&recolor.get(m.material)||m.material;
