@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261005p';
-import {clamp} from './util.js?v=20261005p';
+import {TRACKS} from './data/tracks.js?v=20261005q';
+import {clamp} from './util.js?v=20261005q';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -11,7 +11,8 @@ try{const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(o.tod&&o.tod[T
 
 /* ================= REGULATION / VEHICLE CONSTANTS ================= */
 export const TRACK_LEN=TR.len, W=20, HW=W/2, GRID_D=5.2, KERB_W=1.6;
-// car body scale (length, height, width) and wheel scale — a chunkier Hypercar silhouette
+// car body scale (length, height, width) and wheel scale. The model is built to the real 2022 F1 dimensions (5.6 × 2.0 m)
+// and drawn a little larger, so it reads as big on screen as before (collision box and track limits scale with it)
 export const CAR_SX=1.05, CAR_SY=1.18, CAR_SZ=1.2, WHEEL_S=1.18;
 // track limits: a violation only when the whole car is beyond the kerb (lenient street-circuit limit)
 export const TL_EDGE=HW+KERB_W+1.2*CAR_SZ;

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261005p">
+<link rel="stylesheet" href="css/style.css?v=20261005q">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -17,7 +17,7 @@
 <canvas id="gl"></canvas>
 
 <div id="hud" hidden>
-  <div id="tower" class="panel"><div class="hd"><span>LAP</span><b id="twLap" class="num">1/5</b></div><div id="rows"></div></div>
+  <div id="tower" class="panel"><div id="rows"></div></div>
   <div id="mirror"></div>
   <div id="proxL" class="prox"><i></i></div><div id="proxR" class="prox"><i></i></div>
   <div id="topc">
@@ -27,7 +27,7 @@
   <div id="lights" hidden><i></i><i></i><i></i><i></i><i></i></div>
   <div id="msg"></div>
   <div id="timing" class="panel">
-    <div><div class="lbl" id="gapALbl">GAP AHEAD</div><div class="big" id="gapA">—</div></div>
+    <div><div class="lbl" id="gapALbl">DELTA TO POLE</div><div class="big" id="gapA">—</div></div>
     <div><div class="lbl">CURRENT LAP</div><div class="big" id="curLap">—</div></div>
     <div class="secs"><i id="s1">S1</i><i id="s2">S2</i><i id="s3">S3</i></div>
     <div class="kv"><span>LAST</span><b id="lastLap">—</b></div>
@@ -35,24 +35,41 @@
   </div>
   <div id="leftcol">
   <canvas id="minimap" class="panel" width="230" height="230"></canvas>
-  <div id="info" class="panel">
-    <div class="kv"><span>POSITION</span><span class="pos num" id="pos">P10</span></div>
-    <div class="kv"><span>GAP BEHIND</span><b id="gapB">—</b></div>
-    <div class="sep"></div>
-    <div class="kv"><span>TYRE / WEAR</span><b><span class="tc" id="tyreC">M</span> <span id="wear">0%</span></b></div>
-    <div class="kv"><span>NEXT TYRE (1/2/3)</span><b><span class="tc" id="nextC">H</span></b></div>
-    <div class="kv"><span>COMPOUNDS USED</span><b id="used">M</b></div>
-    <div class="kv"><span>FUEL / DAMAGE</span><b><span id="fuel">0.0</span> kg · <span id="dmg">0%</span></b></div>
-    <div class="kv"><span>TRACK LIMITS / PENALTY</span><b><span id="tl">0</span>/3 · <span id="pen">0</span>s</b></div>
   </div>
+  <!-- F1-game style cluster: DRS gauge (left), gear (centre), speed / rpm gauge (right) -->
+  <div id="dash">
+    <svg viewBox="0 0 360 132" aria-label="Speed, gear and DRS">
+      <defs><linearGradient id="rpmG" x1="0" x2="1"><stop offset="0" stop-color="#1be26b"/><stop offset=".7" stop-color="#1be26b"/><stop offset=".85" stop-color="#ffd200"/><stop offset="1" stop-color="#ff2a1a"/></linearGradient></defs>
+      <rect x="-4" y="2" width="368" height="128" rx="64" class="bgall"/>
+      <g id="gDrs" class="g-drs">
+        <circle cx="64" cy="66" r="56" class="dial"/>
+        <path d="M30.06 99.94 A48 48 0 1 1 97.94 99.94" pathLength="100" class="trk"/>
+        <path id="drsArc" d="M30.06 99.94 A48 48 0 1 1 97.94 99.94" pathLength="100" class="arc"/>
+        <text x="64" y="44" class="lbl">DRS</text><text id="drsTxt" x="64" y="78" class="big">OFF</text><text id="drsSub" x="64" y="100" class="sub"></text>
+      </g>
+      <g class="g-mid">
+        <rect x="140" y="28" width="80" height="92" rx="12" class="gbg"/>
+        <text id="lim" x="180" y="44" class="limtxt">PIT</text>
+        <text id="gear" x="180" y="100" class="gear">N</text>
+        <!-- brake on the left of the gear, throttle on the right; both fill from the bottom -->
+        <rect x="128" y="36" width="7" height="76" rx="3.5" class="bar"/><rect id="brk" x="128" y="112" width="7" height="0" rx="3.5" class="brk"/>
+        <rect x="225" y="36" width="7" height="76" rx="3.5" class="bar"/><rect id="thr" x="225" y="112" width="7" height="0" rx="3.5" class="thr"/>
+      </g>
+      <g class="g-spd">
+        <circle cx="296" cy="66" r="56" class="dial"/>
+        <path d="M262.06 99.94 A48 48 0 1 1 329.94 99.94" pathLength="100" class="trk"/>
+        <path id="rpmArc" d="M262.06 99.94 A48 48 0 1 1 329.94 99.94" pathLength="100" class="arc rpm"/>
+        <text x="296" y="44" class="lbl">km/h</text><text id="spd" x="296" y="80" class="big spdn">0</text><text id="rpmTxt" x="296" y="102" class="sub">4000</text>
+      </g>
+    </svg>
   </div>
-  <div id="dash" class="panel">
-    <div class="rpm"><div id="rpmFill"></div></div>
-    <div class="spdrow"><div><div id="spd">0</div><div class="u">KM/H</div></div><div id="gear">N</div></div>
-    <div class="drsrow"><div id="drs">DRS</div><div id="lim">PIT</div></div>
-    <div class="ped"><div class="pb"><i id="thr"></i></div><div class="pb br"><i id="brk"></i></div></div>
+  <!-- MFD (F: open / next page, arrows: choose) -->
+  <div id="mfd" class="panel" hidden>
+    <div class="mfd-tabs"><b data-p="0">OVERVIEW</b><b data-p="1">DAMAGE</b><b data-p="2">TYRES</b><b data-p="3">PIT</b></div>
+    <div id="mfdBody"></div>
+    <div class="mfd-help"><kbd>F</kbd> next page · PIT page: <kbd>↑</kbd><kbd>↓</kbd> select · <kbd>←</kbd><kbd>→</kbd> change</div>
   </div>
-  <div id="keys"><kbd>W</kbd> Throttle · <kbd>A</kbd>/<kbd>D</kbd> Steer · <kbd>SPACE</kbd> Brake · <kbd>S</kbd> Reverse (pit lane) · <kbd>E</kbd> DRS · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Next tyre · <kbd>L</kbd> Racing line · <kbd>H</kbd> HUD · <kbd>R</kbd> Recover · <kbd>P</kbd> Pause · <kbd>0</kbd> Replay · <kbd>M</kbd> Sound</div>
+  <div id="keys"><kbd>W</kbd> Throttle · <kbd>A</kbd>/<kbd>D</kbd> Steer · <kbd>SPACE</kbd> Brake · <kbd>S</kbd> Reverse (pit lane) · <kbd>E</kbd> DRS · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Next tyre · <kbd>F</kbd> MFD · <kbd>C</kbd> Camera · <kbd>L</kbd> Racing line · <kbd>H</kbd> HUD · <kbd>R</kbd> Recover · <kbd>P</kbd> Pause · <kbd>0</kbd> Replay · <kbd>M</kbd> Sound</div>
 </div>
 
 <div id="menu" class="ov">
@@ -70,7 +87,7 @@
     <div class="sec" id="todSec" hidden><h3>TIME OF DAY</h3><div class="chips" id="todSel"></div></div>
     <div class="sec"><h3>GRAPHICS QUALITY <span id="qInfo" style="color:var(--mute);font-weight:400;letter-spacing:0"></span></h3><div class="chips" id="qSel"></div></div>
     <div class="sec"><h3>TEAM / LIVERY</h3><div class="teams" id="teamSel"></div></div>
-    <div class="keyl"><span><kbd>W</kbd> Throttle</span><span><kbd>A</kbd><kbd>D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>S</kbd> Reverse (pit lane)</span><span><kbd>E</kbd> DRS</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Pit tyre S/M/H</span><span><kbd>L</kbd> Racing line</span><span><kbd>H</kbd> HUD</span><span><kbd>R</kbd> Recover</span><span><kbd>P</kbd> Pause</span><span><kbd>0</kbd> Replay</span></div>
+    <div class="keyl"><span><kbd>W</kbd> Throttle</span><span><kbd>A</kbd><kbd>D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>S</kbd> Reverse (pit lane)</span><span><kbd>E</kbd> DRS</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Pit tyre S/M/H</span><span><kbd>F</kbd> MFD (<kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>)</span><span><kbd>C</kbd> Camera</span><span><kbd>L</kbd> Racing line</span><span><kbd>H</kbd> HUD</span><span><kbd>R</kbd> Recover</span><span><kbd>P</kbd> Pause</span><span><kbd>0</kbd> Replay</span></div>
     <button class="btn ghost" id="introBtn">▶ CIRCUIT INTRO</button>
     <button class="btn" id="startBtn">ENTER PIT BOX</button>
     </div>
@@ -125,6 +142,6 @@
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261005p"></script>
+<script type="module" src="src/main.js?v=20261005q"></script>
 </body>
 </html>

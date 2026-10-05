@@ -42,7 +42,24 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 #topc small{display:block;font:700 10px var(--f-disp);letter-spacing:.14em;color:var(--mute)}
 #topc b{font:700 22px var(--f-disp);font-variant-numeric:tabular-nums}
 #flags{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 92px);transform:translateX(-50%);display:flex;gap:6px}
-.flag{padding:3px 10px;border-radius:4px;font:700 12px var(--f-disp);letter-spacing:.08em}
+/* race control strip: a flag / board icon and the call, F1 TV style */
+#flags{flex-wrap:wrap;justify-content:center;max-width:min(640px,92vw)}
+.flag{display:inline-flex;align-items:center;gap:7px;padding:4px 11px 4px 6px;border-radius:4px;font:800 12px var(--f-disp);letter-spacing:.08em;
+  background:rgba(8,11,16,.88);color:#fff;border:1px solid rgba(255,255,255,.14);white-space:nowrap}
+.flag i{width:22px;height:15px;border-radius:2px;flex:none;background:#444;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.flag.y1{border-color:var(--yellow)} .flag.y1 i{background:var(--yellow);animation:fwave .5s steps(2) infinite}
+.flag.y2{border-color:var(--yellow);background:#2a2300} .flag.y2 i{background:linear-gradient(90deg,var(--yellow) 0 44%,transparent 44% 56%,var(--yellow) 56%);box-shadow:none;animation:fwave .25s steps(2) infinite}
+.flag.ya{color:var(--yellow)} .flag.ya i{background:repeating-linear-gradient(135deg,var(--yellow) 0 4px,#3a3000 4px 8px)}
+.flag.gr{border-color:var(--green)} .flag.gr i{background:var(--green)}
+.flag.sc,.flag.vsc{background:var(--yellow);color:#111;border-color:var(--yellow)}
+.flag.sc i,.flag.vsc i{background:#111;color:var(--yellow);font:900 9px/15px var(--f-disp);text-align:center;font-style:normal;letter-spacing:0;width:28px}
+.flag.sc i::before{content:'SC'} .flag.vsc i::before{content:'VSC'}
+.flag.dp{color:var(--green)} .flag.dp i,.flag.dn i{display:none} .flag.dn{color:#fff;background:var(--red);border-color:var(--red)}
+.flag.bl i{background:#1560ff} .flag.ret{background:var(--red);border-color:var(--red)} .flag.ret i{display:none}
+.flag.off{color:#9aa} .flag.off i{display:none}
+.flag.bw i{background:linear-gradient(135deg,#000 50%,#fff 50%)} .flag.ch i{background:repeating-conic-gradient(#fff 0 25%,#111 0 50%) 0 0/8px 8px}
+@keyframes fwave{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.flag i{animation:none!important}}
 #msg{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 18px);transform:translate(-50%,-10px);font:900 26px var(--f-disp);letter-spacing:.12em;white-space:nowrap;opacity:0;transition:opacity .2s,transform .2s;background:rgba(8,11,16,.9);border-left:6px solid var(--red);border-radius:5px;padding:12px 26px 12px 20px;box-shadow:0 8px 26px rgba(0,0,0,.55)}
 #msg.on{opacity:1;transform:translate(-50%,0)}
 #msg small{display:none}
@@ -62,20 +79,60 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 #hud.lite #timing .big{font-size:25px}
 #hud.min #timing{display:none}
 /* dash */
-#dash{position:absolute;right:16px;bottom:16px;width:272px;padding:10px 14px 12px}
-.rpm{height:8px;border-radius:4px;background:#1b2133;overflow:hidden}
-#rpmFill{height:100%;width:0;background:linear-gradient(90deg,#1be26b 0 55%,#ffd200 55% 80%,#ff2a1a 80%)}
-.spdrow{display:flex;align-items:flex-end;justify-content:space-between;margin-top:4px}
-#spd{font:900 58px/1 var(--f-disp);font-variant-numeric:tabular-nums}
-.u{font:700 11px var(--f-disp);letter-spacing:.16em;color:var(--mute)}
-#gear{font:900 50px/1 var(--f-disp);width:54px;height:62px;display:grid;place-items:center;border:2px solid var(--line);border-radius:6px}
-.drsrow{display:flex;gap:6px;margin-top:8px}
-#drs,#lim{flex:1;text-align:center;padding:4px 0;border-radius:4px;font:900 15px var(--f-disp);letter-spacing:.1em;border:2px solid #333;color:#555}
-#drs.en{border-color:#bbb;color:#bbb} #drs.av{border-color:var(--drs);color:var(--drs)} #drs.open{background:var(--drs);border-color:var(--drs);color:#02140a}
-#lim.on{background:var(--blue);border-color:var(--blue);color:#021223}
-.ped{display:flex;gap:6px;margin-top:8px}
-.pb{flex:1;height:6px;background:#1b2133;border-radius:3px;overflow:hidden}
-.pb i{display:block;height:100%;width:0;background:var(--green)} .pb.br i{background:var(--red)}
+/* dash: the F1-game cluster under the car — DRS gauge, gear, speed/rpm gauge */
+#dash{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);width:min(380px,92vw)}
+#dash svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 4px 10px rgba(0,0,0,.55))}
+#dash .dial{fill:rgba(6,8,12,.78);stroke:rgba(255,255,255,.14);stroke-width:1.5}
+#dash .trk{fill:none;stroke:rgba(255,255,255,.12);stroke-width:7;stroke-linecap:round}
+#dash .arc{fill:none;stroke:#3a3f4a;stroke-width:7;stroke-linecap:round;stroke-dasharray:0 100;transition:stroke-dasharray .08s linear}
+#dash .arc.rpm{stroke:url(#rpmG)}
+#dash text{font-family:var(--f-disp);text-anchor:middle;fill:#fff;font-variant-numeric:tabular-nums}
+#dash .lbl{font-size:11px;font-weight:700;letter-spacing:.14em;fill:#aab3c5}
+#dash .big{font-size:30px;font-weight:900}
+#dash .spdn{font-size:36px}
+#dash .sub{font-size:11px;font-weight:700;letter-spacing:.1em;fill:#aab3c5}
+#dash .gear{font-size:64px;font-weight:900;paint-order:stroke;stroke:rgba(0,0,0,.6);stroke-width:4px}
+#dash .limtxt{font-size:13px;font-weight:900;letter-spacing:.14em;fill:transparent}
+#dash .limtxt.on{fill:var(--blue)}
+#dash .bgall{fill:rgba(0,0,0,.86);stroke:rgba(255,255,255,.1);stroke-width:1.5}
+#dash .gbg{fill:rgba(0,0,0,.88);stroke:rgba(255,255,255,.12);stroke-width:1.5}
+#dash .bar{fill:rgba(255,255,255,.12)} #dash .thr{fill:var(--green)} #dash .brk{fill:var(--red)}
+/* DRS states: off (grey), available (green ring, pulsing), open (full green) */
+#gDrs.off #drsTxt{fill:#8b93a3}
+#gDrs.av #drsArc{stroke:var(--drs);stroke-dasharray:100 100;animation:drsPulse .6s ease-in-out infinite alternate} #gDrs.av #drsTxt{fill:var(--drs)}
+#gDrs.open #drsArc{stroke:var(--drs);stroke-dasharray:100 100} #gDrs.open #drsTxt{fill:var(--drs)} #gDrs.open .dial{fill:rgba(10,60,32,.85)}
+#gDrs.dis #drsTxt{fill:#5b6170}
+@keyframes drsPulse{from{opacity:.35}to{opacity:1}}
+#keys{bottom:6px!important}
+/* MFD (bottom right): damage, tyre / brake temperatures, pit strategy */
+#mfd{position:absolute;right:16px;bottom:16px;width:300px;padding:8px 10px 8px;font:600 12px var(--f-disp)}
+#mfd[hidden]{display:none}
+@media (max-width:1100px){#mfd{bottom:180px}}
+.mfd-tabs{display:flex;gap:4px;margin-bottom:8px}
+.mfd-tabs b{flex:1;text-align:center;padding:4px 0;border-radius:3px;font:800 10px var(--f-disp);letter-spacing:.08em;color:var(--mute);background:#141a2a}
+.mfd-tabs b.on{background:var(--red);color:#fff}
+.mfd-help{margin-top:8px;font-size:10px;color:var(--mute);text-align:center}
+.mfd-help kbd{font-size:9px;padding:0 4px}
+#mfdBody{min-height:180px}
+#mfdBody .dmg{display:grid;grid-template-columns:110px 1fr;gap:8px;align-items:center}
+#mfdBody .dmg svg{width:110px;height:auto}
+#mfdBody .dmg svg [data-k]{stroke:rgba(0,0,0,.6);stroke-width:1}
+#mfdBody .lst{display:grid;gap:2px;font-size:11px}
+#mfdBody .lst div{display:flex;justify-content:space-between;gap:6px}
+#mfdBody .lst span{color:var(--mute)}
+#mfdBody .lst.ovw{gap:7px;font-size:12px} #mfdBody .lst.ovw b span{color:inherit}
+#mfdBody .tyres{display:grid;grid-template-columns:1fr 70px 1fr;grid-template-rows:auto auto;gap:6px 8px;align-items:center}
+#mfdBody .tyr{border-radius:5px;padding:5px 6px;text-align:center;background:#111725;border:2px solid #333}
+#mfdBody .tyr b{display:block;font:900 18px var(--f-disp)} #mfdBody .tyr small{display:block;font-size:10px;color:var(--mute)}
+#mfdBody .tyr i{display:block;font-style:normal;font-size:11px;margin-top:2px}
+#mfdBody .carmid{grid-row:1/3;grid-column:2;height:130px;border-radius:30px 30px 14px 14px;background:linear-gradient(#2a3040,#161b27);position:relative}
+#mfdBody .carmid::after{content:attr(data-c);position:absolute;inset:auto 0 8px 0;text-align:center;font:900 12px var(--f-disp)}
+#mfdBody .rows{display:grid;gap:4px}
+#mfdBody .opt{display:flex;justify-content:space-between;align-items:center;padding:7px 8px;border-radius:4px;background:#111725;border:1px solid transparent}
+#mfdBody .opt.sel{border-color:var(--yellow);background:#1d2232}
+#mfdBody .opt span{color:var(--mute);font-size:11px;letter-spacing:.06em}
+#mfdBody .opt b{font:800 13px var(--f-disp)} #mfdBody .opt b::before{content:'◂ ';color:var(--mute)} #mfdBody .opt b::after{content:' ▸';color:var(--mute)}
+#mfdBody .note{margin-top:6px;font-size:11px;color:var(--mute);line-height:1.4}
 /* info */
 #info{position:relative;width:272px;padding:10px 12px;font-size:13px;display:grid;gap:6px}
 .kv{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -139,7 +196,7 @@ td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.05);white-space:now
 tr.me td{background:rgba(225,6,0,.18)}
 td .sw{display:inline-block;width:4px;height:12px;margin-right:6px;vertical-align:-1px}
 .pts{font-weight:700;color:var(--yellow)}
-@media (max-width:560px){#tower,#minimap,#timing{display:none} #keys{display:none} #dash,#info{width:calc(50% - 20px)} #spd{font-size:40px}}
+@media (max-width:560px){#tower,#minimap,#timing{display:none} #keys{display:none} #info{width:calc(50% - 20px)} #dash{width:min(300px,70vw)} #mfd{width:calc(100% - 32px);bottom:150px}}
 @media (prefers-reduced-motion:reduce){#msg{transition:none}}
 /* loading screen */
 #loading{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#101833,#04060c 70%);transition:opacity .5s}
