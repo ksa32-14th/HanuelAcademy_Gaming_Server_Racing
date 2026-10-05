@@ -6,19 +6,19 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005s';
-import {perf} from './perf.js?v=20261005s';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261005s';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005s';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005s';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261005s';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005t';
+import {perf} from './perf.js?v=20261005t';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261005t';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005t';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005t';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261005t';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005s';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005t';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005s'):import('./data/osm-songdo.js?v=20261005s')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005t'):import('./data/osm-songdo.js?v=20261005t')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1615,7 +1615,8 @@ function walls(c){
     // the barrier does not forgive: damage grows with the speed INTO the wall; a hard hit (~70 km/h square on, i.e.
     // 200 km/h at 20°) or the last straw on a battered car breaks the suspension and ends the race
     const hz=hitZone(c,w.px,w.pz),zone=into>0.45&&hz[0]==='F'?'F':hz[0]==='R'?'R':'S';
-    if(vn>7&&phase==='race'&&!c.dnf){c.damage=Math.min(1,c.damage+(vn-7)*0.03);hurt(c,(vn-7)*0.03,zone,hz[1]);hazard(c.s,1,vn>14?14:8);
+    if(vn>7&&phase==='race'&&!c.dnf){c.damage=Math.min(1,c.damage+(vn-7)*0.03);hurt(c,(vn-7)*0.03,zone,hz[1]);
+      if(vn>13)hazard(c.s,1,6); // only a real impact brings out a yellow — not every scrape along the barrier
       if(vn>=19||c.damage>=1)retire(c,'HEAVY IMPACT',vn);
       else if(c.isPlayer&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT · DAMAGE '+Math.round(c.damage*100)+'%');}}
     else if(vn>12&&!c.dnf){c.damage=Math.min(0.9,c.damage+(vn-12)*0.02);hurt(c,(vn-12)*0.02,zone,hz[1]);}}
@@ -1654,7 +1655,7 @@ function collide(){
     if(hitter&&closing>13){const am=(closing-13)*0.012,vic=hitter===A?B:A,zh=hitZone(hitter,h.px,h.pz),zv=hitZone(vic,h.px,h.pz);
       hitter.damage=Math.min(1,hitter.damage+am);hurt(hitter,am,zh[0],zh[1]); // mostly the front wing
       hurt(vic,am*0.5,zv[0],zv[1]);}                                         // the car that was hit: parts only
-    if(phase==='race'&&closing>10&&!A.pitSide&&!B.pitSide){hazard(A.s,1,8);
+    if(phase==='race'&&closing>10&&!A.pitSide&&!B.pitSide){ // contact itself brings out no yellow: only its aftermath does (a car stopped, stranded or retired — see updateFlags)
       if(closing>24&&!hitter.dnf)retire(hitter,'COLLISION',closing);
       const vic=hitter===A?B:A;if(closing>30&&!vic.dnf)retire(vic,'COLLISION',closing);}
     if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT'+(closing>10?' · AERO DAMAGE':''));}}
@@ -1938,7 +1939,7 @@ function computeFlags(){
   hazards=hazards.filter(z=>simTime<z.until);
   const prev=msFlag.slice();msFlag.fill(0);
   for(const z of hazards){const k=msOf(z.s);msFlag[k]=Math.max(msFlag[k],z.sev);
-    if(z.s-k*MS_L<90){const p=(k-1+MS_N)%MS_N;msFlag[p]=Math.max(msFlag[p],1);}} // just past a post: the post before warns too
+    if(z.s-k*MS_L<40){const p=(k-1+MS_N)%MS_N;msFlag[p]=Math.max(msFlag[p],1);}} // right past a post: the post before warns too
   for(let k=0;k<MS_N;k++){
     if(msFlag[k]){const n=(k+1)%MS_N;if(!msFlag[n])msGreen[n]=simTime+0.3;} // green at the post that ends the yellow zone
     else if(prev[k])msGreen[k]=simTime+6;}}                              // a sector that has just been cleared
@@ -1956,9 +1957,13 @@ function updateFlags(dt){
     if(c.parked||c.pitSide||c.pitStop>0||c.finished||c.held)continue;
     const ad=Math.abs(c.d),hw=HWa[c.idx];
     if(c.dnf){hazard(c.s,2,1);continue;}                                  // a wreck with marshals at work: double yellow
-    if(c.v<4)hazard(c.s,ad<hw+0.5?2:1,3);                                 // stopped: on the racing surface → double
-    else if(ad>hw+KERB_W+1.5&&c.v<22)hazard(c.s,1,3);                    // stranded off the road / crawling back on
-    else if(Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.6&&c.v>5)hazard(c.s,1,5);} // spinning
+    // a moment slow or off the road is no incident: only a car that STAYS stopped (2 s) or stranded off the road (3 s)
+    // brings out a yellow; cleared 2 s after it gets going again
+    c.stopT=c.v<4?(c.stopT||0)+dt:0;
+    c.offT=ad>hw+KERB_W+1.5&&c.v<12?(c.offT||0)+dt:0;
+    if(c.stopT>2)hazard(c.s,ad<hw+0.5?2:1,2);                             // stopped: on the racing surface → double
+    else if(c.offT>3)hazard(c.s,1,2);                                     // stranded off the road / crawling back on
+    else if(Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.6&&c.v>5)hazard(c.s,1,4);} // spinning
   computeFlags();
   // the VSC / SC delta: time actually taken minus the reference time over the same distance (positive = slower = legal)
   if(vsc||scOn())for(const c of cars){if(c.parked||c.dnf||c.pitSide){c.vd=Math.max(c.vd||0,0);continue;}
