@@ -6,19 +6,19 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005q';
-import {perf} from './perf.js?v=20261005q';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261005q';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005q';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005q';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261005q';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005r';
+import {perf} from './perf.js?v=20261005r';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261005r';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005r';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005r';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261005r';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005q';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005r';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005q'):import('./data/osm-songdo.js?v=20261005q')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005r'):import('./data/osm-songdo.js?v=20261005r')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1531,7 +1531,7 @@ function physics(c,dt){
   const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=0.26/(1+v/70); // ~13.5 m minimum turning radius, and still limited at speed
   const dmax=Math.max(0.03,Math.min(dPhys,dGrip*(c.isPlayer?1.2:1.1)));
   const want=c.isPlayer&&!c.auto?c.steerIn*dmax:clamp(c.deltaCmd,-dmax,dmax);
-  c.delta+=clamp(want-c.delta,-8*dt,8*dt);
+  c.delta+=clamp(want-c.delta,-3*dt,3*dt); // the front wheels turn at a steady rate: no instant lock-to-lock darts
   let axT=(Fp-Fb)/m;if(v<0.05&&axT<0)axT=0;
   // A planted F1 car, not a drift car. The path (chi) bends as far as the tyres allow; the body (yaw) follows the path
   // within a few hundredths of a second, carrying only a small slip angle — it never swings out of line. Asking for
@@ -1545,10 +1545,11 @@ function physics(c,dt){
   const ax=axT-Fdrag/m-Math.min(c.slip,1)*3.0;
   c.v=Math.max(0,v+ax*dt);
   c.chi=v>0.5?c.chi+ay/v*dt:c.yaw;
-  // body: turns with the path, plus a small slip angle (up to ~3° with the steering, 5° hard limit) settling in ~40 ms
-  const rT=(v>0.5?ay/v:rReq)+(clamp(ay*0.0012,-0.05,0.05)-beta)*12;
-  c.r+=(rT-c.r)*(1-Math.exp(-dt/0.035));c.yaw+=c.r*dt;
-  if(Math.abs(wrapA(c.yaw-c.chi))>0.09)c.chi=c.yaw-Math.sign(wrapA(c.yaw-c.chi))*0.09;
+  // body: turns with the path, plus a tiny slip angle (≤ ~1.5°). The follow is well damped (no overshoot), so letting
+  // go of the steering no longer swings the nose past the path and back; a 5° hard limit eases chi in, never snaps it
+  const rT=(v>0.5?ay/v:rReq)+(clamp(ay*0.0005,-0.025,0.025)-beta)*8;
+  c.r+=(rT-c.r)*(1-Math.exp(-dt/0.05));c.yaw+=c.r*dt;
+  {const b=wrapA(c.yaw-c.chi);if(Math.abs(b)>0.09)c.chi+=(b-Math.sign(b)*0.09)*Math.min(1,10*dt);}
   c.aLong=ax;c.aLat=ay;
   c.x+=Math.cos(c.chi)*c.v*dt;c.z+=Math.sin(c.chi)*c.v*dt;
   const dist=c.v*dt;
@@ -1654,11 +1655,13 @@ function contactPush(C,nx,nz,dn){
   const ch=C.chi??C.yaw,vx=Math.cos(ch)*C.v-nx*dn,vz=Math.sin(ch)*C.v-nz*dn,nv=Math.hypot(vx,vz);
   if(nv<0.05){C.v=0;return;}
   const nc=Math.atan2(vz,vx),d=wrapA(nc-ch);
-  if(Math.abs(d)>0.3){C.v=Math.max(0,vx*Math.cos(ch)+vz*Math.sin(ch));return;}
-  C.chi=nc;C.yaw+=d;C.v=nv;}
+  // a contact bends the path by at most ~1.7° per step and leaves the body alone: the body turns after it through the
+  // normal damped follow (snapping yaw by up to 17° in one step was the "flick" on every touch); the rest is speed lost
+  if(Math.abs(d)>0.03){C.chi=ch+Math.sign(d)*0.03;C.v=Math.max(0,vx*Math.cos(C.chi)+vz*Math.sin(C.chi));return;}
+  C.chi=nc;C.v=nv;}
 // visual-only impact motion: a damped twist/shake of the car body (the camera is not affected)
 function jolt(c,dx,dz,px,pz,sp){const k=Math.min(sp,25),fx=Math.cos(c.yaw),fz=Math.sin(c.yaw);
-  const tq=(px-c.x)*dz-(pz-c.z)*dx;c.jyV=clamp((c.jyV||0)-tq*k*0.02,-1.2,1.2);
+  const tq=(px-c.x)*dz-(pz-c.z)*dx;c.jyV=clamp((c.jyV||0)-tq*k*0.008,-0.4,0.4);
   c.rollV+=clamp((dx*-fz+dz*fx)*k*0.012,-0.3,0.3);c.pitchV+=clamp((dx*fx+dz*fz)*k*0.008,-0.2,0.2);}
 // separating-axis test between two car boxes → penetration, normal (A→B), contact point
 function obbHit(A,B){
@@ -1751,10 +1754,9 @@ function computeTow(){for(const c of cars){c.tow=0;if(c.parked)continue;for(cons
 
 /* ================= DRIVER INPUT / AI ================= */
 function playerControl(dt){const c=player;if(c.auto){aiDrive(c,dt);return;}const tg=(keys.KeyD?1:0)-(keys.KeyA?1:0);
-  // keys act at once: steering winds on in ~0.1 s at low speed and ~0.25 s at 300 km/h (so a tap still gives part
-  // lock there) and centres in ~50 ms; throttle and brake reach full in ~35 ms. (The old wind-on took ~0.6 s at speed
-  // and, with the yaw lag behind it, every input felt late.)
-  const rate=(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?20:10/(1+c.v/50);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
+  // steering winds on in ~0.17 s at low speed and ~0.45 s at 300 km/h and centres in ~0.12 s: quick, but a keyboard
+  // tap no longer flicks the car left-right (the 50 ms version made every tap a dart); throttle and brake ~35 ms
+  const rate=(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?8:6/(1+c.v/50);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
   c.throttle+=clamp((keys.KeyW?1:0)-c.throttle,-35*dt,30*dt);c.brake+=clamp((keys.Space?1:0)-c.brake,-35*dt,30*dt);
   if(c.throttle<0.01)c.throttle=0;if(c.brake<0.01)c.brake=0;c.revIn=!!keys.KeyS;
   if(c.dnf){c.throttle=0;c.brake=1;c.steerIn=0;}}
@@ -1862,8 +1864,12 @@ function aiDrive(c,dt){
   let vt=1e9;for(let j=0;j<4;j++)vt=Math.min(vt,VP[(c.idx+j)%N]);
   vt*=c.skill*Math.sqrt(tyreGrip(c)/0.975)*(1-0.12*c.damage);
   if(yielding)vt*=0.95;if(c.finished)vt*=0.6;vt=Math.min(vt,vcap);
-  // yellow: lift for a single, slow down significantly for a double (and no DRS in either)
-  if(session==='race'){const fl=flagAt(c.s);if(fl){vt*=fl===2?0.72:0.9;c.drsOpen=false;}}
+  // yellow: lift for a single, slow down significantly for a double (and no DRS in either). The cut is eased in — it
+  // starts with a yellow in the next sectors and the target pace drops by ~8 %/s — so the cars ahead slow down
+  // gradually by lifting instead of all stamping on the brakes at the flag post; it comes back off at ~25 %/s
+  if(session==='race'){const fl=flagAt(c.s),yf=fl===2?0.72:fl===1?0.9:yellowAhead(c.s)?0.96:1;
+    c.yf=(c.yf??1)+clamp(yf-(c.yf??1),-0.08*dt,0.25*dt);vt*=c.yf;if(fl)c.drsOpen=false;}
+  else c.yf=1;
   if(session==='race'&&scActive())vt=Math.min(vt,scCap(c));
   // now and then a driver overcooks a braking zone (≈ once per 300 car-laps): too fast into the corner for ~1.5 s
   if(session==='race'&&!scActive()&&c.lapCount>=0){if(c.mLap!==c.lapCount){c.mLap=c.lapCount;c.mAt=rnd()<0.0035?rnd()*L:null;}
@@ -2576,13 +2582,14 @@ function updateVisuals(dt){
   for(const c of cars){const m=c.mesh;m.root.position.set(c.rx,.02+(c.pitStop>0?.13:0),c.rz);
     c.visSlide=0; // real slip angle is simulated now (body yaw ≠ travel direction)
     // impact twist is applied to the whole car (body + wheels) so the body never shears off its wheels
-    m.root.rotation.y=-c.ryaw+clamp(c.jy||0,-0.08,0.08);
+    m.root.rotation.y=-c.ryaw+clamp(c.jy||0,-0.03,0.03);
     // suspension: damped springs toward load-transfer targets (nose dive, body roll)
     // stiff F1-like suspension: only a hint of roll/dive, critically damped so keyboard taps don't rock the car
     const tp=clamp(c.aLong*0.0003,-0.012,0.008),tr=clamp(-c.aLat*0.00012,-0.006,0.006);
     c.pitchV+=((tp-c.pitch)*160-c.pitchV*25)*sdt;c.pitch+=c.pitchV*sdt;
     c.rollV+=((tr-c.roll)*160-c.rollV*25)*sdt;c.roll+=c.rollV*sdt;
-    c.jyV=(c.jyV||0)+(-(c.jy||0)*220-c.jyV*12)*sdt;c.jy=(c.jy||0)+c.jyV*sdt;
+    // impact twist: critically damped, so it eases back once instead of wagging left-right before settling
+    c.jyV=(c.jyV||0)+(-(c.jy||0)*220-c.jyV*30)*sdt;c.jy=(c.jy||0)+c.jyV*sdt;
     if(!isFinite(c.roll)||!isFinite(c.pitch)){c.roll=c.pitch=c.rollV=c.pitchV=0;}if(!isFinite(c.jy)){c.jy=c.jyV=0;}
     m.body.rotation.set(clamp(c.roll,-0.05,0.05),0,clamp(c.pitch,-0.04,0.04));
     for(const w of m.wheels)w.rotation.z-=c.v*dt/(0.36*WHEEL_S);for(const s of m.steer)s.rotation.y=-c.delta*1.4;
@@ -2605,7 +2612,7 @@ function updateVisuals(dt){
    for(let k=ci;k<crews.length;k++)crews[k].visible=false;}
   drawSafetyCar(dt,al);updateMarshalPanels();
   updatePitHud();
-  // F1 broadcast T-cam just above the driver's head. It follows position and heading only —
+  // the TV POD camera follows position and heading only —
   // it is NOT tied to body roll/pitch, so the horizon stays level whatever the chassis does.
   // Two things made this view sickening and both are fixed here:
   //  1. the heading was welded 1:1 to the chassis, so every steering tap and every degree of slip
@@ -2613,25 +2620,23 @@ function updateVisuals(dt){
   //  2. the field of view grew with speed. A FOV that breathes is a classic nausea trigger; it is fixed.
   const c=player;
   const tgt=c.ryaw-clamp(wrapA(c.ryaw-c.chi),-0.4,0.4)*0.6;
-  if(camYaw===null)camYaw=tgt;else camYaw+=wrapA(tgt-camYaw)*(1-Math.exp(-dt/0.07));
+  if(camYaw===null)camYaw=tgt;else camYaw+=wrapA(tgt-camYaw)*(1-Math.exp(-dt/0.12));
   const hx=Math.cos(camYaw),hz=Math.sin(camYaw);
-  // C cycles the view: COCKPIT / 1st person (default — the driver's eye inside the helmet, rigid to the car, halo
-  // overhead, nose and steering wheel below), the raised T-cam, the TV POD (the broadcast camera pod on top of the
-  // airbox: halo, mirrors and front wheels in shot), and a chase camera as in the F1 games
+  // C toggles the view: COCKPIT / 1st person (default — the driver's eye inside the helmet, rigid to the car, halo
+  // overhead, nose and steering wheel below) and the TV POD (the broadcast camera pod on top of the airbox: halo,
+  // mirrors and front wheels in shot)
   if(camMode===0){const cx=Math.cos(c.ryaw),cz=Math.sin(c.ryaw),ey=0.02+0.84*CAR_SY,ex=-0.06*CAR_SX; // inside the helmet (its inside faces are not drawn)
     camera.position.set(c.rx+cx*ex,ey,c.rz+cz*ex);_v1.set(c.rx+cx*30,ey-2.5,c.rz+cz*30);}
-  else if(camMode===2){camera.position.set(c.rx-hx*0.39,1.25,c.rz-hz*0.39);_v1.set(c.rx+hx*40,0.75,c.rz+hz*40);}
-  else if(camMode===3){camera.position.set(c.rx-hx*6.8,2.0,c.rz-hz*6.8);_v1.set(c.rx+hx*8,0.8,c.rz+hz*8);}
-  else{camera.position.set(c.rx-hx*0.16,1.672,c.rz-hz*0.16);_v1.set(c.rx+hx*40,0.65,c.rz+hz*40);}
+  else{camera.position.set(c.rx-hx*0.39,1.25,c.rz-hz*0.39);_v1.set(c.rx+hx*40,0.75,c.rz+hz*40);}
   camera.up.set(0,1,0);
-  camera.lookAt(_v1);camera.fov=camMode===0?70:camMode===2?66:62;camera.far=FAR_RACE;
+  camera.lookAt(_v1);camera.fov=camMode===0?70:66;camera.far=FAR_RACE;
   updateRacingLine();
   camera.updateProjectionMatrix();
   aimSun(c.rx,c.rz);
 }
 const _v1=new THREE.Vector3();
 let camYaw=null; // damped camera heading; reset when a car is placed on the grid
-let camMode=0;const CAM_MODES=["COCKPIT (1ST PERSON)","T-CAM HIGH","TV POD","CHASE"];
+let camMode=0;const CAM_MODES=["COCKPIT (1ST PERSON)","TV POD"];
 
 /* ---- pit banner: counts down the approach to the entry, then narrates the stop itself ---- */
 const pitHud=document.createElement('div');
