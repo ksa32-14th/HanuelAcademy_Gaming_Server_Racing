@@ -140,7 +140,8 @@ function setQualityMode(mode){qState.mode=mode;qName=mode==='auto'?detectPreset(
   scaler.enabled=scalerAllowed();scaler.reset();saveMode(mode);applyQuality();}
 // Dynamic resolution only with GPU timings: judged on frame intervals alone it also shrank CPU-bound frames, which only
 // blurs them, and every step re-allocates the render targets (a hitch)
-function scalerAllowed(){return !NOSCALER&&gpuTimer.ok;}
+// …and only in AUTO: a fixed preset (shown as "fixed preset" in the lobby) keeps its resolution
+function scalerAllowed(){return !NOSCALER&&gpuTimer.ok&&qState.mode==='auto';}
 
 const mat=(o)=>new THREE.MeshStandardMaterial(o);
 // Flat ground layers (ground, footways, parks, sea, car parks, streets) lie centimetres apart, and seen from a
@@ -229,13 +230,6 @@ async function buildWorld(){
   const pa=idxSp(PIT_A);strip(pa,rangeN(PIT_A,PIT_D),i=>pitOffSp(spI(i))-PIT_HW,i=>pitOffSp(spI(i))+PIT_HW,0.01,0.01,matPitRoad,10);
   const hwI=i=>HWa[i%N];
   strip(0,N+1,i=>-hwI(i),hwI,0.02,0.02,matRoad,W);
-  // the city street's own markings, left on the road as at any street circuit and worn by the race traffic: dashed white
-  // lane lines (8 m paint, 12 m gap) splitting the carriageway into six lanes, and the yellow double centre line
-  {const dash=canvasTex(64,4,(x)=>{x.clearRect(0,0,64,4);x.fillStyle='#fff';x.fillRect(0,0,26,4);},true);
-   const mDash=mat({map:dash,color:0xe8e6dc,transparent:true,opacity:.5,roughness:.6,depthWrite:false,...po(-3)});
-   const mYel=mat({color:0xd9b440,transparent:true,opacity:.3,roughness:.6,depthWrite:false,...po(-3)});
-   for(const f of [-2/3,-1/3,1/3,2/3])strip(0,N+1,i=>hwI(i)*f-0.07,i=>hwI(i)*f+0.07,0.022,0.022,mDash,20,false);
-   for(const o of [-0.22,0.1])strip(0,N+1,()=>o,()=>o+0.12,0.022,0.022,mYel,20,false);}
   strip(0,N+1,i=>RL[i]-1.3,i=>RL[i]+1.3,0.025,0.025,matRubber,20,false); // rubbered-in racing line
   strip(0,N+1,i=>-hwI(i)-0.05,i=>-hwI(i)+0.15,0.03,0.03,matLine);
   strip(0,N+1,i=>hwI(i)-0.15,i=>hwI(i)+0.05,0.03,0.03,matLine);
