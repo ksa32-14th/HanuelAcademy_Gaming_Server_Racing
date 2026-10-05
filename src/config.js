@@ -18,7 +18,10 @@ export const CAR_SX=1.05, CAR_SY=1.18, CAR_SZ=1.2, WHEEL_S=1.18;
 export const TL_EDGE=HW+KERB_W+1.2*CAR_SZ;
 // CdA tuned for ~330 km/h flat out, more with DRS/tow. There is NO artificial speed cap: top speed is
 // wherever power runs out against drag. VMAX is only the planning ceiling for the AI speed profile
-export const G=9.81, RHO=1.2, MASS=798, POWER=700000, CDA=1.514, CLA=5.0, MU=1.55, CRR=0.012, WB=3.6, VMAX=420/3.6;
+// TRACTION: the share of the tyre grip the driven rear wheels can put down as drive before they spin. Traction control
+// is only light (TC_SLACK): the driver may ask for up to 1.25× that before it intervenes; beyond, the wheels spin —
+// less drive, less cornering grip, revs flaring (see physics()).
+export const G=9.81, RHO=1.2, MASS=798, POWER=700000, CDA=1.514, CLA=5.0, MU=1.55, CRR=0.012, WB=3.6, VMAX=420/3.6, TRACTION=0.62, TC_SLACK=1.25;
 // brake grip as a fraction of the tyre's cornering grip. Below 1 the brakes cannot stand the car on
 // its nose, so the braking zone is long enough that you have to place the car for the corner in it —
 // which is what makes out-in-out necessary instead of optional.

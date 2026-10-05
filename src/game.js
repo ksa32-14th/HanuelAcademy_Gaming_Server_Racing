@@ -9,7 +9,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005q';
 import {perf} from './perf.js?v=20261005q';
 import {TRACKS,INTROS} from './data/tracks.js?v=20261005q';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005q';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005q';
 import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005q';
 import {createTextures,canvasTex,winTex} from './textures.js?v=20261005q';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
@@ -1519,7 +1519,12 @@ function physics(c,dt){
   const cla=CLA*(c.drsOpen?0.9:1)*(1-0.3*c.damage),cda=CDA*(c.drsOpen?0.85:1)*(1-0.22*c.tow);
   const Nn=m*G+0.5*RHO*cla*v*v,aMax=mu*Nn/m;
   const thr=c.fuel>0?c.throttle:0;
-  const Fp=thr>0?Math.min(POWER*thr/Math.max(v,4),mu*0.62*Nn):0;
+  // drive and wheelspin: TRACTION × grip is what the rear tyres can put down. A light traction control lets the driver
+  // ask for up to TC_SLACK × that; past it the wheels spin (spin 0…1): the drive drops to ~75 % and the rears lose
+  // some cornering grip, so too much throttle out of a slow corner is slower and pushes the car wide
+  const Fdem=thr>0?POWER*thr/Math.max(v,4):0,Ftr=mu*TRACTION*Nn;
+  c.spin=Fdem>Ftr*TC_SLACK?Math.min(1,(Fdem/(Ftr*TC_SLACK)-1)*1.5):0;
+  const Fp=Math.min(Fdem,Ftr)*(1-0.25*c.spin);
   const Fdrag=0.5*RHO*cda*v*v+(v>0.1?CRR*m*G:0),Fb=c.brake*mu*BRK*Nn;
   // steering lock shrinks with speed (heavy steering / small angles at 300 km/h); the player may ask
   // for ~30 % more than the grip limit, which now makes the car slide instead of tracking on rails
@@ -1528,25 +1533,27 @@ function physics(c,dt){
   const want=c.isPlayer&&!c.auto?c.steerIn*dmax:clamp(c.deltaCmd,-dmax,dmax);
   c.delta+=clamp(want-c.delta,-8*dt,8*dt);
   let axT=(Fp-Fb)/m;if(v<0.05&&axT<0)axT=0;
-  // heading (yaw) and travel direction (chi) are separate: the body can rotate faster than the
-  // tyres can bend the path → slip angle beta = yaw − chi (slides, understeer, snap oversteer)
+  // A planted F1 car, not a drift car. The path (chi) bends as far as the tyres allow; the body (yaw) follows the path
+  // within a few hundredths of a second, carrying only a small slip angle — it never swings out of line. Asking for
+  // more than the grip (friction ellipse: braking / traction and cornering share one budget) makes the tyres slide:
+  // past the peak they give a little LESS than the peak, so the car pushes wide and scrubs speed (understeer, wheelspin
+  // out of slow corners, locking up into them) — hard to drive on the limit, but no tail-out slides.
   if(c.chi===undefined)c.chi=c.yaw;
-  const beta=wrapA(c.yaw-c.chi),rReq=v*Math.tan(c.delta)/WB;
-  const rT=rReq-beta*1.6; // self-aligning torque straightens the car when you ease off
-  c.r+=(rT-c.r)*(1-Math.exp(-dt/(0.07+v*0.002))); // yaw inertia (heavier at speed, never instant)
-  // friction ellipse: drive/brake and the lateral force bending the path share one grip budget
-  const ayNeed=v*(c.r+beta*4.5),n=Math.hypot(axT/(aMax*1.05),ayNeed/aMax);
-  let ay=ayNeed;c.slip=0;if(n>1){c.slip=n-1;axT/=n;ay/=n;}
-  if(c.slip>0&&c.throttle>0.5&&v<60)c.r+=Math.sign(rReq)*Math.min(c.slip,1)*c.throttle*2.0*dt; // power oversteer
-  const ax=axT-Fdrag/m-Math.min(c.slip,1)*2.5-(c.slip>0?Math.min(Math.abs(beta),0.5)*v*0.45:0); // only a real slide scrubs speed
-  c.v=Math.max(0,v+ax*dt);c.yaw+=c.r*dt;
+  const beta=wrapA(c.yaw-c.chi),rReq=v*Math.tan(c.delta)/WB,ayReq=v*rReq;
+  const n=Math.hypot(axT/(aMax*1.05),ayReq/(aMax*(1-0.2*c.spin))); // spinning rears corner worse
+  let ay=ayReq;c.slip=0;if(n>1){c.slip=n-1;const lose=1-0.14*Math.min(c.slip,1);axT=axT/n*lose;ay=ayReq/n*lose;}
+  const ax=axT-Fdrag/m-Math.min(c.slip,1)*3.0;
+  c.v=Math.max(0,v+ax*dt);
   c.chi=v>0.5?c.chi+ay/v*dt:c.yaw;
-  if(Math.abs(wrapA(c.yaw-c.chi))>1.0)c.chi=c.yaw-Math.sign(wrapA(c.yaw-c.chi))*1.0;
+  // body: turns with the path, plus a small slip angle (up to ~3° with the steering, 5° hard limit) settling in ~40 ms
+  const rT=(v>0.5?ay/v:rReq)+(clamp(ay*0.0012,-0.05,0.05)-beta)*12;
+  c.r+=(rT-c.r)*(1-Math.exp(-dt/0.035));c.yaw+=c.r*dt;
+  if(Math.abs(wrapA(c.yaw-c.chi))>0.09)c.chi=c.yaw-Math.sign(wrapA(c.yaw-c.chi))*0.09;
   c.aLong=ax;c.aLat=ay;
   c.x+=Math.cos(c.chi)*c.v*dt;c.z+=Math.sin(c.chi)*c.v*dt;
   const dist=c.v*dt;
   c.fuel=Math.max(0,c.fuel-FUEL_PER_LAP/L*dist*(0.35+0.65*thr)*1.12);
-  c.wear+=dist/1000*COMP[c.comp].rate*wearMult*(1+1.5*Math.min(c.slip,2)+0.4*c.brake);
+  c.wear+=dist/1000*COMP[c.comp].rate*wearMult*(1+1.5*Math.min(c.slip,2)+0.4*c.brake+1.2*c.spin);
   temps(c,dt,ay,ax);
 }
 /* ---- tyre and brake temperatures (°C), FL FR RL RR. A tyre heats with the work it does — cornering load (more on the
@@ -1557,7 +1564,7 @@ const T_OPT={S:95,M:100,H:106},T_HEAT={S:1.08,M:1,H:0.93};
 function temps(c,dt,ay,ax){if(!c.tT){c.tT=[80,80,80,80];c.bT=[300,300,300,300];}
   const v=c.v,lat=Math.abs(ay),cool=0.012*(1+v/50),hk=T_HEAT[c.comp],sl=Math.min(c.slip||0,1);
   for(let w=0;w<4;w++){const front=w<2,out=ay>0?w%2===0:w%2===1,load=lat<0.5?1:out?1.3:0.7;
-    const H=(0.009*v+0.068*lat*load+(front?0.04*Math.max(0,-ax):0.034*Math.max(0,ax))+4*sl)*hk;
+    const H=(0.009*v+0.068*lat*load+(front?0.04*Math.max(0,-ax):0.034*Math.max(0,ax)+9*(c.spin||0))+4*sl)*hk;
     c.tT[w]+=(H-(c.tT[w]-32)*cool)*dt;
     const bh=c.brake*v*(front?7:5),bc=(c.bT[w]-60)*0.03*(1+v/80);c.bT[w]=Math.max(60,c.bT[w]+(bh-bc)*dt);}}
 // grip from tyre temperature: a mild loss away from the window (never more than 6 %)
@@ -1744,10 +1751,11 @@ function computeTow(){for(const c of cars){c.tow=0;if(c.parked)continue;for(cons
 
 /* ================= DRIVER INPUT / AI ================= */
 function playerControl(dt){const c=player;if(c.auto){aiDrive(c,dt);return;}const tg=(keys.KeyD?1:0)-(keys.KeyA?1:0);
-  // near-instant response: full input in ~60–100 ms (just enough smoothing to avoid a digital twitch)
-  // centring stays quick; winding on lock slows with speed so taps give partial steering at 300 km/h
-  const rate=(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?16:6/(1+c.v/25);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
-  c.throttle+=clamp((keys.KeyW?1:0)-c.throttle,-25*dt,16*dt);c.brake+=clamp((keys.Space?1:0)-c.brake,-25*dt,20*dt);
+  // keys act at once: steering winds on in ~0.1 s at low speed and ~0.25 s at 300 km/h (so a tap still gives part
+  // lock there) and centres in ~50 ms; throttle and brake reach full in ~35 ms. (The old wind-on took ~0.6 s at speed
+  // and, with the yaw lag behind it, every input felt late.)
+  const rate=(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?20:10/(1+c.v/50);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
+  c.throttle+=clamp((keys.KeyW?1:0)-c.throttle,-35*dt,30*dt);c.brake+=clamp((keys.Space?1:0)-c.brake,-35*dt,30*dt);
   if(c.throttle<0.01)c.throttle=0;if(c.brake<0.01)c.brake=0;c.revIn=!!keys.KeyS;
   if(c.dnf){c.throttle=0;c.brake=1;c.steerIn=0;}}
 
@@ -2542,7 +2550,9 @@ function pop(t){const ac=au.ac,s=ac.createBufferSource();s.buffer=au.buf;const f
 // the string of pops down the exhaust after a lift: unburnt fuel lighting off in the pipes
 function crackle(t,rpm){const n=2+Math.floor(Math.random()*4);
   for(let k=0;k<n;k++)pop(t+0.04+k*rand(0.03,0.11));}
-function rpmOf(c){const kmh=c.v*3.6,g=gearOf(c.v);let r=clamp(12000*kmh/GEARS[g],4000,12200);if(g===0)r=Math.max(r,4000+c.throttle*7000*(1-kmh/GEARS[0]));return r;}
+function rpmOf(c){const kmh=c.v*3.6,g=gearOf(c.v);let r=clamp(12000*kmh/GEARS[g],4000,12200);if(g===0)r=Math.max(r,4000+c.throttle*7000*(1-kmh/GEARS[0]));
+  if(c.spin>0)r=Math.min(12200,r+c.spin*2200); // wheelspin: the revs flare
+  return r;}
 function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
   au.master.gain.setTargetAtTime(paused||muted||replay?0:.55,t,.05);
   if(g>lastGear&&c.throttle>.3)au.me.cut(t);else if(g<lastGear){au.me.blip(t);crackle(t,rpm);}lastGear=g;
@@ -2554,7 +2564,7 @@ function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
   let o=null,bd=150;for(const x of cars){if(x===c||x.parked)continue;const d=Math.hypot(x.x-c.x,x.z-c.z);if(d<bd){bd=d;o=x;}}
   if(o){const dx=o.x-c.x,dz=o.z-c.z,d=Math.max(bd,1),vr=((Math.cos(o.yaw)*o.v-Math.cos(c.yaw)*c.v)*dx+(Math.sin(o.yaw)*o.v-Math.sin(c.yaw)*c.v)*dz)/d;
     au.opp.set(rpmOf(o)*clamp(343/(343+vr),0.7,1.4),o.throttle,t,clamp(9/d,0,1)*0.28);}else au.opp.set(4000,0,t,0);
-  au.sq.gain.setTargetAtTime(Math.min(.25,c.slip*.6)*(c.v>6?1:0),t,.05);
+  au.sq.gain.setTargetAtTime(Math.min(.25,(c.slip+(c.spin||0)*.5)*.6)*(c.v>3?1:0),t,.05);
   au.wn.gain.setTargetAtTime(Math.min(.3,(c.v/85)**2*.3),t,.1);}
 
 /* ================= CAMERA / VISUALS ================= */
@@ -2603,7 +2613,7 @@ function updateVisuals(dt){
   //  2. the field of view grew with speed. A FOV that breathes is a classic nausea trigger; it is fixed.
   const c=player;
   const tgt=c.ryaw-clamp(wrapA(c.ryaw-c.chi),-0.4,0.4)*0.6;
-  if(camYaw===null)camYaw=tgt;else camYaw+=wrapA(tgt-camYaw)*(1-Math.exp(-dt/0.14));
+  if(camYaw===null)camYaw=tgt;else camYaw+=wrapA(tgt-camYaw)*(1-Math.exp(-dt/0.07));
   const hx=Math.cos(camYaw),hz=Math.sin(camYaw);
   // C cycles the view: COCKPIT / 1st person (default — the driver's eye inside the helmet, rigid to the car, halo
   // overhead, nose and steering wheel below), the raised T-cam, the TV POD (the broadcast camera pod on top of the
