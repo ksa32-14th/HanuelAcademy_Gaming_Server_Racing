@@ -44,7 +44,7 @@ export const TRACKS={
   // whole arc (a single centre only pushes the tight part to the edge of the zone)
   wide:[[630,137,95,45],[690,135,95,55],[745,80,95,55],[720,5,95,50]],
   // the Michuhol Park straight runs through a narrower street than the rest of the lap
-  narrow:[[[130,-30],[690,158],18]],
+  narrow:[[[130,-30],[690,158],13]],
   // pit entry on the main straight, just past the final corner: the lane peels away to the right over
   // a long, gentle taper, so you drift into it at racing speed; the only braking is at the 60 km/h
   // line in the lane itself

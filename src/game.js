@@ -6,19 +6,19 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005r';
-import {perf} from './perf.js?v=20261005r';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261005r';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005r';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005r';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261005r';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005s';
+import {perf} from './perf.js?v=20261005s';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261005s';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005s';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005s';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261005s';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005r';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005s';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005r'):import('./data/osm-songdo.js?v=20261005r')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005s'):import('./data/osm-songdo.js?v=20261005s')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1216,8 +1216,12 @@ function carMesh(col,acc,num,cam=0x111214){
     if(o.material===src.nm)o.material=nm;else if(o.material===src.tail)o.material=tail;else if(o.material===src.band)o.material=band;});
   const car={root,body:root.getObjectByName('body'),flap:root.getObjectByName('flap'),far:root.getObjectByName('far'),tail,band,isFar:false};
   car.pivs=[0,1,2,3].map(k=>root.getObjectByName('piv'+k));car.steer=car.pivs.slice(0,2);car.wheels=car.pivs.map(p=>p.getObjectByName('spin'));car.sw=root.getObjectByName('sw');
-  car.nearObjs=[car.body,...car.pivs];
-  root.position.y=0.02;scene.add(root);return car;}
+  car.nearObjs=[car.body,...car.pivs];car.contact=root.getObjectByName('contact');
+  root.traverse(o=>{o.castShadow=false;}); // the cars cast no shadow
+  root.position.y=CAR_Y;scene.add(root);return car;}
+// the car's ride height: the road surface is at y = 0.02; the tyres sit 1.2 cm into it, so the tread is flattened onto
+// the asphalt (a contact patch) instead of touching it at a single point and showing a hairline of daylight underneath
+const CAR_Y=0.008;
 function buildCar(col,acc,num){
   const root=new THREE.Group(),g=new THREE.Group();g.name='body';root.add(g);g.scale.set(CAR_SX,CAR_SY,CAR_SZ);const car={root,body:g};
   const det=new THREE.Group();det.name='det';g.add(det); // small parts: near view only
@@ -1308,7 +1312,7 @@ function buildCar(col,acc,num){
   for(const [x,z,w,front] of [[1.8,.845,.305,1],[1.8,-.845,.305,1],[-1.8,.795,.405,0],[-1.8,-.795,.405,0]]){
     const piv=new THREE.Group();piv.name='piv'+car.pivs.length;piv.position.set(x*CAR_SX,.36*WHEEL_S,z*CAR_SZ);piv.scale.setScalar(WHEEL_S);root.add(piv);const spin=new THREE.Group();spin.name='spin';piv.add(spin);
     const sz=Math.sign(z);
-    add(tyreGeo(.36,w,.235,24),mT,0,0,0,spin,false); // no own shadow: the bodywork over it already casts one
+    add(tyreGeo(.36,w,.235,40),mT,0,0,0,spin,false); // 40 sides: the tread stays on the road as the wheel turns
     add(new THREE.CylinderGeometry(.236,.236,w-.01,20).rotateX(Math.PI/2),mR,0,0,0,spin,false);
     add(new THREE.CylinderGeometry(.05,.05,.03,10).rotateX(Math.PI/2),mN,0,0,sz*(w/2),spin,false);
     for(let k=0;k<3;k++){const a=k*Math.PI*2/3,m=add(new THREE.BoxGeometry(.11,.025,.006),mW,Math.cos(a)*.3,Math.sin(a)*.3,sz*(w/2+.001),spin,false);m.rotation.z=a+Math.PI/2;}
@@ -1320,7 +1324,15 @@ function buildCar(col,acc,num){
   bakeGroup(flap,paint);bakeGroup(det,paint);bakeGroup(g.getObjectByName('sw'),paint);bakeGroup(g,paint);
   for(const m of [mB,mA,mC,mK,mCam,mPl,mF,mLG,mLR,mLB,mW,mT,mR,mN])m.dispose();
   makeFarLOD(car,root,g);
+  // tyre contact patches: a tight dark footprint under each tyre (only where the rubber meets the road — not a cast
+  // shadow), so the car sits ON the asphalt instead of hovering. One mesh per car, hidden while it is on the jacks
+  {const geos=[];for(const [x,z,w] of [[1.8,.845,.305],[1.8,-.845,.305],[-1.8,.795,.405],[-1.8,-.795,.405]])
+     geos.push(new THREE.PlaneGeometry(.62*WHEEL_S,(w+.12)*WHEEL_S).rotateX(-Math.PI/2).translate(x*CAR_SX,.003,z*CAR_SZ));
+   const cp=new THREE.Mesh(mergeGeometries(geos),contactMat);cp.name='contact';cp.renderOrder=1;root.add(cp);}
   car.tail=mTail;car.band=mBand;car.nm=nm;return car;}
+const contactMat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.78,depthWrite:false,...po(-6),
+  alphaMap:canvasTex(64,64,(x)=>{const gr=x.createRadialGradient(32,32,4,32,32,32);gr.addColorStop(0,'#fff');
+    gr.addColorStop(.55,'#bbb');gr.addColorStop(1,'#000');x.fillStyle=gr;x.fillRect(0,0,64,64);},false,false)});
 
 /* ---- pit crew: jacks front and rear, a gunner and a fresh tyre at each corner, and the lollipop.
    Built lazily into a small pool and parked on whichever cars are stationary in their box. ---- */
@@ -2136,7 +2148,7 @@ function updateSafetyCar(dt){
 // interpolated drawing, body roll/pitch on soft springs, wheels turning, the light bar
 function drawSafetyCar(dt,al){if(!sc||!scMesh)return;const u=scMesh.userData,sdt=Math.min(dt,1/30);
   const x=sc.px+(sc.x-sc.px)*al,z=sc.pz+(sc.z-sc.pz)*al,yw=sc.pyaw+wrapA(sc.yaw-sc.pyaw)*al;
-  scMesh.position.set(x,0.02,z);scMesh.rotation.y=-yw;
+  scMesh.position.set(x,CAR_Y,z);scMesh.rotation.y=-yw;
   const tr=clamp(-sc.v*sc.yawR*0.006,-0.035,0.035),tp=clamp(sc.a*0.0035,-0.02,0.015);
   sc.rollV+=((tr-sc.roll)*60-sc.rollV*12)*sdt;sc.roll+=sc.rollV*sdt;sc.pitchV+=((tp-sc.pitch)*60-sc.pitchV*12)*sdt;sc.pitch+=sc.pitchV*sdt;
   u.body.rotation.set(sc.roll,0,sc.pitch);
@@ -2188,12 +2200,16 @@ function buildSCMesh(){
   const wheels=[],steer=[];
   for(const [x,z,fr] of [[1.32,.84,1],[1.32,-.84,1],[-1.31,.85,0],[-1.31,-.85,0]]){
     const piv=new THREE.Group();piv.position.set(x,.345,z);root.add(piv);const spin=new THREE.Group();piv.add(spin);const sz=Math.sign(z);
-    add(tyreGeo(.345,.29,.25,22),tyre,0,0,0,spin,false);
+    add(tyreGeo(.345,.29,.25,40),tyre,0,0,0,spin,false);
     add(new THREE.CylinderGeometry(.25,.25,.24,18).rotateX(Math.PI/2),rim,0,0,-sz*.02,spin,false);
     for(let k=0;k<5;k++){const a=k*Math.PI*2/5,o=add(new THREE.BoxGeometry(.2,.045,.03),mS,Math.cos(a)*.13,Math.sin(a)*.13,sz*.12,spin,false);o.rotation.z=a;}
     add(new THREE.BoxGeometry(.14,.1,.04),cal,-.05*Math.sign(x),.12,sz*.07,piv,false);
     wheels.push(spin);if(fr)steer.push(piv);}
   const pm=new Map([[mS,paint],[mD,paint],[mY,paint],[mR,paint]]);bakeGroup(g,pm);for(const w of wheels)bakeGroup(w,new Map([[tyre,carWheel],[rim,carWheel],[mS,carWheel]]));
+  {const geos=[];for(const [x,z] of [[1.32,.84],[1.32,-.84],[-1.31,.85],[-1.31,-.85]])
+     geos.push(new THREE.PlaneGeometry(.55,.4).rotateX(-Math.PI/2).translate(x,.003,z));
+   const cp=new THREE.Mesh(mergeGeometries(geos),contactMat);cp.renderOrder=1;root.add(cp);} // tyre contact patches
+  root.traverse(o=>{o.castShadow=false;}); // no car shadow
   root.userData={body:g,wheels,steer,amber,green,head,tail};root.visible=false;scene.add(root);return root;}
 
 /* ---- marshal posts: an LED light panel at the start of every marshal sector, on top of the barrier, facing the
@@ -2579,7 +2595,7 @@ function updateVisuals(dt){
   // render between the last two physics states so motion is smooth at any refresh rate
   for(const c of cars){if(c.px===undefined){c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;}
     c.rx=c.px+(c.x-c.px)*al;c.rz=c.pz+(c.z-c.pz)*al;c.ryaw=c.pyaw+wrapA(c.yaw-c.pyaw)*al;}
-  for(const c of cars){const m=c.mesh;m.root.position.set(c.rx,.02+(c.pitStop>0?.13:0),c.rz);
+  for(const c of cars){const m=c.mesh;m.root.position.set(c.rx,CAR_Y+(c.pitStop>0?.13:0),c.rz);if(m.contact)m.contact.visible=!(c.pitStop>0);
     c.visSlide=0; // real slip angle is simulated now (body yaw ≠ travel direction)
     // impact twist is applied to the whole car (body + wheels) so the body never shears off its wheels
     m.root.rotation.y=-c.ryaw+clamp(c.jy||0,-0.03,0.03);
@@ -2808,7 +2824,7 @@ function replayFrame(dt){
   const cr=(p0,p1,p2,p3)=>0.5*(2*p1+(p2-p0)*a+(2*p0-5*p1+4*p2-p3)*a2+(3*p1-p0-3*p2+p3)*a3);
   cars.forEach((c,k)=>{const p=k*REC_F,m=c.mesh;
     const x=cr(cl[A0+p],cl[A+p],cl[B+p],cl[B1+p]),z=cr(cl[A0+p+1],cl[A+p+1],cl[B+p+1],cl[B1+p+1]),yaw=cl[A+p+2]+wrapA(cl[B+p+2]-cl[A+p+2])*a,v=cl[A+p+3]+(cl[B+p+3]-cl[A+p+3])*a;
-    m.root.position.set(x,.02+(cl[A+p+7]?.13:0),z);m.root.rotation.y=-yaw;m.body.rotation.set(0,0,0);
+    m.root.position.set(x,CAR_Y+(cl[A+p+7]?.13:0),z);if(m.contact)m.contact.visible=!cl[A+p+7];m.root.rotation.y=-yaw;m.body.rotation.set(0,0,0);
     for(const w of m.wheels)w.rotation.z-=v*dt/(0.36*WHEEL_S);for(const s of m.steer)s.rotation.y=-cl[A+p+4]*1.4;
     m.flap.rotation.z=cl[A+p+6]?-.04:-.45;m.tail.color.setHex(cl[A+p+5]>.1?0xff1010:0x4a0000);
     if(c===player){R.fx=x;R.fz=z;R.fyaw=yaw;R.fv=v;}});
