@@ -162,6 +162,14 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 .btn{pointer-events:auto;font:900 18px var(--f-disp);letter-spacing:.12em;background:var(--red);color:#fff;border:0;border-radius:6px;padding:12px 18px;cursor:pointer;width:100%;margin-top:14px}
 .btn:hover{filter:brightness(1.15)}
 .btn.ghost{background:#1a2138}
+#ttName{width:100%;box-sizing:border-box;font:700 20px var(--f-body);background:#141a2e;color:var(--ink);border:1px solid #2a3350;border-radius:6px;padding:12px 14px}
+#ttName:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
+#ttName.bad{border-color:var(--red)}
+.namemsg{margin-top:6px;font-size:12px;color:var(--mute)}.namemsg.bad{color:#ff6b6b}
+/* time trial: the leaderboard takes the place of the timing tower */
+#tower .tt-hd{padding:6px 10px;font:800 11px var(--f-disp);letter-spacing:.14em;color:#ffd200;border-bottom:1px solid var(--line)}
+#tower .tt-row{display:grid;grid-template-columns:22px 1fr auto;gap:6px;padding:3px 10px;font:600 12px var(--f-body)}
+#tower .tt-row.me{background:rgba(225,6,0,.28)}#tower .tt-row b{font-family:var(--f-disp)}#tower .tt-row span{color:var(--mute)}
 .spec{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 0}
 .spec div{background:#10162a;border-radius:6px;padding:8px}
 .spec b{display:block;font:700 18px var(--f-disp)}

@@ -6,19 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005t';
-import {perf} from './perf.js?v=20261005t';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261005t';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005t';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005t';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261005t';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005u';
+import {perf} from './perf.js?v=20261005u';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261005u';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005u';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005u';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261005u';
+import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261005u';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005t';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005u';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005t'):import('./data/osm-songdo.js?v=20261005t')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005u'):import('./data/osm-songdo.js?v=20261005u')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1357,6 +1358,34 @@ function makeCrew(){
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,2.6,6),mat({color:0x2a2e36}));pole.position.set(4.9,1.3,0);g.add(pole);
   g.userData={lolMat,guns,wheels};return g;}
 
+/* ---- "YOUR BOX": a marker over the player's own pit box that can't be missed from the lane — a pulsing glowing
+   outline and fill on the ground in the team colour, a big bobbing arrow pointing down at it and a "YOUR BOX" sign
+   (with the team name) that always faces the camera. Rebuilt whenever a session starts (the team can change). ---- */
+let boxMarker=null;
+function buildBoxMarker(team){
+  if(boxMarker){scene.remove(boxMarker);boxMarker.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose();}});}
+  const t=TEAMS[team],i=idxSp(BOX_S[team]),g=new THREE.Group();
+  g.position.set(X[i]-TZ[i]*(PIT_OFF+BOX_D),0,Z[i]+TX[i]*(PIT_OFF+BOX_D));g.rotation.y=-ANG[i];
+  const add={transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false};
+  const lineM=new THREE.MeshBasicMaterial({color:0xffffff,...add,...po(-8)}),fillM=new THREE.MeshBasicMaterial({color:t.c,opacity:.35,...add,...po(-7)});
+  const fill=new THREE.Mesh(new THREE.PlaneGeometry(7.5,3.6).rotateX(-Math.PI/2),fillM);fill.position.y=0.035;g.add(fill);
+  const ln=[];for(const [w,h,x,z] of [[8.1,.3,0,1.95],[8.1,.3,0,-1.95],[.3,4.2,3.9,0],[.3,4.2,-3.9,0]]){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h).rotateX(-Math.PI/2),lineM);m.position.set(x,0.04,z);g.add(m);ln.push(m);}
+  const arrowM=new THREE.MeshBasicMaterial({color:t.c===0x1b1d21?t.a:t.c,toneMapped:false});
+  const arrow=new THREE.Group();arrow.position.y=5.2;g.add(arrow);
+  const head=new THREE.Mesh(new THREE.ConeGeometry(1.0,1.6,4).rotateX(Math.PI),arrowM);arrow.add(head);
+  const shaft=new THREE.Mesh(new THREE.BoxGeometry(.5,1.4,.5),arrowM);shaft.position.y=1.4;arrow.add(shaft);
+  const rim=new THREE.Mesh(new THREE.ConeGeometry(1.12,1.75,4).rotateX(Math.PI),new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,toneMapped:false}));arrow.add(rim);
+  const tex=canvasTex(512,192,(x)=>{x.fillStyle='rgba(8,11,16,.88)';x.beginPath();x.roundRect(6,6,500,180,22);x.fill();
+    x.lineWidth=10;x.strokeStyle=hex(t.c===0x1b1d21?t.a:t.c);x.stroke();
+    x.textAlign='center';x.textBaseline='middle';x.fillStyle='#ffd200';x.font='900 84px Titillium Web, sans-serif';x.fillText('YOUR BOX',256,82);
+    x.fillStyle='#fff';x.font='700 30px Titillium Web, sans-serif';x.fillText(t.name.toUpperCase(),256,150);});
+  const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true,toneMapped:false}));sign.scale.set(8.5,3.2,1);sign.position.y=9.2;g.add(sign);
+  g.userData={fillM,lineM,arrow};scene.add(g);boxMarker=g;}
+function animBoxMarker(){if(!boxMarker)return;const u=boxMarker.userData,t=performance.now()/1000,p=0.5+0.5*Math.sin(t*4);
+  boxMarker.visible=phase!=='menu'&&session!=='tt';
+  u.fillM.opacity=0.22+0.3*p;u.lineM.opacity=0.55+0.45*p;u.arrow.position.y=5.2+0.45*Math.sin(t*3);u.arrow.rotation.y=t*1.2;}
+
 /* ================= RACE STATE ================= */
 let cars=[],player=null,phase='menu',simTime=0,raceStart=null,gridT0=0,lightsOutAt=0,lightsOn=-1;
 let drsEnabled=false,checkered=false,targetLaps=5,totalLaps=5,wearMult=1,timeLimitHit=false,fastest=null;
@@ -1398,22 +1427,34 @@ function placeInBox(c){const i=idxSp(BOX_S[c.team]);c.idx=i;
   // it — so it has to be set here, or the car counts as being on the circuit while still in its box
   c.pitSide=true;c.limiter=true;camYaw=null;}
 
-function setupSession(){
-  totalLaps=targetLaps=optLaps;wearMult=1;
+// mode 'gp': qualifying → race weekend; 'tt': time trial (the player alone, no damage, every valid lap timed)
+function setupSession(mode='gp'){
+  for(const c of cars)scene.remove(c.mesh.root); // a restart builds a fresh field
+  closeOverlays();resetRaceControl();
+  totalLaps=targetLaps=optLaps;wearMult=mode==='tt'?0:1;
   const pt=optTeam,diff=optAI;
-  const nums=[...Array(98).keys()].map(n=>n+2).sort(()=>rnd()-.5);
-  const ai=[];let di=0;
-  for(let t=0;t<10;t++)for(let s=0;s<2;s++){if(t===pt&&s===0)continue;const perf=1-t*0.0035+rand(-0.006,0.004);ai.push({team:t,drv:DRIVERS[di++],skill:diff*perf});}
-  ai.sort((a,b)=>b.skill-a.skill);
-  cars=[];player=makeCar(0,pt,['YOU','You'],true,1,'S',7);player.auto=AUTOPILOT;cars.push(player);
-  ai.forEach((a,k)=>cars.push(makeCar(k+1,a.team,a.drv,false,a.skill,'S',nums[k])));
+  cars=[];player=makeCar(0,pt,['YOU',ttName||'You'],true,1,'S',7);player.auto=AUTOPILOT;cars.push(player);
+  if(mode==='gp'){
+    const nums=[...Array(98).keys()].map(n=>n+2).sort(()=>rnd()-.5);
+    const ai=[];let di=0;
+    for(let t=0;t<10;t++)for(let s=0;s<2;s++){if(t===pt&&s===0)continue;const perf=1-t*0.0035+rand(-0.006,0.004);ai.push({team:t,drv:DRIVERS[di++],skill:diff*perf});}
+    ai.sort((a,b)=>b.skill-a.skill);
+    ai.forEach((a,k)=>cars.push(makeCar(k+1,a.team,a.drv,false,a.skill,'S',nums[k])));}
   qTimes=new Map();
   for(const c of cars)if(!c.isPlayer){qTimes.set(c,IDEAL_LAP*QUALI_K/c.skill*(1+rand(-0.003,0.010)));parkInGarage(c);}
   simTime=0;raceStart=null;lightsOn=-1;drsEnabled=true;checkered=false;timeLimitHit=false;fastest=null;
-  bestSecAll.fill(null);resultsShown=false;qGrid=null;session='quali';
+  bestSecAll.fill(null);resultsShown=false;qGrid=null;session=mode==='tt'?'tt':'quali';
   $('tower').hidden=true;$('lights').hidden=true;
-  openBox('quali');
+  buildBoxMarker(pt);camYaw=null;recReset();
+  if(mode==='tt')startTT();else openBox('quali');
 }
+function closeOverlays(){if(replay)endReplay();paused=false;for(const id of ['pause','results','qres','box'])$(id).hidden=true;
+  for(const k in keys)keys[k]=false;elSty(pitHud,'display','none');for(const g of crews)g.visible=false;}
+// restart buttons (pause menu, results): the race again from the same grid, or the whole weekend from qualifying
+function restartRace(){if(session!=='race'||!qGrid)return;closeOverlays();resultsShown=false;
+  for(const c of cars)if(!c.isPlayer)parkInGarage(c);resetRaceControl();openBox('race');}
+function restartQuali(){setupSession('gp');}
+function restartTT(){setupSession('tt');}
 
 function openBox(mode){
   boxMode=mode;phase='box';paused=false;
@@ -1480,6 +1521,60 @@ function finishQuali(t){
   msg(pt==null?'NO TIME':'P'+(p+1)+' · '+fmt(pt));
 }
 
+/* ================= TIME TRIAL =================
+   The player alone on the circuit on fresh softs (no wear, no fuel worries, no damage), from a rolling start. Every
+   lap from the line is timed; touching a wall or going beyond the track limits deletes that lap. Each valid lap is
+   offered to the leaderboard (only a driver's best counts), under the real name entered before the session. */
+let ttName='',tt={stage:'out',laps:0,best:null,board:[],boardShared:false,boardT:-99,pbSplits:null};
+try{ttName=localStorage.getItem('hrc-name')||'';}catch(e){}
+function startTT(){const c=player;
+  tt={stage:'out',laps:0,best:null,board:tt.board,boardShared:tt.boardShared,boardT:-99,pbSplits:null};
+  phase='quali';c.comp='S';c.used=new Set(['S']);c.nextComp='M';c.mesh.band.color.setHex(COMP.S.hex);
+  c.wear=0;c.damage=0;c.dm=newDmg();c.fuel=12;c.tT=[90,90,90,90];c.bT=[400,400,400,400];c.held=false;c.lapInvalid=false;
+  c.bestLap=null;c.lastLap=null;c.sec=[null,null,null];c.secCol=['','',''];c.bestSec=[null,null,null];
+  rollingStart(c,straightBack());
+  $('tower').hidden=false;refreshBoard(true);
+  msg('TIME TRIAL','A WALL OR TRACK LIMITS DELETE THE LAP');}
+function ttCross(c){
+  if(c.pitSide)return;
+  const t=simTime;
+  if(tt.stage==='out'){tt.stage='flying';}
+  else{const lt=t-c.lapStart;sectorDone(c,2,t);tt.laps++;
+    if(c.lapInvalid)msg('LAP DELETED · NO TIME',c.invWhy||'');
+    else{c.lastLap=lt;const pb=c.bestLap==null||lt<c.bestLap;
+      if(pb){c.bestLap=lt;tt.pbSplits=c.cum?c.cum.slice():null;}
+      msg(pb?'PERSONAL BEST':'LAP TIME',fmt(lt));ttSubmit(lt);}}
+  // the next lap starts at once
+  c.lapCount=0;c.lapStart=t;c.secStart=t;c.lapInvalid=false;c.invWhy=null;c.sec=[null,null,null];c.secCol=['','',''];c.cum=new Float32Array(64);}
+function ttInvalidate(why){const c=player;if(session!=='tt'||tt.stage!=='flying'||!c||c.lapInvalid)return;
+  c.lapInvalid=true;c.invWhy=why;msg('LAP DELETED',why+' · THIS LAP WILL NOT COUNT');}
+async function ttSubmit(lt){if(!ttName)return;
+  const r=await lbSubmit(TRACK_ID,{name:ttName,t:+lt.toFixed(3),team:TEAMS[player.team].name,date:Date.now()});
+  await refreshBoard(true);
+  const p=tt.board.findIndex(x=>x.name===ttName)+1;
+  if(r.improved&&p)msg('LEADERBOARD · P'+p,ttName+' · '+fmt(lt));}
+async function refreshBoard(force){if(!force&&performance.now()/1000-tt.boardT<20)return;tt.boardT=performance.now()/1000;
+  const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;}
+// lap progress for the delta to the personal best: time at each 1/64 of the lap
+function ttTrack(c){if(session!=='tt'||tt.stage!=='flying'||!c.cum)return;const k=Math.min(63,Math.floor(c.s/L*64));if(!c.cum[k])c.cum[k]=simTime-c.lapStart;}
+function updateTTInfo(){const c=player;
+  elTxt(el('lapNum'),c.lapInvalid&&tt.stage==='flying'?'LAP DELETED':tt.stage==='out'?'OUT LAP':'TIME TRIAL');
+  elSty(el('gapA').parentElement,'display','');elTxt(el('gapALbl'),'DELTA TO PB');
+  let dl=null;if(tt.stage==='flying'&&tt.pbSplits&&!c.lapInvalid){const k=Math.min(63,Math.floor(c.s/L*64));const a=tt.pbSplits[k],b=c.cum&&c.cum[k];if(a&&b)dl=b-a;}
+  elTxt(el('gapA'),dl==null?'—':(dl>=0?'+':'')+dl.toFixed(3));elSty(el('gapA'),'color',dl==null?'':(dl<0?'#1be26b':'#ff5252'));
+  elTxt(el('curLap'),tt.stage==='flying'?fmt(simTime-c.lapStart):'—');elTxt(el('lastLap'),fmt(c.lastLap));elTxt(el('bestLap'),fmt(c.bestLap));
+  infoTyres(c);
+  elHtml(el('flags'),c.lapInvalid&&tt.stage==='flying'?'<span class="flag ret"><i></i>LAP DELETED · '+(c.invWhy||'')+'</span>':'');
+  refreshBoard(false);
+  const b=tt.board,lead=b.length?b[0].t:null,me=b.findIndex(x=>x.name===ttName);
+  let h='<div class="tt-hd">LEADERBOARD'+(tt.boardShared?'':' · THIS BROWSER')+'</div>';
+  const show=b.slice(0,10);if(me>=10)show.push(b[me]);
+  if(!show.length)h+='<div class="tt-row"><span></span><span>No times yet</span><span></span></div>';
+  for(const r of show){const p=b.indexOf(r)+1;
+    h+='<div class="tt-row'+(r.name===ttName?' me':'')+'"><span>'+p+'</span><b>'+esc(r.name)+'</b><span>'+(p===1?fmt(r.t):'+'+(r.t-lead).toFixed(3))+'</span></div>';}
+  elHtml(el('rows'),h);renderMfd();}
+const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
 function startRace(){
   session='race';phase='grid';
   qGrid.forEach((c,slot)=>{
@@ -1493,12 +1588,12 @@ function startRace(){
     c.pitStop=0;c.boxDone=false;c.pitPlan=false;c.pitCount=0;c.pitSide=false;c.limiter=false;
     c.lastLap=null;c.bestLap=null;c.sec=[null,null,null];c.secCol=['','',''];c.bestSec=[null,null,null];
     c.hp=[];c.ht=[];c.drsOpen=false;c.drsElig=[false,false,false];c.detT=[null,null,null];c.zone=-1;
-    c.tow=0;c.slip=0;c.v=0;c.delta=0;c.r=0;c.laneOff=0;c.laneOffT=0;c.laneHold=0;c.sep=0;c.held=true;
+    c.tow=0;c.slip=0;c.v=0;c.gear=0;c.delta=0;c.r=0;c.laneOff=0;c.laneOffT=0;c.laneHold=0;c.sep=0;c.held=true;
     c.dnf=false;c.dnfWhy=null;c.maxLap=-1;c.defUntil=null;c.mArm=false;c.mT=0;c.passCar=null;
     c.waveBy=false;c.unlap=false;c.vd=0;c.infr=[];c.flagSt=0;c.dyT=0;c.dyFast=0;c.dWarn=0;c.msk=null;c.pRel=null;c.autoBox=false;
     c.dm=newDmg();c.wingShare=0;c.wingChange=false;c.tT=null;c.bT=null;if(c.isPlayer){c.pitWing=c.pitWing||"AUTO";c.planLap=null;}
     placeOnGrid(c,slot);c.lapCount=-1;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;});
-  sc=null;scRestart=false;restartGo=false;vsc=null;drsResume=null;hazards=[];msFlag.fill(0);msGreen.fill(-1);if(scMesh)scMesh.visible=false;
+  resetRaceControl();
   simTime=0;raceStart=null;gridT0=0.8;lightsOutAt=gridT0+5+rand(0.3,2.6);lightsOn=-1;
   drsEnabled=false;checkered=false;timeLimitHit=false;fastest=null;bestSecAll.fill(null);resultsShown=false;
   camYaw=null;recReset();
@@ -1535,7 +1630,9 @@ function physics(c,dt){
   // ask for up to TC_SLACK × that; past it the wheels spin (spin 0…1): the drive drops to ~75 % and the rears lose
   // some cornering grip, so too much throttle out of a slow corner is slower and pushes the car wide
   const Fdem=thr>0?POWER*thr/Math.max(v,4):0,Ftr=mu*TRACTION*Nn;
-  c.spin=Fdem>Ftr*TC_SLACK?Math.min(1,(Fdem/(Ftr*TC_SLACK)-1)*1.5):0;
+  // pulling away and at crawling speed the traction control catches it completely (fades out from ~80 down to ~50 km/h):
+  // otherwise every launch sat in full wheelspin for seconds — revs pinned, speed barely building
+  c.spin=Fdem>Ftr*TC_SLACK?Math.min(1,(Fdem/(Ftr*TC_SLACK)-1)*1.5)*clamp((v-14)/8,0,1):0;
   const Fp=Math.min(Fdem,Ftr)*(1-0.25*c.spin);
   const Fdrag=0.5*RHO*cda*v*v+(v>0.1?CRR*m*G:0),Fb=c.brake*mu*BRK*Nn;
   // steering lock shrinks with speed (heavy steering / small angles at 300 km/h); the player may ask
@@ -1543,7 +1640,8 @@ function physics(c,dt){
   const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=0.26/(1+v/70); // ~13.5 m minimum turning radius, and still limited at speed
   const dmax=Math.max(0.03,Math.min(dPhys,dGrip*(c.isPlayer?1.2:1.1)));
   const want=c.isPlayer&&!c.auto?c.steerIn*dmax:clamp(c.deltaCmd,-dmax,dmax);
-  c.delta+=clamp(want-c.delta,-3*dt,3*dt); // the front wheels turn at a steady rate: no instant lock-to-lock darts
+  // the front wheels turn at a steady rate (the player's a little gentler still): no instant lock-to-lock darts
+  const dr=c.isPlayer&&!c.auto?2.2:3;c.delta+=clamp(want-c.delta,-dr*dt,dr*dt);
   let axT=(Fp-Fb)/m;if(v<0.05&&axT<0)axT=0;
   // A planted F1 car, not a drift car. The path (chi) bends as far as the tyres allow; the body (yaw) follows the path
   // within a few hundredths of a second, carrying only a small slip angle — it never swings out of line. Asking for
@@ -1557,17 +1655,20 @@ function physics(c,dt){
   const ax=axT-Fdrag/m-Math.min(c.slip,1)*3.0;
   c.v=Math.max(0,v+ax*dt);
   c.chi=v>0.5?c.chi+ay/v*dt:c.yaw;
-  // body: turns with the path, plus a tiny slip angle (≤ ~1.5°). The follow is well damped (no overshoot), so letting
-  // go of the steering no longer swings the nose past the path and back; a 5° hard limit eases chi in, never snaps it
-  const rT=(v>0.5?ay/v:rReq)+(clamp(ay*0.0005,-0.025,0.025)-beta)*8;
-  c.r+=(rT-c.r)*(1-Math.exp(-dt/0.05));c.yaw+=c.r*dt;
+  // body: turns with the path, plus a tiny slip angle (≤ ~1°). The follow is well damped (no overshoot), so the car
+  // never snaps round and letting go of the steering doesn't swing the nose past the path and back; a 5° hard limit
+  // eases chi in, never snaps it. The player's car follows softer still (what you see from it); the AI keeps a
+  // slightly tighter follow so its body stays square to its line through tight street corners
+  const soft=c.isPlayer&&!c.auto,bK=soft?6:8,bTau=soft?0.07:0.05,bS=soft?0.0003:0.0005,bM=soft?0.018:0.025;
+  const rT=(v>0.5?ay/v:rReq)+(clamp(ay*bS,-bM,bM)-beta)*bK;
+  c.r+=(rT-c.r)*(1-Math.exp(-dt/bTau));c.yaw+=c.r*dt;
   {const b=wrapA(c.yaw-c.chi);if(Math.abs(b)>0.09)c.chi+=(b-Math.sign(b)*0.09)*Math.min(1,10*dt);}
   c.aLong=ax;c.aLat=ay;
   c.x+=Math.cos(c.chi)*c.v*dt;c.z+=Math.sin(c.chi)*c.v*dt;
   const dist=c.v*dt;
   c.fuel=Math.max(0,c.fuel-FUEL_PER_LAP/L*dist*(0.35+0.65*thr)*1.12);
   c.wear+=dist/1000*COMP[c.comp].rate*wearMult*(1+1.5*Math.min(c.slip,2)+0.4*c.brake+1.2*c.spin);
-  temps(c,dt,ay,ax);
+  temps(c,dt,ay,ax);updateGear(c,dt);
 }
 /* ---- tyre and brake temperatures (°C), FL FR RL RR. A tyre heats with the work it does — cornering load (more on the
    outside wheels), braking on the fronts, traction on the rears, sliding — and the air cools it, harder at speed. On
@@ -1585,13 +1686,18 @@ function tempGrip(c){if(!c.tT)return 1;const t=(c.tT[0]+c.tT[1]+c.tT[2]+c.tT[3])
 /* ---- part damage (0..1) for the MFD: where a car is hit decides which parts take it. `c.damage` stays the overall
    figure that costs grip / downforce and retires a car at 100 %; a new front wing in the pits takes the share of it
    that came from the wing. ---- */
-const DMG_PARTS=[['fwL','FRONT WING L'],['fwR','FRONT WING R'],['rw','REAR WING'],['floor','FLOOR'],['diff','DIFFUSER'],['spL','SIDEPOD L'],['spR','SIDEPOD R'],['eng','ENGINE'],['gbx','GEARBOX']];
-const newDmg=()=>({fwL:0,fwR:0,rw:0,floor:0,diff:0,spL:0,spR:0,eng:0,gbx:0});
-function hurt(c,amt,where,side){if(amt<=0)return;const d=c.dm||(c.dm=newDmg()),a=(k,x)=>{d[k]=Math.min(1,d[k]+x);};
-  if(where==='F'){if(side>=0)a('fwR',amt*2.6);if(side<=0)a('fwL',amt*2.6);a('floor',amt*.4);c.wingShare=(c.wingShare||0)+amt*0.75;}
-  else if(where==='R'){a('rw',amt*2.2);a('diff',amt*1.6);a('gbx',amt*.8);}
-  else{a(side>0?'spR':'spL',amt*1.8);a('floor',amt);a(side>0?'fwR':'fwL',amt*.6);c.wingShare=(c.wingShare||0)+amt*0.2;}
-  if(amt>0.12)a('eng',amt*.3);}
+// Only the WINGS can be damaged: a hit at the front breaks the front wing (that side, or both square on), a hit at the
+// rear the rear wing, a side swipe clips the front wing on that side. No crash ever retires a car. `c.damage` (what
+// costs downforce / grip) is worked out from the three; a new front wing in the pits clears the front part of it.
+// In TIME TRIAL nothing is damaged at all.
+const DMG_PARTS=[['fwL','FRONT WING L'],['fwR','FRONT WING R'],['rw','REAR WING']];
+const newDmg=()=>({fwL:0,fwR:0,rw:0});
+const dmgOverall=d=>Math.min(1,0.45*Math.max(d.fwL,d.fwR)+0.25*Math.min(d.fwL,d.fwR)+0.3*d.rw);
+function hurt(c,amt,where,side){if(amt<=0||session==='tt')return;const d=c.dm||(c.dm=newDmg()),a=(k,x)=>{d[k]=Math.min(1,d[k]+x);};
+  if(where==='F'){if(side>=0)a('fwR',amt*2.6);if(side<=0)a('fwL',amt*2.6);}
+  else if(where==='R')a('rw',amt*2.2);
+  else a(side>0?'fwR':'fwL',amt*1.2);
+  c.damage=dmgOverall(d);}
 // where a contact point sits on a car: 'F' / 'R' / 'S' and the side (+1 right, -1 left)
 function hitZone(c,px,pz){const fx=Math.cos(c.yaw),fz=Math.sin(c.yaw),dx=px-c.x,dz=pz-c.z,lg=dx*fx+dz*fz,lt=-dx*fz+dz*fx;
   return [lg>HX*0.55?'F':lg<-HX*0.55?'R':'S',lt>0.15?1:lt<-0.15?-1:0];}
@@ -1612,20 +1718,21 @@ function walls(c){
   c.x+=w.nx*w.pen;c.z+=w.nz*w.pen;
   const cd=c.chi??c.yaw,fx=Math.cos(cd),fz=Math.sin(cd),into=Math.max(0,-(fx*w.nx+fz*w.nz)); // travel direction vs wall
   if(!c.onWall){const vn=c.v*into;if(vn>1)jolt(c,w.nx,w.nz,c.x+fx*HX*0.8-w.nx*HZ,c.z+fz*HX*0.8-w.nz*HZ,vn);
-    // the barrier does not forgive: damage grows with the speed INTO the wall; a hard hit (~70 km/h square on, i.e.
-    // 200 km/h at 20°) or the last straw on a battered car breaks the suspension and ends the race
+    // time trial: any touch of the barrier deletes the lap
+    if(session==='tt'&&c.isPlayer)ttInvalidate('WALL CONTACT');
+    // the barrier breaks a wing (harder the faster the car goes INTO it); a big shunt (~70 km/h square on, i.e.
+    // 200 km/h at 20°) leaves debris on the track — that brings out the Safety Car (with a yellow just before it)
     const hz=hitZone(c,w.px,w.pz),zone=into>0.45&&hz[0]==='F'?'F':hz[0]==='R'?'R':'S';
-    if(vn>7&&phase==='race'&&!c.dnf){c.damage=Math.min(1,c.damage+(vn-7)*0.03);hurt(c,(vn-7)*0.03,zone,hz[1]);
-      if(vn>13)hazard(c.s,1,6); // only a real impact brings out a yellow — not every scrape along the barrier
-      if(vn>=19||c.damage>=1)retire(c,'HEAVY IMPACT',vn);
+    if(vn>7&&phase==='race'&&!c.dnf){hurt(c,(vn-7)*0.03,zone,hz[1]);
+      if(vn>=19)incident(c,'HEAVY IMPACT');
       else if(c.isPlayer&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT · DAMAGE '+Math.round(c.damage*100)+'%');}}
-    else if(vn>12&&!c.dnf){c.damage=Math.min(0.9,c.damage+(vn-12)*0.02);hurt(c,(vn-12)*0.02,zone,hz[1]);}}
+    else if(vn>12&&!c.dnf)hurt(c,(vn-12)*0.02,zone,hz[1]);}
   c.onWall=true;
   // scraping the barrier costs speed: a brush barely hurts, but the longer the car stays against it
   // the harder it drags (bodywork, then tyre, biting into the wall)
   c.wallT=Math.min(2.5,(c.wallT||0)+dt);
   c.v=Math.max(0,c.v-(1.2+3.6*c.wallT+26*into)*dt);
-  if(into>0){const ta=Math.atan2(fz+w.nz*into,fx+w.nx*into);c.chi=cd+clamp(wrapA(ta-cd),-3*dt,3*dt);c.yaw+=clamp(wrapA(ta-c.yaw),-1.0*dt,1.0*dt);}
+  if(into>0){const ta=Math.atan2(fz+w.nz*into,fx+w.nx*into);c.chi=cd+clamp(wrapA(ta-cd),-1.5*dt,1.5*dt);c.yaw+=clamp(wrapA(ta-c.yaw),-0.5*dt,0.5*dt);}
 }
 
 // cars: contact only stops them overlapping — no rotation, no sideways shove, no bounce.
@@ -1653,11 +1760,10 @@ function collide(){
     const hitter=sa>=0.5?A:B;
     jolt(A,-h.nx,-h.nz,h.px,h.pz,closing);jolt(B,h.nx,h.nz,h.px,h.pz,closing);
     if(hitter&&closing>13){const am=(closing-13)*0.012,vic=hitter===A?B:A,zh=hitZone(hitter,h.px,h.pz),zv=hitZone(vic,h.px,h.pz);
-      hitter.damage=Math.min(1,hitter.damage+am);hurt(hitter,am,zh[0],zh[1]); // mostly the front wing
-      hurt(vic,am*0.5,zv[0],zv[1]);}                                         // the car that was hit: parts only
-    if(phase==='race'&&closing>10&&!A.pitSide&&!B.pitSide){ // contact itself brings out no yellow: only its aftermath does (a car stopped, stranded or retired — see updateFlags)
-      if(closing>24&&!hitter.dnf)retire(hitter,'COLLISION',closing);
-      const vic=hitter===A?B:A;if(closing>30&&!vic.dnf)retire(vic,'COLLISION',closing);}
+      hurt(hitter,am,zh[0],zh[1]);   // mostly the front wing
+      hurt(vic,am*0.5,zv[0],zv[1]);} // the car that was hit: its rear wing / a front wing
+    // a big shunt (debris everywhere) brings out the Safety Car; nobody retires from it
+    if(phase==='race'&&closing>24&&!A.pitSide&&!B.pitSide)incident(hitter,'COLLISION');
     if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT'+(closing>10?' · AERO DAMAGE':''));}}
 }
 let lastContact=-9;
@@ -1700,9 +1806,10 @@ function startPit(c){
 function wingNeeded(c){const d=c.dm,fw=d?Math.max(d.fwL,d.fwR):0;
   if(c.isPlayer&&c.pitWing==='CHANGE')return true;if(c.isPlayer&&c.pitWing==='NO')return false;return fw>0.1||(!d&&c.damage>0.05);}
 function finishPit(c){c.pitStop=0;c.comp=c.nextComp;c.wear=0;c.used.add(c.comp);c.mesh.band.color.setHex(COMP[c.comp].hex);c.tT=[80,80,80,80];
-  if(c.wingChange){c.damage=Math.max(0,c.damage-(c.wingShare||0));c.wingShare=0;if(c.dm){c.dm.fwL=0;c.dm.fwR=0;}}c.wingChange=false;
+  if(c.wingChange){c.wingShare=0;if(c.dm){c.dm.fwL=0;c.dm.fwR=0;c.damage=dmgOverall(c.dm);}else c.damage=0;}c.wingChange=false;
   if(!c.isPlayer){c.pitLap=Infinity;c.nextComp=c.comp==='H'?'M':'H';}else{c.nextComp=c.comp==='H'?'M':'H';if(c.planLap!=null&&c.planLap<=c.lapCount+1)c.planLap=null;msg('GO GO GO');}}
 function trackLimit(c){
+  if(session==='tt'){if(c.isPlayer)ttInvalidate('TRACK LIMITS');return;}
   if(session==='quali'){if(c.isPlayer&&qStage==='flying'&&!c.lapInvalid){c.lapInvalid=true;msg('LAP DELETED · YOU START LAST');}return;}
   c.tl++;if(!c.isPlayer){if(c.tl>=4)c.pen+=5;return;}
   if(c.tl>=4){c.pen+=5;msg('5 SECOND PENALTY · TRACK LIMITS');}
@@ -1713,13 +1820,13 @@ function sectorDone(c,k,t){const st=t-c.secStart;c.secStart=t;
   c.secCol[k]=(bestSecAll[k]==null||st<bestSecAll[k])?'pu':(c.bestSec[k]==null||st<c.bestSec[k])?'gr':'ye';
   if(c.bestSec[k]==null||st<c.bestSec[k])c.bestSec[k]=st;if(bestSecAll[k]==null||st<bestSecAll[k])bestSecAll[k]=st;}
 function lapCross(c){
+  if(session==='tt'){if(c===player){c.fuel=12;ttCross(c);}return;}
   if(session==='quali'){if(c===player)qualiCross(c);return;}
   c.lapCount++;const t=simTime;
   // reversing back over the line in the pit lane and driving forward again must not log a lap
   if(c.lapCount<=(c.maxLap??-1)||c.dnf)return;c.maxLap=c.lapCount;
   if(c.lapCount===0){c.lapStart=raceStart??t;c.secStart=c.lapStart;return;}
   sectorDone(c,2,t);const lt=t-c.lapStart;c.lastLap=lt;c.lapStart=t;
-  if(c.dm){c.dm.eng=Math.min(1,c.dm.eng+0.004);c.dm.gbx=Math.min(1,c.dm.gbx+0.003);} // mileage
   if(c.bestLap==null||lt<c.bestLap)c.bestLap=lt;
   if(!fastest||lt<fastest.t){fastest={t:lt,car:c};if(c.isPlayer&&c.lapCount>1)msg('FASTEST LAP',fmt(lt));}
   if(!checkered&&c.lapCount>=targetLaps){checkered=true;if(!c.isPlayer)msg('CHEQUERED FLAG · '+c.code+' WINS');}
@@ -1750,7 +1857,8 @@ function post(c){
     else if(c.pitPlan&&psp<box&&sp>=box)startPit(c);}
   if(sp>PIT_D&&sp<PIT_D+120&&c.boxDone){c.boxDone=false;c.pitPlan=false;}
   if(phase==='race'||phase==='quali'){const off=ad>hw+KERB_W+1.2*CAR_SZ&&!inPit&&!c.pitSide;if(off&&!c.tlOut){c.tlOut=true;trackLimit(c);}else if(ad<hw)c.tlOut=false;}
-  if(ps>L-80&&s<80)lapCross(c);else if(ps<80&&s>L-80)c.lapCount--;
+  if(session==='tt'&&c.isPlayer){if(c.pitSide)ttInvalidate('PIT LANE');ttTrack(c);}
+  if(ps>L-80&&s<80)lapCross(c);else if(ps<80&&s>L-80&&session!=='tt')c.lapCount--;
   if(c.lapCount>=0)for(let k=0;k<2;k++)if(ps<SEC[k]&&s>=SEC[k]&&s-ps<50)sectorDone(c,k,simTime);
   c.progress=c.lapCount*L+s;
   for(let k=0;k<DRSZ.length;k++){const dz=DRSZ[k].det;if(ps<dz&&s>=dz&&s-ps<50)detect(c,k);}
@@ -1767,9 +1875,9 @@ function computeTow(){for(const c of cars){c.tow=0;if(c.parked)continue;for(cons
 
 /* ================= DRIVER INPUT / AI ================= */
 function playerControl(dt){const c=player;if(c.auto){aiDrive(c,dt);return;}const tg=(keys.KeyD?1:0)-(keys.KeyA?1:0);
-  // steering winds on in ~0.17 s at low speed and ~0.45 s at 300 km/h and centres in ~0.12 s: quick, but a keyboard
-  // tap no longer flicks the car left-right (the 50 ms version made every tap a dart); throttle and brake ~35 ms
-  const rate=(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?8:6/(1+c.v/50);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
+  // steering winds on in ~0.25 s at low speed and ~0.75 s at 300 km/h and centres in ~0.2 s: a keyboard tap gives a
+  // gentle, progressive turn instead of flicking the car left-right; throttle and brake ~35 ms
+  const rate=(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?5:4/(1+c.v/40);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
   c.throttle+=clamp((keys.KeyW?1:0)-c.throttle,-35*dt,30*dt);c.brake+=clamp((keys.Space?1:0)-c.brake,-35*dt,30*dt);
   if(c.throttle<0.01)c.throttle=0;if(c.brake<0.01)c.brake=0;c.revIn=!!keys.KeyS;
   if(c.dnf){c.throttle=0;c.brake=1;c.steerIn=0;}}
@@ -1917,10 +2025,12 @@ const order=()=>cars.slice().sort(orderCmp);
      DOUBLE waved yellow — the track is wholly or partly blocked, or marshals are working on or beside it: slow down
      significantly, no overtaking, be ready to stop. The yellow is shown at the post of the incident's sector (and the
      post before, when the incident is right after a post); the GREEN flag at the next post ends the zone.
-   · Overtaking a running car in a yellow zone, or under the SC / VSC, has to be undone (give the place back) within
+   · In this game a yellow only ever comes out in the ~5 s before a Safety Car (a double yellow at the incident — see
+     incident()); small offs, stops and touches show nothing.
+   · Overtaking a running car in a yellow zone, or under the SC, has to be undone (give the place back) within
      ~12 s, or it is a 5 s penalty. Not slowing down through a double yellow is a 5 s penalty. DRS is closed in yellow sectors.
-   · VIRTUAL SAFETY CAR — every car has to stay slower than the FIA reference lap (a positive DELTA) at every marshal post;
-     no overtaking, no DRS, pit stops allowed. "VSC ENDING" — the panels turn green 10–15 s later.
+   · There is NO SC / VSC delta time: under the SC the field closes up into a train behind it. (The VSC code remains
+     but nothing calls it any more.)
    · SAFETY CAR — it leaves the pit lane with its orange lights on and goes round in front of the leader; any car between it
      and the leader is waved past (green lights). Nobody overtakes; the field closes up behind. Once the incident is
      cleared: "LAPPED CARS MAY NOW OVERTAKE", then "SAFETY CAR IN THIS LAP" (orange lights off) — it peels into the pit
@@ -1953,21 +2063,9 @@ const scActive=()=>scOn()||scRestart||!!vsc;      // neutralised: nobody overtak
 const refV=i=>Math.min(VP[i]*0.7,52);
 function updateFlags(dt){
   if(phase!=='race'||raceStart==null){computeFlags();return;}
-  if(simTime-raceStart>=3)for(const c of cars){
-    if(c.parked||c.pitSide||c.pitStop>0||c.finished||c.held)continue;
-    const ad=Math.abs(c.d),hw=HWa[c.idx];
-    if(c.dnf){hazard(c.s,2,1);continue;}                                  // a wreck with marshals at work: double yellow
-    // a moment slow or off the road is no incident: only a car that STAYS stopped (2 s) or stranded off the road (3 s)
-    // brings out a yellow; cleared 2 s after it gets going again
-    c.stopT=c.v<4?(c.stopT||0)+dt:0;
-    c.offT=ad>hw+KERB_W+1.5&&c.v<12?(c.offT||0)+dt:0;
-    if(c.stopT>2)hazard(c.s,ad<hw+0.5?2:1,2);                             // stopped: on the racing surface → double
-    else if(c.offT>3)hazard(c.s,1,2);                                     // stranded off the road / crawling back on
-    else if(Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.6&&c.v>5)hazard(c.s,1,4);} // spinning
+  // yellows come out ONLY in the seconds before a Safety Car (see incident()); nothing else shows one
+  if(scPending&&simTime>=scPending.at){const p=scPending;scPending=null;deploySC(p.cause);}
   computeFlags();
-  // the VSC / SC delta: time actually taken minus the reference time over the same distance (positive = slower = legal)
-  if(vsc||scOn())for(const c of cars){if(c.parked||c.dnf||c.pitSide){c.vd=Math.max(c.vd||0,0);continue;}
-    c.vd=Math.min(9.9,(c.vd||0)+dt-c.v*dt/refV(c.idx));}
   playerRules(dt);
   updateVSC(dt);updateSafetyCar(dt);}
 // ---- the player and the rules: overtaking under yellow / SC / VSC, lifting for a double yellow, the delta at each post
@@ -1992,12 +2090,8 @@ function playerRules(dt){const p=player;if(!p||p.dnf||session!=='race')return;p.
   if(fl===2){const ref=pRef[p.idx]||VP[p.idx]*0.9;p.dyT=(p.dyT||0)+dt;if(p.v>ref*0.9&&p.v>15)p.dyFast=(p.dyFast||0)+dt;
     p.lift=p.v>ref*0.9&&p.v>15;}
   else{if(p.dyT>1.2&&p.dyFast/p.dyT>0.6){p.pen+=5;msg('FAILED TO SLOW FOR DOUBLE YELLOW','5 SECOND TIME PENALTY');}p.dyT=0;p.dyFast=0;p.lift=false;}
-  // 3) VSC / SC delta, checked at every marshal post: a first negative delta is a warning, the next ones 5 s each
+  // 3) (no SC / VSC delta time: under the Safety Car the field simply closes up into a train behind it)
   const k=msOf(p.s);
-  if(k!==p.msk){if(p.msk!=null&&simTime-cautionT0>3&&(vsc||(scOn()&&!p.waveBy&&!p.unlap))&&!p.pitSide&&(p.vd||0)<0){
-      if(!p.dWarn){p.dWarn=1;msg('DELTA TIME NEGATIVE','WARNING · STAY ABOVE THE MINIMUM TIME');}
-      else{p.pen+=5;msg('DELTA TIME NEGATIVE','5 SECOND TIME PENALTY');}p.vd=0;}
-    p.msk=k;}
   // 4) race control messages as the flags come into view
   if(!p.pitSide&&!neutral){const st=fl?10+fl:yellowAhead(p.s)?1:0;
     if(st!==p.flagSt){
@@ -2020,6 +2114,16 @@ function retire(c,why,sp){
   else msg(c.code+' OUT · '+why);
   if(checkered||c.pitSide)return;
   if(onRoad||sp>26||wrecks>=2)deploySC(c);else deployVSC(c);}
+/* ---- incidents: a big shunt (heavy wall impact, a high-speed collision) leaves debris on the track. Nobody retires —
+   only the wings get damaged — but the debris needs the Safety Car: race control shows a DOUBLE YELLOW at the scene for
+   ~5 s (the only time a yellow ever comes out), then the SC is deployed. Marshals need ~35–50 s to clear the debris. ---- */
+let scPending=null,debrisUntil=0;
+function resetRaceControl(){sc=null;scRestart=false;restartGo=false;vsc=null;drsResume=null;hazards=[];msFlag.fill(0);msGreen.fill(-1);
+  scPending=null;debrisUntil=0;if(scMesh)scMesh.visible=false;}
+function incident(c,why){if(phase!=='race'||raceStart==null||checkered||scOn()||scPending||session!=='race')return;
+  scPending={at:simTime+5,cause:c};c.incWhy=why;debrisUntil=simTime+5+rand(35,50);
+  hazard(c.s,2,30);
+  msg('DOUBLE YELLOW',c.code+' · '+why+' · SAFETY CAR TO BE DEPLOYED');}
 function clearWrecks(){for(const c of cars)if(c.dnf&&!c.parked&&simTime>=c.clearAt){
   if(c.isPlayer){c.v=0;c.held=true;continue;} // the camera stays on your car
   c.parked=true;c.mesh.root.visible=false;c.held=true;c.v=0;}}
@@ -2061,10 +2165,13 @@ function deploySC(cause){
     trackPt(sc.s,sc.d,_tp);sc.x=sc.px=_tp.x;sc.z=sc.pz=_tp.z;sc.pyaw=sc.yaw;}
   cautionT0=simTime;
   Object.assign(sc,{released:false,go:false,hold:0,t0:simTime,cause,lights:'orange',wave:false,waveSide:-1,unlap:false,inAfterLine:false,inDist:0,formed:false});
-  scRestart=false;restartGo=false;
-  for(const c of cars){c.drsOpen=false;c.waveBy=false;c.unlap=false;c.vd=0.6;}if(player)player.dWarn=0;
+  scRestart=false;restartGo=false;hazards=[]; // the yellow that announced it is replaced by the SC boards
+  for(const c of cars){c.drsOpen=false;c.waveBy=false;c.unlap=false;}
   pitUnderCaution();
-  scMesh.visible=true;msg('SAFETY CAR DEPLOYED',cause?cause.code+' · '+cause.dnfWhy:'');}
+  scMesh.visible=true;msg('SAFETY CAR DEPLOYED',cause?cause.code+' · '+(cause.incWhy||cause.dnfWhy||''):'');}
+// the nearest running car ahead on the road (within 250 m) and the gap to it
+function carAhead(c){let best=null,bg=250;for(const o of cars){if(o===c||o.dnf||o.parked||o.pitSide||o.finished)continue;
+  const g=fwd(c.s,o.s);if(g>0&&g<bg){bg=g;best=o;}}return best?{o:best,gap:bg}:null;}
 // the first running car behind the safety car on the road
 function scLeader(){if(!sc)return null;let best=null,bd=1e9;for(const c of cars){if(c.dnf||c.parked||c.pitSide||c.finished)continue;
   const d=fwd(c.s,sc.s);const dd=d<0?d+L:d;if(dd<bd){bd=dd;best=c;}}return best;}
@@ -2075,14 +2182,17 @@ function scCap(c){if(c.pitSide||c.dnf)return 1e9;
   if(scRestart&&!scOn())return restartGo?1e9:VP[c.idx]*0.6;
   if(!scOn())return 1e9;
   if(c.waveBy||c.unlap)return VP[c.idx]*0.8; // allowed past: they make their way round to the back of the queue
-  let cap=refV(c.idx)*0.97;
+  // no delta time: every car runs at a brisk ~80 % of racing pace until it has caught the car in front, then sits
+  // ~12 m behind it — so the field closes up into a Safety Car train (the leader ~22 m behind the SC)
+  let cap=VP[c.idx]*0.8;
   if(sc.phase!=='exit'){const g=fwd(c.s,sc.s),gg=g<0?g+L:g;if(scLeader()===c||gg<60)cap=Math.min(cap,sc.v+clamp((gg-22)*0.4,-sc.v,15));}
+  const ah=carAhead(c);if(ah)cap=Math.min(cap,ah.o.v+clamp((ah.gap-12)*0.5,-ah.o.v,15));
   return Math.max(cap,0);}
 function updateSafetyCar(dt){
   if(!sc)return;
   sc.px=sc.x;sc.pz=sc.z;sc.pyaw=sc.yaw;
   const sp=spOf(sc.s),i=Math.floor(sc.s/DS)%N,lead=scLeaderAny(),first=scLeader();
-  const wrecksLeft=cars.some(c=>c.dnf&&!c.parked&&!c.isPlayer);
+  const wrecksLeft=simTime<debrisUntil||cars.some(c=>c.dnf&&!c.parked&&!c.isPlayer);
   // ---- race control decisions
   if(sc.phase==='exit'&&sp>=PIT_D&&sp<PIT_D+200)sc.phase='out';
   if(sc.phase==='out'){
@@ -2332,13 +2442,23 @@ function drawMinimap(dt){mmAcc+=dt;if(mmAcc<1/15)return;mmAcc=0;
   for(const c of cars){if(c===player||c.parked)continue;const p=mmT(c.x,c.z);mctx.fillStyle=c.hexCol||(c.hexCol=hex(c.col));mctx.beginPath();mctx.arc(p[0],p[1],3.4,0,7);mctx.fill();}
   const p=mmT(player.x,player.z),x=p[0],z=p[1];mctx.fillStyle='#fff';mctx.beginPath();mctx.arc(x,z,5.5,0,7);mctx.fill();mctx.fillStyle='#e10600';mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
 
-function gearOf(v){const k=v*3.6;let g=0;while(g<7&&k>GEARS[g])g++;return g;}
+// gearbox: the engine revs follow the road speed in the selected gear, and the gear is changed on the REVS — up at
+// RPM_UP, down when they drop below RPM_DOWN (with the lower gear landing safely under the limit). A short lock-out
+// after each change stops it hunting between two gears.
+const RPM_IDLE=4000,RPM_UP=11500,RPM_DOWN=7600;
+const engRpm=(kmh,g)=>12000*kmh/GEARS[g];
+function updateGear(c,dt){let g=c.gear||0;c.shiftT=Math.max(0,(c.shiftT||0)-dt);const kmh=c.v*3.6;
+  if(c.shiftT<=0){
+    if(g<7&&engRpm(kmh,g)>=RPM_UP){g++;c.shiftT=0.15;}
+    else if(g>0&&engRpm(kmh,g)<RPM_DOWN&&engRpm(kmh,g-1)<RPM_UP-500){g--;c.shiftT=0.15;}}
+  c.gear=g;}
+const gearOf=c=>c.gear||0;
 // HUD writes are guarded: touching the DOM every frame with an unchanged value still dirties style/layout next to a WebGL canvas
 const _hc={};
 function setTxt(id,v){if(_hc[id]!==v){_hc[id]=v;$(id).textContent=v;}}
 function setW(id,p){const v=Math.round(p);if(_hc['w'+id]!==v){_hc['w'+id]=v;$(id).style.width=v+'%';}}
 function updateHud(){
-  const c=player,kmh=c.v*3.6,g=gearOf(c.v);
+  const c=player,kmh=c.v*3.6,g=gearOf(c);
   const rpm=c.held?4000+c.throttle*7500:rpmOf(c);
   setTxt('spd',Math.round(kmh));setTxt('gear',c.v<0.3&&c.held?'N':(g+1));setTxt('rpmTxt',Math.round(rpm/10)*10);
   // the arcs are pathLength=100, so the dash length is a percentage; bars are 60 px wide
@@ -2356,6 +2476,7 @@ function updateHud(){
 }
 function updateInfo(){
   const c=player;
+  if(session==='tt'){updateTTInfo();return;}
   if(session==='quali'){updateQualiInfo();return;}
   // (no gap-ahead read-out in the race; tyres, fuel, damage, track limits and penalties live in the MFD)
   elSty(el('gapA').parentElement,'display','none');
@@ -2368,7 +2489,6 @@ function updateInfo(){
   if(race&&scOn())f.push([sc.phase==='in'?'SC IN THIS LAP':sc.unlap?'SC · LAPPED CARS MAY OVERTAKE':'SAFETY CAR','sc']);
   else if(race&&vsc)f.push([vsc.phase==='ending'?'VSC ENDING':'VIRTUAL SAFETY CAR','vsc']);
   else if(race&&scRestart)f.push([restartGo?'RESTART · OVERTAKE AFTER THE LINE':'RESTART · LEADER SETS THE PACE','sc']);
-  if(race&&(scOn()||vsc)&&!c.pitSide&&!c.waveBy&&!c.unlap){const d=c.vd||0;f.push(['DELTA '+(d>=0?'+':'')+d.toFixed(1),d>=0?'dp':'dn']);}
   if(race&&c.waveBy)f.push(['WAVED BY · PASS THE SC','gr']);
   if(race&&c.unlap)f.push(['UNLAP · PASS THE SC','gr']);
   if(fl===2)f.push(['DOUBLE YELLOW · MS'+(mk+1)+(c.lift?' · LIFT!':''),'y2']);
@@ -2438,14 +2558,14 @@ function renderMfd(force){if(mfdPage<0||!player)return;const c=player,body=el('m
       kv('PIT PLAN',c.planLap==null?'—':'LAP '+c.planLap)+'</div>';}
   else if(mfdPage===1){const d=c.dm||newDmg(),f=k=>dmgCol(d[k]);
     h='<div class="dmg"><svg viewBox="0 0 110 194">'+
-      '<rect data-k="floor" x="8" y="60" width="94" height="100" rx="8" fill="'+f('floor')+'" opacity=".55"/>'+
+      '<rect x="8" y="60" width="94" height="100" rx="8" fill="#2a2f3a" opacity=".55"/>'+
       '<rect x="0" y="30" width="14" height="30" rx="3" fill="#0d0f14"/><rect x="96" y="30" width="14" height="30" rx="3" fill="#0d0f14"/>'+
       '<rect x="0" y="140" width="16" height="34" rx="3" fill="#0d0f14"/><rect x="94" y="140" width="16" height="34" rx="3" fill="#0d0f14"/>'+
       '<rect data-k="fwL" x="8" y="4" width="45" height="14" rx="3" fill="'+f('fwL')+'"/><rect data-k="fwR" x="57" y="4" width="45" height="14" rx="3" fill="'+f('fwR')+'"/>'+
       '<rect x="47" y="16" width="16" height="64" rx="7" fill="#5a6274"/>'+
-      '<rect data-k="spL" x="16" y="78" width="26" height="56" rx="9" fill="'+f('spL')+'"/><rect data-k="spR" x="68" y="78" width="26" height="56" rx="9" fill="'+f('spR')+'"/>'+
-      '<rect data-k="eng" x="42" y="90" width="26" height="40" rx="5" fill="'+f('eng')+'"/><rect data-k="gbx" x="46" y="132" width="18" height="26" rx="4" fill="'+f('gbx')+'"/>'+
-      '<rect data-k="diff" x="28" y="160" width="54" height="12" rx="3" fill="'+f('diff')+'"/><rect data-k="rw" x="18" y="176" width="74" height="14" rx="3" fill="'+f('rw')+'"/></svg>'+
+      '<rect x="16" y="78" width="26" height="56" rx="9" fill="#3a4150"/><rect x="68" y="78" width="26" height="56" rx="9" fill="#3a4150"/>'+
+      '<rect x="42" y="90" width="26" height="40" rx="5" fill="#3a4150"/><rect x="46" y="132" width="18" height="26" rx="4" fill="#3a4150"/>'+
+      '<rect x="28" y="160" width="54" height="12" rx="3" fill="#3a4150"/><rect data-k="rw" x="18" y="176" width="74" height="14" rx="3" fill="'+f('rw')+'"/></svg>'+
       '<div class="lst">'+DMG_PARTS.map(([k,n])=>'<div><span>'+n+'</span><b style="color:'+dmgCol(d[k])+'">'+Math.round(d[k]*100)+'%</b></div>').join('')+
       '<div style="margin-top:4px"><span>OVERALL</span><b style="color:'+dmgCol(c.damage)+'">'+Math.round(c.damage*100)+'%</b></div></div></div>';}
   else if(mfdPage===2){const t=c.tT||[80,80,80,80],b=c.bT||[300,300,300,300],o=T_OPT[c.comp],nm=['FL','FR','RL','RR'];
@@ -2577,8 +2697,12 @@ function pop(t){const ac=au.ac,s=ac.createBufferSource();s.buffer=au.buf;const f
 // the string of pops down the exhaust after a lift: unburnt fuel lighting off in the pipes
 function crackle(t,rpm){const n=2+Math.floor(Math.random()*4);
   for(let k=0;k<n;k++)pop(t+0.04+k*rand(0.03,0.11));}
-function rpmOf(c){const kmh=c.v*3.6,g=gearOf(c.v);let r=clamp(12000*kmh/GEARS[g],4000,12200);if(g===0)r=Math.max(r,4000+c.throttle*7000*(1-kmh/GEARS[0]));
-  if(c.spin>0)r=Math.min(12200,r+c.spin*2200); // wheelspin: the revs flare
+// engine revs: road speed × gear. Pulling away in 1st the clutch slips and holds the revs at ~8 000 until the road
+// speed catches up (~50 km/h), and wheelspin flares them a little — never up to the shift point, so the rev counter
+// never sits high while the gearbox refuses to change
+function rpmOf(c){const kmh=c.v*3.6,g=gearOf(c);let r=clamp(engRpm(kmh,g),RPM_IDLE,12200);
+  if(g===0)r=Math.max(r,RPM_IDLE+c.throttle*4000);
+  if(c.spin>0)r=Math.min(Math.max(r,RPM_UP-300),r+c.spin*1200);
   return r;}
 function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
   au.master.gain.setTargetAtTime(paused||muted||replay?0:.55,t,.05);
@@ -2631,7 +2755,7 @@ function updateVisuals(dt){
      for(const gn of g.userData.guns)if(busy)gn.rotation.x+=34*dt;
      for(const w of g.userData.wheels)w.visible=busy;}
    for(let k=ci;k<crews.length;k++)crews[k].visible=false;}
-  drawSafetyCar(dt,al);updateMarshalPanels();
+  drawSafetyCar(dt,al);updateMarshalPanels();animBoxMarker();
   updatePitHud();
   // the TV POD camera follows position and heading only —
   // it is NOT tied to body roll/pitch, so the horizon stays level whatever the chassis does.
@@ -2641,11 +2765,11 @@ function updateVisuals(dt){
   //  2. the field of view grew with speed. A FOV that breathes is a classic nausea trigger; it is fixed.
   const c=player;
   const tgt=c.ryaw-clamp(wrapA(c.ryaw-c.chi),-0.4,0.4)*0.6;
-  if(camYaw===null)camYaw=tgt;else camYaw+=wrapA(tgt-camYaw)*(1-Math.exp(-dt/0.12));
+  if(camYaw===null)camYaw=tgt;else camYaw+=wrapA(tgt-camYaw)*(1-Math.exp(-dt/0.2));
   const hx=Math.cos(camYaw),hz=Math.sin(camYaw);
-  // C toggles the view: COCKPIT / 1st person (default — the driver's eye inside the helmet, rigid to the car, halo
-  // overhead, nose and steering wheel below) and the TV POD (the broadcast camera pod on top of the airbox: halo,
-  // mirrors and front wheels in shot)
+  // C toggles the view: the TV POD (default — the broadcast camera pod on top of the airbox: halo, mirrors and front
+  // wheels in shot) and COCKPIT / 1st person (the driver's eye inside the helmet, rigid to the car, halo overhead,
+  // nose and steering wheel below)
   if(camMode===0){const cx=Math.cos(c.ryaw),cz=Math.sin(c.ryaw),ey=0.02+0.84*CAR_SY,ex=-0.06*CAR_SX; // inside the helmet (its inside faces are not drawn)
     camera.position.set(c.rx+cx*ex,ey,c.rz+cz*ex);_v1.set(c.rx+cx*30,ey-2.5,c.rz+cz*30);}
   else{camera.position.set(c.rx-hx*0.39,1.25,c.rz-hz*0.39);_v1.set(c.rx+hx*40,0.75,c.rz+hz*40);}
@@ -2657,7 +2781,7 @@ function updateVisuals(dt){
 }
 const _v1=new THREE.Vector3();
 let camYaw=null; // damped camera heading; reset when a car is placed on the grid
-let camMode=0;const CAM_MODES=["COCKPIT (1ST PERSON)","TV POD"];
+let camMode=1;const CAM_MODES=["COCKPIT (1ST PERSON)","TV POD"]; // the TV POD is the default view
 
 /* ---- pit banner: counts down the approach to the entry, then narrates the stop itself ---- */
 const pitHud=document.createElement('div');
@@ -2685,7 +2809,7 @@ function updatePitHud(){
     let head;
     if(inBox)head='<span style="color:#3ddc6a">■ IN THE BOX</span> — '+(c.v<0.4?'STOPPING':'BRAKE TO A STOP');
     else if(along<-1.0)head='<span style="color:#ff5252">OVERSHOT '+(-along).toFixed(1)+' m</span> — hold <b>S</b> to reverse';
-    else if(along<160)head='<span style="color:#ffd200">BOX</span> '+along.toFixed(along<20?1:0)+' m';
+    else if(along<160)head='<span style="display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;background:'+hex(c.col)+'"></span> <span style="color:#ffd200">YOUR BOX</span> '+along.toFixed(along<20?1:0)+' m';
     else head='<span style="color:#ffd200">PIT LANE 60 km/h</span>';
     show(head+'<br><span style="font-weight:400;opacity:.85;font-size:12px">'+(along<160?side+' · stop inside the box':'Your box is on the right, past the 60 line')+'</span>');return;}
   if(c.limiter){show('<span style="color:#ffd200">PIT LANE 60 km/h</span><br>'+
@@ -2863,13 +2987,45 @@ addEventListener('keydown',e=>{if(phase==='menu'||phase==='box'||phase==='qdone'
   if(e.code==='Digit0'||e.code==='Numpad0'){if(replay)endReplay();else startReplay();return;}
   if(e.code==='KeyP'||e.code==='Escape'){if(replay){endReplay();return;}togglePause();}
   if(['Digit1','Digit2','Digit3'].includes(e.code)&&player){const n={Digit1:'S',Digit2:'M',Digit3:'H'}[e.code];player.nextComp=n;msg('NEXT TYRE · '+COMP[n].name);}
-  if(e.code==='KeyR'&&player&&phase==='race'&&player.pitStop<=0&&!player.dnf){const c=player,i=c.idx;const d=c.pitSide?PIT_OFF+FAST_D:clamp(c.d,-HWa[i]+1.5,HWa[i]-1.5);c.x=X[i]-TZ[i]*d;c.z=Z[i]+TX[i]*d;c.yaw=c.chi=ANG[i];c.v=0;c.delta=0;c.r=0;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;msg('BACK ON TRACK');}
+  if(e.code==='KeyR'&&player&&(phase==='race'||session==='tt')&&player.pitStop<=0&&!player.dnf){if(session==='tt')ttInvalidate('RECOVERED');const c=player,i=c.idx;const d=c.pitSide?PIT_OFF+FAST_D:clamp(c.d,-HWa[i]+1.5,HWa[i]-1.5);c.x=X[i]-TZ[i]*d;c.z=Z[i]+TX[i]*d;c.yaw=c.chi=ANG[i];c.v=0;c.delta=0;c.r=0;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;msg('BACK ON TRACK');}
 });
 addEventListener('keyup',e=>{keys[e.code]=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
-function togglePause(){if(phase==='menu'||phase==='box'||phase==='qdone'||resultsShown||replay)return;paused=!paused;$('pause').hidden=!paused;}
+function togglePause(){if(phase==='menu'||phase==='box'||phase==='qdone'||resultsShown||replay)return;paused=!paused;$('pause').hidden=!paused;
+  // restart choices that fit the session: the race (same grid) / the weekend from qualifying / the time trial
+  for(const b of document.querySelectorAll('#pause .rs-race'))b.hidden=session!=='race';
+  for(const b of document.querySelectorAll('#pause .rs-gp'))b.hidden=session==='tt';
+  for(const b of document.querySelectorAll('#pause .rs-tt'))b.hidden=session!=='tt';}
 $('resumeBtn').onclick=togglePause;
 $('quitBtn').onclick=$('againBtn').onclick=()=>location.reload();
+$('pRestartRace').onclick=$('rRestartRace').onclick=()=>{document.activeElement.blur();restartRace();};
+$('pRestartQuali').onclick=$('rRestartQuali').onclick=()=>{document.activeElement.blur();restartQuali();};
+$('pRestartTT').onclick=()=>{document.activeElement.blur();restartTT();};
+$('pLeaderboard').onclick=()=>{document.activeElement.blur();openTTDialog(true);};
+
+/* ---- time trial entry: the driver's real name (Korean or English), checked before the session starts; the dialog
+   also shows the circuit's leaderboard. Opened from the pause menu it only shows the board (BACK returns to it). ---- */
+let ttFromPause=false;
+async function renderBoardTable(){$('ttLb').innerHTML='<tr><td colspan="5" style="color:var(--mute)">Loading…</td></tr>';
+  const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;const lead=r.rows.length?r.rows[0].t:null;
+  $('ttLbSrc').textContent=r.shared?'· ALL PLAYERS':lbShared?'· SERVER UNREACHABLE — THIS BROWSER ONLY':'· THIS BROWSER';
+  $('ttLb').innerHTML=r.rows.length?r.rows.slice(0,50).map((x,k)=>'<tr class="'+(x.name===ttName?'me':'')+'"><td class="num">'+(k+1)+'</td><td><b>'+esc(x.name)+'</b></td><td>'+esc(x.team||'')+'</td><td class="num">'+fmt(x.t)+'</td><td class="num">'+(k?'+'+(x.t-lead).toFixed(3):'—')+'</td></tr>').join('')
+    :'<tr><td colspan="5" style="color:var(--mute)">No times yet on this circuit — be the first.</td></tr>';}
+function openTTDialog(fromPause=false){ttFromPause=fromPause;$('ttTrk').textContent=TR.label;$('ttName').value=ttName;
+  $('ttName').classList.remove('bad');$('ttNameMsg').classList.remove('bad');
+  $('ttNameMsg').textContent='리더보드에 표시됩니다. 한국어 이름(2–5자) 또는 영어 이름(이름과 성)으로 입력하세요.';
+  $('ttGo').textContent=fromPause?'RESTART TIME TRIAL':'START TIME TRIAL';
+  if(fromPause)$('pause').hidden=true;else $('menu').hidden=true;
+  $('ttDlg').hidden=false;renderBoardTable();if(!fromPause)setTimeout(()=>$('ttName').focus(),50);}
+$('ttBtn').onclick=()=>{document.activeElement.blur();audioInit();openTTDialog(false);};
+$('ttBack').onclick=()=>{$('ttDlg').hidden=true;if(ttFromPause)$('pause').hidden=false;else $('menu').hidden=false;};
+$('ttName').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('ttGo').click();});
+$('ttGo').onclick=()=>{const r=checkName($('ttName').value);
+  if(!r.ok){$('ttName').classList.add('bad');$('ttNameMsg').classList.add('bad');
+    $('ttNameMsg').textContent='본인의 실명을 입력하세요: 한국어 2–5자(예: 홍길동) 또는 영어 이름과 성(예: Gildong Hong). 숫자·기호·별명은 안 됩니다.';return;}
+  ttName=r.name;try{localStorage.setItem('hrc-name',ttName);}catch(e){}
+  $('ttDlg').hidden=true;document.activeElement.blur();
+  $('menu').hidden=true;$('hud').hidden=false;if(!ttFromPause)$('hud').className='lite';setupSession('tt');};
 
 /* ---- lobby: grand prix / laps / difficulty / team, all picked with buttons ---- */
 const AI_LEVELS=[['Easy',0.975],['Medium',1.02],['Hard',1.06],['Simulation',1.10]];
@@ -3112,4 +3268,4 @@ function detHash(seed=1,n=6000){
   reseed(null);
   return {hash:(h>>>0).toString(16).padStart(8,'0'),seed,steps:n,simTime:+simTime.toFixed(4),laps:cars.map(c=>c.lapCount),best:cars.map(c=>c.bestLap&&+c.bestLap.toFixed(3))};}
 boot();
-window.hrc={quickRace,detHash,deploySC,deployVSC,hazard,retire,get sc(){return sc;},get vsc(){return vsc;},get msFlag(){return msFlag;},reseed,rtEstimate,get player(){return player;},get simTime(){return simTime;},gpuTimer,cullByDistance,finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene};
+window.hrc={updateHud,updateInfo,restartRace,restartQuali,restartTT,setupSession,incident,get tt(){return tt;},get session(){return session;},quickRace,detHash,deploySC,deployVSC,hazard,retire,get sc(){return sc;},get vsc(){return vsc;},get msFlag(){return msFlag;},reseed,rtEstimate,get player(){return player;},get simTime(){return simTime;},gpuTimer,cullByDistance,finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene};

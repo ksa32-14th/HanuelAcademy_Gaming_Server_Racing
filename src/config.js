@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261005t';
-import {clamp} from './util.js?v=20261005t';
+import {TRACKS} from './data/tracks.js?v=20261005u';
+import {clamp} from './util.js?v=20261005u';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -40,9 +40,13 @@ export const COMP={S:{name:'SOFT',grip:1.0,rate:1/(18*5.063),col:'#ff2d2d',hex:0
             M:{name:'MEDIUM',grip:0.975,rate:1/(28*5.063),col:'#ffd200',hex:0xffd200},
             H:{name:'HARD',grip:0.95,rate:1/(40*5.063),col:'#f2f2f2',hex:0xf2f2f2}};
 export const POINTS=[25,18,15,12,10,8,6,4,2,1];
+// Time Trial leaderboard server: a Firebase Realtime Database URL (e.g. 'https://<project>-default-rtdb.<region>.
+// firebasedatabase.app'). Empty = the board is kept in each browser only. Setup: README → Time Trial.
+export const LB_URL='';
 export const DRS_GAP=3.0, DRS_FROM_LAP=1; // house rule: DRS within 3 s, available from lap 1
-// top speed of each gear (km/h): 1st to 100, 2nd 140, 3rd 180, 4th 220, 5th 260, 6th 290, 7th 320, 8th above that
-export const GEARS=[100,140,180,220,260,290,320,370];
+// speed of each gear at 12 000 rpm (km/h). The gearbox shifts on the engine revs (see updateGear in game.js): up at
+// 11 500 rpm, down when the revs fall below ~7 600. 1st and 2nd are short so the car is out of them quickly
+export const GEARS=[75,115,155,195,235,270,305,360];
 export const FUEL_PER_LAP=1.72*TRACK_LEN/5063;
 
 export const TEAMS=[

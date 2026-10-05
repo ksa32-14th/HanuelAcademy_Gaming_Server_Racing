@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261005t">
+<link rel="stylesheet" href="css/style.css?v=20261005u">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -89,8 +89,25 @@
     <div class="sec"><h3>TEAM / LIVERY</h3><div class="teams" id="teamSel"></div></div>
     <div class="keyl"><span><kbd>W</kbd> Throttle</span><span><kbd>A</kbd><kbd>D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>S</kbd> Reverse (pit lane)</span><span><kbd>E</kbd> DRS</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Pit tyre S/M/H</span><span><kbd>F</kbd> MFD (<kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>)</span><span><kbd>C</kbd> Camera</span><span><kbd>L</kbd> Racing line</span><span><kbd>H</kbd> HUD</span><span><kbd>R</kbd> Recover</span><span><kbd>P</kbd> Pause</span><span><kbd>0</kbd> Replay</span></div>
     <button class="btn ghost" id="introBtn">▶ CIRCUIT INTRO</button>
+    <button class="btn ghost" id="ttBtn">⏱ TIME TRIAL</button>
     <button class="btn" id="startBtn">ENTER PIT BOX</button>
     </div>
+  </div>
+</div>
+
+<!-- time trial: the driver's real name for the leaderboard, and the board for this circuit -->
+<div id="ttDlg" class="ov" hidden>
+  <div class="card" style="width:min(620px,100%)">
+    <div class="eyebrow">TIME TRIAL · <span id="ttTrk"></span></div>
+    <h1 style="font-size:34px">Time <em>Trial</em></h1>
+    <p class="sub">Alone on track, no damage. Hitting a wall or exceeding track limits deletes that lap. Every valid lap goes on the leaderboard.</p>
+    <div class="sec"><h3>DRIVER NAME <span style="color:var(--mute);font-weight:400;letter-spacing:0">· 본인의 실명 (한국어 또는 영어)</span></h3>
+      <input id="ttName" maxlength="30" autocomplete="name" placeholder="홍길동 / Gildong Hong">
+      <div id="ttNameMsg" class="namemsg">리더보드에 표시됩니다. 한국어 이름(2–5자) 또는 영어 이름(이름과 성)으로 입력하세요.</div></div>
+    <div class="sec"><h3>LEADERBOARD <span id="ttLbSrc" style="color:var(--mute);font-weight:400;letter-spacing:0"></span></h3>
+      <div class="tblw" style="max-height:34vh"><table><thead><tr><th>P</th><th>DRIVER</th><th>TEAM</th><th class="num">LAP</th><th class="num">GAP</th></tr></thead><tbody id="ttLb"></tbody></table></div></div>
+    <button class="btn ghost" id="ttBack">BACK</button>
+    <button class="btn" id="ttGo">START TIME TRIAL</button>
   </div>
 </div>
 
@@ -128,6 +145,10 @@
     <div class="eyebrow">RED FLAG · PAUSED</div>
     <h1 style="font-size:40px">Paused</h1>
     <button class="btn" id="resumeBtn">RESUME (P)</button>
+    <button class="btn ghost rs-race" id="pRestartRace">RESTART RACE</button>
+    <button class="btn ghost rs-gp" id="pRestartQuali">RESTART FROM QUALIFYING</button>
+    <button class="btn ghost rs-tt" id="pRestartTT">RESTART TIME TRIAL</button>
+    <button class="btn ghost rs-tt" id="pLeaderboard">LEADERBOARD</button>
     <button class="btn ghost" id="quitBtn">QUIT TO MENU</button>
   </div>
 </div>
@@ -138,10 +159,12 @@
     <h1 style="font-size:40px">Race <em>Classification</em></h1>
     <p class="sub" id="resSub"></p>
     <div class="tblw"><table><thead><tr><th>POS</th><th>DRIVER</th><th>TEAM</th><th>LAPS</th><th>TIME / GAP</th><th>PEN</th><th>BEST LAP</th><th>PTS</th></tr></thead><tbody id="resBody"></tbody></table></div>
-    <button class="btn" id="againBtn">NEW RACE</button>
+    <button class="btn" id="rRestartRace">RESTART RACE</button>
+    <button class="btn ghost" id="rRestartQuali">RESTART FROM QUALIFYING</button>
+    <button class="btn ghost" id="againBtn">MENU</button>
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261005t"></script>
+<script type="module" src="src/main.js?v=20261005u"></script>
 </body>
 </html>
