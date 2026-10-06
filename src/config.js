@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261005u';
-import {clamp} from './util.js?v=20261005u';
+import {TRACKS} from './data/tracks.js?v=20261006a';
+import {clamp} from './util.js?v=20261006a';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -23,6 +23,10 @@ export const TL_EDGE=HW+KERB_W+1.2*CAR_SZ;
 // is only light (TC_SLACK): the driver may ask for up to 1.25× that before it intervenes; beyond, the wheels spin —
 // less drive, less cornering grip, revs flaring (see physics()).
 export const G=9.81, RHO=1.2, MASS=798, POWER=700000, CDA=1.514, CLA=5.0, MU=1.55, CRR=0.012, WB=3.6, VMAX=420/3.6, TRACTION=0.62, TC_SLACK=1.25;
+// Player-only loose handling. TC_SLACK_P: how much over the traction limit the TC lets the driver ask before the
+// rears spin (1.25 = the AI's, 1.0 = spins right at the limit, <1 = spins before it). TRACTION_P: share of grip the
+// rears put down. SLIDE: 0 = the old planted car, 1 = spinning / overdriven rears swing the tail out.
+export const TC_SLACK_P=1.0, TRACTION_P=0.55, SLIDE=1.0;
 // brake grip as a fraction of the tyre's cornering grip. Below 1 the brakes cannot stand the car on
 // its nose, so the braking zone is long enough that you have to place the car for the corner in it —
 // which is what makes out-in-out necessary instead of optional.
