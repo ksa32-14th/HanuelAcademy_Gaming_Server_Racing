@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261005u';
-import {clamp} from './util.js?v=20261005u';
+import {TRACKS} from './data/tracks.js?v=20261006b';
+import {clamp} from './util.js?v=20261006b';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -27,6 +27,11 @@ export const G=9.81, RHO=1.2, MASS=798, POWER=700000, CDA=1.514, CLA=5.0, MU=1.5
 // its nose, so the braking zone is long enough that you have to place the car for the corner in it —
 // which is what makes out-in-out necessary instead of optional.
 export const BRK=0.90;
+// Player car only (see slideStep()): front and rear tyres are separate, and the rears share their grip between drive
+// and cornering. TC_P: the share of the rear grip the (lighter) traction control lets the throttle use — what is left
+// is all the rears have for cornering, so a big throttle in a slow corner steps the tail out. SLIDE: how far a rear
+// tyre past its peak drops off (0 = the old planted model, 1 = a slide keeps going until it is countersteered).
+export const TC_P=0.8, SLIDE=1.0;
 // mechanical grip is lower at low speed (no downforce to lean on, tyres slide more easily)
 export const gripV=v=>0.84+0.16*Math.min(1,v/55);
 export const PITWALL=HW+3.5, PIT_HW=6, PIT_OFF=PITWALL+1+PIT_HW+1, PIT_LIMIT=60/3.6;

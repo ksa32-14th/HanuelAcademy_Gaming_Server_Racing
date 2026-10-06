@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005u';
-import {perf} from './perf.js?v=20261005u';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261005u';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005u';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005u';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261005u';
-import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261005u';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006b';
+import {perf} from './perf.js?v=20261006b';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261006b';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006b';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006b';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261006b';
+import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006b';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005u';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006b';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005u'):import('./data/osm-songdo.js?v=20261005u')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006b'):import('./data/osm-songdo.js?v=20261006b')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1638,10 +1638,15 @@ function physics(c,dt){
   // steering lock shrinks with speed (heavy steering / small angles at 300 km/h); the player may ask
   // for ~30 % more than the grip limit, which now makes the car slide instead of tracking on rails
   const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=0.26/(1+v/70); // ~13.5 m minimum turning radius, and still limited at speed
-  const dmax=Math.max(0.03,Math.min(dPhys,dGrip*(c.isPlayer?1.2:1.1)));
+  // sliding (player): steering INTO the slide (countersteer: towards the direction of travel) gets the slip angle as
+  // extra lock, so there is enough of it to catch the car; steering further into the spin gets none
+  const slideOn=c.isPlayer&&!c.auto&&SLIDE>0&&v>6,bTr=slideOn?wrapA((c.chi??c.yaw)-c.yaw):0;
+  const bSl=c.steerIn*bTr>0?Math.abs(bTr):0;
+  const dmax=Math.max(0.03,Math.min(dPhys,dGrip*(c.isPlayer?1.2:1.1))+bSl);
   const want=c.isPlayer&&!c.auto?c.steerIn*dmax:clamp(c.deltaCmd,-dmax,dmax);
   // the front wheels turn at a steady rate (the player's a little gentler still): no instant lock-to-lock darts
-  const dr=c.isPlayer&&!c.auto?2.2:3;c.delta+=clamp(want-c.delta,-dr*dt,dr*dt);
+  const dr=c.isPlayer&&!c.auto?(bSl>0.03?5:2.2):3;c.delta+=clamp(want-c.delta,-dr*dt,dr*dt);
+  if(slideOn){const [ax,ay]=slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag);afterMove(c,dt,thr,ax,ay);return;}
   let axT=(Fp-Fb)/m;if(v<0.05&&axT<0)axT=0;
   // A planted F1 car, not a drift car. The path (chi) bends as far as the tyres allow; the body (yaw) follows the path
   // within a few hundredths of a second, carrying only a small slip angle — it never swings out of line. Asking for
@@ -1663,12 +1668,51 @@ function physics(c,dt){
   const rT=(v>0.5?ay/v:rReq)+(clamp(ay*bS,-bM,bM)-beta)*bK;
   c.r+=(rT-c.r)*(1-Math.exp(-dt/bTau));c.yaw+=c.r*dt;
   {const b=wrapA(c.yaw-c.chi);if(Math.abs(b)>0.09)c.chi+=(b-Math.sign(b)*0.09)*Math.min(1,10*dt);}
-  c.aLong=ax;c.aLat=ay;
   c.x+=Math.cos(c.chi)*c.v*dt;c.z+=Math.sin(c.chi)*c.v*dt;
+  afterMove(c,dt,thr,ax,ay);
+}
+function afterMove(c,dt,thr,ax,ay){
+  c.aLong=ax;c.aLat=ay;
   const dist=c.v*dt;
   c.fuel=Math.max(0,c.fuel-FUEL_PER_LAP/L*dist*(0.35+0.65*thr)*1.12);
   c.wear+=dist/1000*COMP[c.comp].rate*wearMult*(1+1.5*Math.min(c.slip,2)+0.4*c.brake+1.2*c.spin);
   temps(c,dt,ay,ax);updateGear(c,dt);
+}
+/* ---- the player's car at speed: a two-axle (bicycle) model. Each axle's tyres have their own slip angle and grip; the
+   rears share theirs between drive / braking and cornering (friction circle), and past its peak a tyre gives LESS
+   (Pacejka-shaped, the rear more so with SLIDE). Nothing pulls the body back in line: once the rear lets go the car
+   keeps rotating on its own yaw momentum until the driver countersteers (or lifts, giving the rears their grip back).
+   State in and out is the usual v / chi (travel) / yaw (body) / r, so walls, the camera and the AI path see no
+   difference; it runs in 10 sub-steps because the tyres are stiff at low speed. ---- */
+const CG_F=0.54*WB,CG_R=0.46*WB,CG_H=0.30; // CG to front / rear axle (46 % of the weight on the front), CG height
+function pac(al,C,pk){return Math.sin(C*Math.atan(Math.tan(Math.PI/(2*C))/pk*al));} // 1 at slip pk, less past it
+function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
+  const n=10,h=dt/n,Iz=m*1.8,Cr=1.25+0.25*SLIDE;
+  const b0=wrapA(c.chi-c.yaw),v0=c.v;let vx=v0*Math.cos(b0),vy=v0*Math.sin(b0),r=c.r,yaw=c.yaw,x=c.x,z=c.z;
+  // weight moves back under power and forward under braking (light rears on the brakes: lift-off / trail-brake oversteer)
+  const dN=clamp(m*(c.aLong||0)*CG_H/WB,-0.35*Nn,0.35*Nn),Nf=Nn*CG_R/WB-dN,Nr=Nn*CG_F/WB+dN;
+  // the (wider) rears have ~10 % more grip than the fronts: off the throttle the car runs wide at the limit, it doesn't spin
+  const Ff=mu*Nf,Fr=mu*1.1*Nr,d=c.delta,cd=Math.cos(d),sd=Math.sin(d);
+  const Fdrv=Math.min(Fdem,Fr*TC_P);
+  c.spin=Fdem>Fr*TC_P?Math.min(1,(Fdem/(Fr*TC_P)-1)*1.5):0;
+  const Fxf=-Math.min(Fb*0.58,Ff*0.98),Fxr=Fdrv-Math.min(Fb*0.42,Fr*0.98);
+  const Fyf0=Math.sqrt(Math.max(0,Ff*Ff-Fxf*Fxf)),Fyr0=Math.sqrt(Math.max(0,Fr*Fr-Fxr*Fxr));
+  let fy=0,alr=0;
+  for(let i=0;i<n;i++){const u=Math.max(vx,3);
+    const af=d-Math.atan2(vy+CG_F*r,u),ar=-Math.atan2(vy-CG_R*r,u);
+    // the rears are the stiffer pair (the car understeers gently and is stable off the throttle); drive eats into their
+    // grip, and once that tips the balance they let go and fall off past the peak
+    const Fyf=Fyf0*pac(af,1.3,0.12),Fyr=Fyr0*pac(ar,Cr,0.06);
+    const Fy=Fyf*cd+Fxf*sd+Fyr;
+    vx+=((Fxf*cd-Fyf*sd+Fxr-Fdrag)/m+vy*r)*h;
+    vy+=(Fy/m-vx*r)*h;
+    r+=((CG_F*(Fyf*cd+Fxf*sd)-CG_R*Fyr)/Iz)*h;
+    if(vx<0.5){vx=0.5;}
+    x+=(Math.cos(yaw)*vx-Math.sin(yaw)*vy)*h;z+=(Math.sin(yaw)*vx+Math.cos(yaw)*vy)*h;yaw+=r*h;
+    fy=Fy;alr=ar;}
+  c.x=x;c.z=z;c.yaw=yaw;c.r=r;c.v=Math.hypot(vx,vy);c.chi=yaw+Math.atan2(vy,vx);
+  c.slip=Math.min(2,Math.max(0,Math.abs(alr)/0.06-1)); // rear past its peak: tyre squeal, wear and heat
+  return [(c.v-v0)/dt,fy/m];
 }
 /* ---- tyre and brake temperatures (°C), FL FR RL RR. A tyre heats with the work it does — cornering load (more on the
    outside wheels), braking on the fronts, traction on the rears, sliding — and the air cools it, harder at speed. On
@@ -1877,7 +1921,9 @@ function computeTow(){for(const c of cars){c.tow=0;if(c.parked)continue;for(cons
 function playerControl(dt){const c=player;if(c.auto){aiDrive(c,dt);return;}const tg=(keys.KeyD?1:0)-(keys.KeyA?1:0);
   // steering winds on in ~0.25 s at low speed and ~0.75 s at 300 km/h and centres in ~0.2 s: a keyboard tap gives a
   // gentle, progressive turn instead of flicking the car left-right; throttle and brake ~35 ms
-  const rate=(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?5:4/(1+c.v/40);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
+  // catching a slide (steering towards the direction of travel) the hands are quick: lock-to-lock in ~0.25 s
+  const bTr=SLIDE>0&&c.chi!==undefined?wrapA(c.chi-c.yaw):0,catching=tg*bTr>0&&Math.abs(bTr)>0.03;
+  const rate=catching?8:(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?5:4/(1+c.v/40);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
   c.throttle+=clamp((keys.KeyW?1:0)-c.throttle,-35*dt,30*dt);c.brake+=clamp((keys.Space?1:0)-c.brake,-35*dt,30*dt);
   if(c.throttle<0.01)c.throttle=0;if(c.brake<0.01)c.brake=0;c.revIn=!!keys.KeyS;
   if(c.dnf){c.throttle=0;c.brake=1;c.steerIn=0;}}
