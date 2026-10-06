@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006b';
-import {perf} from './perf.js?v=20261006b';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261006b';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006b';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006b';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261006b';
-import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006b';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006c';
+import {perf} from './perf.js?v=20261006c';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261006c';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006c';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006c';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261006c';
+import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006c';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006b';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006c';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006b'):import('./data/osm-songdo.js?v=20261006b')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006c'):import('./data/osm-songdo.js?v=20261006c')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1690,7 +1690,10 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   const n=10,h=dt/n,Iz=m*1.8,Cr=1.25+0.25*SLIDE;
   const b0=wrapA(c.chi-c.yaw),v0=c.v;let vx=v0*Math.cos(b0),vy=v0*Math.sin(b0),r=c.r,yaw=c.yaw,x=c.x,z=c.z;
   // weight moves back under power and forward under braking (light rears on the brakes: lift-off / trail-brake oversteer)
-  const dN=clamp(m*(c.aLong||0)*CG_H/WB,-0.35*Nn,0.35*Nn),Nf=Nn*CG_R/WB-dN,Nr=Nn*CG_F/WB+dN;
+  // a sideways car stalls its floor: with the slip angle the downforce goes (the rear, under the diffuser, most), which
+  // loosens the rear further — the snap that turns a twitch into a spin, fastest where the downforce is biggest
+  const k=Math.min(1,Math.abs(b0)/0.25),Da=Nn-m*G,Ns=m*G+Da*(1-0.5*k);
+  const dN=clamp(m*(c.aLong||0)*CG_H/WB,-0.35*Ns,0.35*Ns),Nf=m*G*CG_R/WB+Da*CG_R/WB*(1-0.3*k)-dN,Nr=m*G*CG_F/WB+Da*CG_F/WB*(1-0.7*k)+dN;
   // the (wider) rears have ~10 % more grip than the fronts: off the throttle the car runs wide at the limit, it doesn't spin
   const Ff=mu*Nf,Fr=mu*1.1*Nr,d=c.delta,cd=Math.cos(d),sd=Math.sin(d);
   const Fdrv=Math.min(Fdem,Fr*TC_P);
