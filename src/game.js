@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006h';
-import {perf} from './perf.js?v=20261006h';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261006h';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006h';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006h';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261006h';
-import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006h';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006i';
+import {perf} from './perf.js?v=20261006i';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261006i';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006i';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006i';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261006i';
+import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006i';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006h';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006i';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006h'):import('./data/osm-songdo.js?v=20261006h')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006i'):import('./data/osm-songdo.js?v=20261006i')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1704,12 +1704,13 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   const tcL=Fr*(0.8-(0.8-TC_P)*Math.min(1,Math.abs(c.aLat||0)/(0.5*mu*Nn/m))),Fdrv=Math.min(Fdem,tcL);
   // the TC holds the wheels near their peak slip: what it trims off shows as a little wheelspin, not a full flare
   c.spin=Fdem>tcL?0.3*Math.min(1,Fdem/tcL-1):0;
-  // brakes, with a strong ABS: the bias follows the axle loads (forward under braking), and no wheel is ever braked
-  // to locking. In a straight line it lets the fronts use ~95 % of their grip and the rears ~70 %; the harder the car
-  // is cornering the more it backs off (to ~60 / ~45 %), so the tyres keep most of their cornering grip — the car
-  // steers while braking, and neither end lets go
-  const abs=Math.min(1,Math.abs(c.aLat||0)/(0.6*mu*Nn/m));
-  const Fbr=Math.min(Fb*0.9*Nr/(Nf+Nr),Fr*(0.7-0.25*abs)),Fbf=Math.min(Fb-Fbr,Ff*(0.95-0.35*abs));
+  // brakes, with ABS at its strongest: the bias follows the axle loads (forward under braking), and no wheel is ever
+  // braked to locking. In a straight line it lets the fronts use ~95 % of their grip and the rears ~70 %; as soon as
+  // the driver steers it backs off with the steering input (at full lock to ~30 / ~25 %), so the tyres keep ~95 % of
+  // their cornering grip — the car turns as if off the brakes, and neither end lets go. (It goes on the steering, not
+  // on the cornering it gets: with the fronts busy braking that never builds, and the ABS would never let go.)
+  const abs=Math.min(1,Math.abs(c.steerIn||0)*1.5);
+  const Fbr=Math.min(Fb*0.9*Nr/(Nf+Nr),Fr*(0.7-0.45*abs)),Fbf=Math.min(Fb-Fbr,Ff*(0.95-0.65*abs));
   const Fxf=-Fbf,Fxr=Fdrv-Fbr;
   const Fyf0=Math.sqrt(Math.max(0,Ff*Ff-Fxf*Fxf)),Fyr0=Math.sqrt(Math.max(0,Fr*Fr-Fxr*Fxr));
   let fy=0,alr=0;

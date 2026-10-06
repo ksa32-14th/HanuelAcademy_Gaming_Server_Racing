@@ -3,7 +3,7 @@
 // · With LB_URL set to a Firebase Realtime Database URL the best laps of EVERY player are shared through its REST API
 //   (one record per driver name under /tt/<circuit>/), so everybody sees the same board. See README → Time Trial.
 // Records: {name, t (s), team, date (ms)}.
-import {LB_URL} from './config.js?v=20261006h';
+import {LB_URL} from './config.js?v=20261006i';
 
 export const lbShared=!!LB_URL;
 const base=LB_URL.replace(/\/+$/,'');
