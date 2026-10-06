@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006a';
-import {perf} from './perf.js?v=20261006a';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261006a';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,TRACTION_P,TC_SLACK_P,SLIDE,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006a';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006a';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261006a';
-import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006a';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261005u';
+import {perf} from './perf.js?v=20261005u';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261005u';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261005u';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261005u';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261005u';
+import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261005u';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006a';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261005u';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006a'):import('./data/osm-songdo.js?v=20261006a')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261005u'):import('./data/osm-songdo.js?v=20261005u')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1629,14 +1629,11 @@ function physics(c,dt){
   // drive and wheelspin: TRACTION × grip is what the rear tyres can put down. A light traction control lets the driver
   // ask for up to TC_SLACK × that; past it the wheels spin (spin 0…1): the drive drops to ~75 % and the rears lose
   // some cornering grip, so too much throttle out of a slow corner is slower and pushes the car wide
-  const pl=c.isPlayer&&!c.auto,tcS=pl?TC_SLACK_P:TC_SLACK;
-  const Fdem=thr>0?POWER*thr/Math.max(v,4):0,Ftr=mu*(pl?TRACTION_P:TRACTION)*Nn;
+  const Fdem=thr>0?POWER*thr/Math.max(v,4):0,Ftr=mu*TRACTION*Nn;
   // pulling away and at crawling speed the traction control catches it completely (fades out from ~80 down to ~50 km/h):
-  // otherwise every launch sat in full wheelspin for seconds — revs pinned, speed barely building.
-  // The player's lighter TC only holds the first few metres (gone by ~30 km/h)
-  const tcFade=pl?clamp((v-3)/5,0,1):clamp((v-14)/8,0,1);
-  c.spin=Fdem>Ftr*tcS?Math.min(1,(Fdem/(Ftr*tcS)-1)*(pl?2.5:1.5))*tcFade:0;
-  const Fp=Math.min(Fdem,Ftr)*(1-(pl?0.35:0.25)*c.spin);
+  // otherwise every launch sat in full wheelspin for seconds — revs pinned, speed barely building
+  c.spin=Fdem>Ftr*TC_SLACK?Math.min(1,(Fdem/(Ftr*TC_SLACK)-1)*1.5)*clamp((v-14)/8,0,1):0;
+  const Fp=Math.min(Fdem,Ftr)*(1-0.25*c.spin);
   const Fdrag=0.5*RHO*cda*v*v+(v>0.1?CRR*m*G:0),Fb=c.brake*mu*BRK*Nn;
   // steering lock shrinks with speed (heavy steering / small angles at 300 km/h); the player may ask
   // for ~30 % more than the grip limit, which now makes the car slide instead of tracking on rails
@@ -1655,22 +1652,17 @@ function physics(c,dt){
   const beta=wrapA(c.yaw-c.chi),rReq=v*Math.tan(c.delta)/WB,ayReq=v*rReq;
   const n=Math.hypot(axT/(aMax*1.05),ayReq/(aMax*(1-0.2*c.spin))); // spinning rears corner worse
   let ay=ayReq;c.slip=0;if(n>1){c.slip=n-1;const lose=1-0.14*Math.min(c.slip,1);axT=axT/n*lose;ay=ayReq/n*lose;}
-  // player: how loose the rears are (wheelspin + overdriven tyres), smoothed so a slide builds and dies over ~¼ s
-  c.loose=pl?(c.loose||0)+(SLIDE*Math.min(1,0.5*c.spin+0.8*c.slip)-(c.loose||0))*(1-Math.exp(-dt/0.25)):0;
-  const ax=axT-Fdrag/m-Math.min(c.slip,1)*3.0-c.loose*Math.abs(beta)*6; // a sideways car scrubs speed
+  const ax=axT-Fdrag/m-Math.min(c.slip,1)*3.0;
   c.v=Math.max(0,v+ax*dt);
   c.chi=v>0.5?c.chi+ay/v*dt:c.yaw;
   // body: turns with the path, plus a tiny slip angle (≤ ~1°). The follow is well damped (no overshoot), so the car
   // never snaps round and letting go of the steering doesn't swing the nose past the path and back; a 5° hard limit
   // eases chi in, never snaps it. The player's car follows softer still (what you see from it); the AI keeps a
   // slightly tighter follow so its body stays square to its line through tight street corners
-  const soft=c.isPlayer&&!c.auto,bK=soft?6*(1-0.6*c.loose):8,bTau=soft?0.07:0.05,bS=soft?0.0003:0.0005,bM=soft?0.018:0.025;
-  // loose rears: the tail steps out — the nose rotates into the corner past the path (power oversteer), the more the
-  // harder the car is steered; countersteer (rReq of the other sign) and lifting (the restoring bK comes back) catch it
-  const kick=c.loose*0.8*clamp(rReq,-1.5,1.5);
-  const rT=(v>0.5?ay/v:rReq)+(clamp(ay*bS,-bM,bM)-beta)*bK+kick;
+  const soft=c.isPlayer&&!c.auto,bK=soft?6:8,bTau=soft?0.07:0.05,bS=soft?0.0003:0.0005,bM=soft?0.018:0.025;
+  const rT=(v>0.5?ay/v:rReq)+(clamp(ay*bS,-bM,bM)-beta)*bK;
   c.r+=(rT-c.r)*(1-Math.exp(-dt/bTau));c.yaw+=c.r*dt;
-  {const bLim=0.09+0.35*c.loose,b=wrapA(c.yaw-c.chi);if(Math.abs(b)>bLim)c.chi+=(b-Math.sign(b)*bLim)*Math.min(1,10*dt);}
+  {const b=wrapA(c.yaw-c.chi);if(Math.abs(b)>0.09)c.chi+=(b-Math.sign(b)*0.09)*Math.min(1,10*dt);}
   c.aLong=ax;c.aLat=ay;
   c.x+=Math.cos(c.chi)*c.v*dt;c.z+=Math.sin(c.chi)*c.v*dt;
   const dist=c.v*dt;
