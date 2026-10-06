@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006d';
-import {perf} from './perf.js?v=20261006d';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261006d';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006d';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006d';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261006d';
-import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006d';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006e';
+import {perf} from './perf.js?v=20261006e';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261006e';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006e';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006e';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261006e';
+import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006e';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006d';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006e';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006d'):import('./data/osm-songdo.js?v=20261006d')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006e'):import('./data/osm-songdo.js?v=20261006e')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1640,7 +1640,10 @@ function physics(c,dt){
   const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=0.26/(1+v/70); // ~13.5 m minimum turning radius, and still limited at speed
   // sliding (player): steering INTO the slide (countersteer: towards the direction of travel) gets the slip angle as
   // extra lock, so there is enough of it to catch the car; steering further into the spin gets none
-  const slideOn=c.isPlayer&&!c.auto&&SLIDE>0&&v>6,bTr=slideOn?wrapA((c.chi??c.yaw)-c.yaw):0;
+  // (a car still sliding sideways stays in it down to walking pace, so a spin skids to a stop instead of snapping straight)
+  const slideOn=c.isPlayer&&!c.auto&&SLIDE>0&&(v>6||v>1&&Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.3),bTr=slideOn?wrapA((c.chi??c.yaw)-c.yaw):0;
+  // the skid has run out at walking pace: the car comes to rest where it points (no snap back to the old heading)
+  if(c.isPlayer&&!c.auto&&SLIDE>0&&!slideOn&&Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.3){c.v=0;c.chi=c.yaw;c.r=0;afterMove(c,dt,thr,0,0);return;}
   const bSl=c.steerIn*bTr>0?Math.min(0.35,Math.abs(bTr)):0; // at most ~20° of extra lock
   const dmax=Math.max(0.03,Math.min(dPhys,dGrip*(c.isPlayer?1.2:1.1))+bSl);
   const want=c.isPlayer&&!c.auto?c.steerIn*dmax:clamp(c.deltaCmd,-dmax,dmax);
@@ -1703,18 +1706,24 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   const Fxf=-Math.min(Fb*0.58,Ff*0.98),Fxr=Fdrv-Math.min(Fb*0.42,Fr*0.98);
   const Fyf0=Math.sqrt(Math.max(0,Ff*Ff-Fxf*Fxf)),Fyr0=Math.sqrt(Math.max(0,Fr*Fr-Fxr*Fxr));
   let fy=0,alr=0;
-  for(let i=0;i<n;i++){const u=Math.max(vx,3);
+  for(let i=0;i<n;i++){const u=Math.max(vx,3),sp=Math.hypot(vx,vy)||1;
     const af=d-Math.atan2(vy+CG_F*r,u),ar=-Math.atan2(vy-CG_R*r,u);
     // the rears are the stiffer pair (the car understeers gently and is stable off the throttle); drive eats into their
     // grip, and once that tips the balance they let go and fall off past the peak
     const Fyf=Fyf0*pac(af,1.3,0.12),Fyr=Fyr0*pac(ar,Cr,0.06);
-    const Fy=Fyf*cd+Fxf*sd+Fyr;
-    vx+=((Fxf*cd-Fyf*sd+Fxr-Fdrag)/m+vy*r)*h;
-    vy+=(Fy/m-vx*r)*h;
-    r+=((CG_F*(Fyf*cd+Fxf*sd)-CG_R*Fyr)/Iz)*h;
-    if(vx<0.5){vx=0.5;}
+    let FX=Fxf*cd-Fyf*sd+Fxr,FY=Fyf*cd+Fxf*sd+Fyr,MZ=CG_F*(Fyf*cd+Fxf*sd)-CG_R*Fyr;
+    // well sideways (~25° → 50°) the tyres stop rolling the car along and just skid: each axle's grip pulls straight
+    // against the way its contact patch is sliding. That scrubs the spin (rotation and speed) down to a stop
+    const w=clamp((Math.abs(Math.atan2(vy,vx))-0.45)/0.4,0,1);
+    // (below ~1 m/s of patch slide the pull fades out with it, so the car settles instead of chattering)
+    if(w>0){const fx=vx,fy_=vy+CG_F*r,fl=Math.max(1,Math.hypot(fx,fy_)),rx=vx,ry=vy-CG_R*r,rl=Math.max(1,Math.hypot(rx,ry));
+      const CX=-Ff*fx/fl-Fr*rx/rl,CY=-Ff*fy_/fl-Fr*ry/rl,CM=-CG_F*Ff*fy_/fl+CG_R*Fr*ry/rl;
+      FX+=(CX-FX)*w;FY+=(CY-FY)*w;MZ+=(CM-MZ)*w;}
+    vx+=((FX-Fdrag*vx/sp)/m+vy*r)*h;
+    vy+=((FY-Fdrag*vy/sp)/m-vx*r)*h;
+    r+=MZ/Iz*h;
     x+=(Math.cos(yaw)*vx-Math.sin(yaw)*vy)*h;z+=(Math.sin(yaw)*vx+Math.cos(yaw)*vy)*h;yaw+=r*h;
-    fy=Fy;alr=ar;}
+    fy=FY;alr=ar;}
   c.x=x;c.z=z;c.yaw=yaw;c.r=r;c.v=Math.hypot(vx,vy);c.chi=yaw+Math.atan2(vy,vx);
   c.slip=Math.min(2,Math.max(0,Math.abs(alr)/0.06-1)); // rear past its peak: tyre squeal, wear and heat
   return [(c.v-v0)/dt,fy/m];
@@ -1724,11 +1733,15 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
    blankets they leave the box at ~80 °C. Each compound has its window (soft 85–105, medium 90–110, hard 95–118); out
    of it the tyre gives a little less grip. Carbon brakes run ~400–900 °C, spiking under heavy braking. ---- */
 const T_OPT={S:95,M:100,H:106},T_HEAT={S:1.08,M:1,H:0.93};
+// Each tyre eases towards the temperature its work holds it at (time constant ~12 s heating, ~20 s cooling): ~95–100 °C
+// at racing pace, ~110 °C only through long hard corners or sliding, ~80 °C behind the Safety Car. Tyres are 70–110 °C
+// in normal running; nothing heats faster than a couple of degrees a second.
 function temps(c,dt,ay,ax){if(!c.tT){c.tT=[80,80,80,80];c.bT=[300,300,300,300];}
-  const v=c.v,lat=Math.abs(ay),cool=0.012*(1+v/50),hk=T_HEAT[c.comp],sl=Math.min(c.slip||0,1);
-  for(let w=0;w<4;w++){const front=w<2,out=ay>0?w%2===0:w%2===1,load=lat<0.5?1:out?1.3:0.7;
-    const H=(0.009*v+0.068*lat*load+(front?0.04*Math.max(0,-ax):0.034*Math.max(0,ax)+9*(c.spin||0))+4*sl)*hk;
-    c.tT[w]+=(H-(c.tT[w]-32)*cool)*dt;
+  const v=c.v,lat=Math.abs(ay),hk=T_HEAT[c.comp],sl=Math.min(c.slip||0,1),sp=Math.min(c.spin||0,1);
+  for(let w=0;w<4;w++){const front=w<2,out=ay>0?w%2===0:w%2===1,load=lat<0.5?1:out?1.25:0.75;
+    const work=20*Math.min(1,v/60)+10*Math.min(1.5,lat*load/30)+(front?5*Math.min(1,-ax/40):3*Math.min(1,Math.max(0,ax)/15)+5*sp)+10*sl;
+    const tg=Math.min(125,70+5*Math.min(1,v/20)+work*hk);
+    c.tT[w]+=(tg-c.tT[w])*(1-Math.exp(-dt/(tg>c.tT[w]?12:20)));
     const bh=c.brake*v*(front?7:5),bc=(c.bT[w]-60)*0.03*(1+v/80);c.bT[w]=Math.max(60,c.bT[w]+(bh-bc)*dt);}}
 // grip from tyre temperature: a mild loss away from the window (never more than 6 %)
 function tempGrip(c){if(!c.tT)return 1;const t=(c.tT[0]+c.tT[1]+c.tT[2]+c.tT[3])/4-T_OPT[c.comp];return 1-Math.min(0.06,0.00004*t*t);}
@@ -2620,8 +2633,8 @@ function renderMfd(force){if(mfdPage<0||!player)return;const c=player,body=el('m
       '<div class="lst">'+DMG_PARTS.map(([k,n])=>'<div><span>'+n+'</span><b style="color:'+dmgCol(d[k])+'">'+Math.round(d[k]*100)+'%</b></div>').join('')+
       '<div style="margin-top:4px"><span>OVERALL</span><b style="color:'+dmgCol(c.damage)+'">'+Math.round(c.damage*100)+'%</b></div></div></div>';}
   else if(mfdPage===2){const t=c.tT||[80,80,80,80],b=c.bT||[300,300,300,300],o=T_OPT[c.comp],nm=['FL','FR','RL','RR'];
-    const ty=w=>'<div class="tyr" style="border-color:'+tyreCol(t[w],o)+'"><small>'+nm[w]+'</small><b style="color:'+tyreCol(t[w],o)+'">'+Math.round(t[w])+'°</b>'+
-      '<i style="color:'+brakeCol(b[w])+'">BRAKE '+Math.round(b[w])+'°</i></div>';
+    const ty=w=>'<div class="tyr" style="border-color:'+tyreCol(t[w],o)+'"><small>'+nm[w]+'</small><b style="color:'+tyreCol(t[w],o)+'">'+Math.round(t[w])+'°C</b>'+
+      '<i style="color:'+brakeCol(b[w])+'">BRAKE '+Math.round(b[w])+'°C</i></div>';
     h='<div class="tyres">'+ty(0)+'<div class="carmid" data-c="'+COMP[c.comp].name+'"></div>'+ty(1)+ty(2)+ty(3)+'</div>'+
       '<div class="note">Window '+(o-10)+'–'+(o+10)+' °C · wear '+Math.round(c.wear*100)+'% · fuel '+c.fuel.toFixed(1)+' kg</div>';}
   else{const wing=c.pitWing||'AUTO',fw=c.dm?Math.max(c.dm.fwL,c.dm.fwR):0,will=wing==='CHANGE'||(wing==='AUTO'&&fw>0.1);
