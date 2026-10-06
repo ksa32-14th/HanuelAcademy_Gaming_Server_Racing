@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006c';
-import {perf} from './perf.js?v=20261006c';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261006c';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006c';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006c';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261006c';
-import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006c';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006d';
+import {perf} from './perf.js?v=20261006d';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261006d';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006d';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006d';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261006d';
+import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006d';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006c';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006d';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006c'):import('./data/osm-songdo.js?v=20261006c')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006d'):import('./data/osm-songdo.js?v=20261006d')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1641,7 +1641,7 @@ function physics(c,dt){
   // sliding (player): steering INTO the slide (countersteer: towards the direction of travel) gets the slip angle as
   // extra lock, so there is enough of it to catch the car; steering further into the spin gets none
   const slideOn=c.isPlayer&&!c.auto&&SLIDE>0&&v>6,bTr=slideOn?wrapA((c.chi??c.yaw)-c.yaw):0;
-  const bSl=c.steerIn*bTr>0?Math.abs(bTr):0;
+  const bSl=c.steerIn*bTr>0?Math.min(0.35,Math.abs(bTr)):0; // at most ~20° of extra lock
   const dmax=Math.max(0.03,Math.min(dPhys,dGrip*(c.isPlayer?1.2:1.1))+bSl);
   const want=c.isPlayer&&!c.auto?c.steerIn*dmax:clamp(c.deltaCmd,-dmax,dmax);
   // the front wheels turn at a steady rate (the player's a little gentler still): no instant lock-to-lock darts
@@ -1687,17 +1687,19 @@ function afterMove(c,dt,thr,ax,ay){
 const CG_F=0.54*WB,CG_R=0.46*WB,CG_H=0.30; // CG to front / rear axle (46 % of the weight on the front), CG height
 function pac(al,C,pk){return Math.sin(C*Math.atan(Math.tan(Math.PI/(2*C))/pk*al));} // 1 at slip pk, less past it
 function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
-  const n=10,h=dt/n,Iz=m*1.8,Cr=1.25+0.25*SLIDE;
+  const n=10,h=dt/n,Iz=m*2.3,Cr=1.25+0.25*SLIDE;
   const b0=wrapA(c.chi-c.yaw),v0=c.v;let vx=v0*Math.cos(b0),vy=v0*Math.sin(b0),r=c.r,yaw=c.yaw,x=c.x,z=c.z;
   // weight moves back under power and forward under braking (light rears on the brakes: lift-off / trail-brake oversteer)
   // a sideways car stalls its floor: with the slip angle the downforce goes (the rear, under the diffuser, most), which
   // loosens the rear further — the snap that turns a twitch into a spin, fastest where the downforce is biggest
-  const k=Math.min(1,Math.abs(b0)/0.25),Da=Nn-m*G,Ns=m*G+Da*(1-0.5*k);
-  const dN=clamp(m*(c.aLong||0)*CG_H/WB,-0.35*Ns,0.35*Ns),Nf=m*G*CG_R/WB+Da*CG_R/WB*(1-0.3*k)-dN,Nr=m*G*CG_F/WB+Da*CG_F/WB*(1-0.7*k)+dN;
+  const k=Math.min(1,Math.abs(b0)/0.25),Da=Nn-m*G,Ns=m*G+Da*(1-0.25*k);
+  const dN=clamp(m*(c.aLong||0)*CG_H/WB,-0.35*Ns,0.35*Ns),Nf=m*G*CG_R/WB+Da*CG_R/WB*(1-0.15*k)-dN,Nr=m*G*CG_F/WB+Da*CG_F/WB*(1-0.35*k)+dN;
   // the (wider) rears have ~10 % more grip than the fronts: off the throttle the car runs wide at the limit, it doesn't spin
   const Ff=mu*Nf,Fr=mu*1.1*Nr,d=c.delta,cd=Math.cos(d),sd=Math.sin(d);
-  const Fdrv=Math.min(Fdem,Fr*TC_P);
-  c.spin=Fdem>Fr*TC_P?Math.min(1,(Fdem/(Fr*TC_P)-1)*1.5):0;
+  // the traction control lets nearly all of the rear grip go to drive in a straight line and less (TC_P) the harder the
+  // car is cornering — it only steps aside a little, so a big throttle mid-corner still eats the rears' cornering grip
+  const tcL=Fr*(0.8-(0.8-TC_P)*Math.min(1,Math.abs(c.aLat||0)/(0.5*mu*Nn/m))),Fdrv=Math.min(Fdem,tcL);
+  c.spin=Fdem>tcL?Math.min(1,(Fdem/tcL-1)*1.5):0;
   const Fxf=-Math.min(Fb*0.58,Ff*0.98),Fxr=Fdrv-Math.min(Fb*0.42,Fr*0.98);
   const Fyf0=Math.sqrt(Math.max(0,Ff*Ff-Fxf*Fxf)),Fyr0=Math.sqrt(Math.max(0,Fr*Fr-Fxr*Fxr));
   let fy=0,alr=0;
@@ -2786,7 +2788,7 @@ function updateVisuals(dt){
     c.jyV=(c.jyV||0)+(-(c.jy||0)*220-c.jyV*30)*sdt;c.jy=(c.jy||0)+c.jyV*sdt;
     if(!isFinite(c.roll)||!isFinite(c.pitch)){c.roll=c.pitch=c.rollV=c.pitchV=0;}if(!isFinite(c.jy)){c.jy=c.jyV=0;}
     m.body.rotation.set(clamp(c.roll,-0.05,0.05),0,clamp(c.pitch,-0.04,0.04));
-    for(const w of m.wheels)w.rotation.z-=c.v*dt/(0.36*WHEEL_S);for(const s of m.steer)s.rotation.y=-c.delta*1.4;
+    for(const w of m.wheels)w.rotation.z-=c.v*dt/(0.36*WHEEL_S);for(const s of m.steer)s.rotation.y=-clamp(c.delta*1.4,-0.6,0.6);
     setFar(m,c!==player&&Math.hypot(c.rx-camera.position.x,c.rz-camera.position.z)>FAR_D);
     m.flap.rotation.z=c.drsOpen?-.04:-.45;m.tail.color.setHex(c.brake>.1?0xff1010:0x4a0000);
     // the steering wheel: a keyboard flicks the steering on and off, so the wheel the driver holds is eased towards it
@@ -2810,11 +2812,12 @@ function updateVisuals(dt){
   // it is NOT tied to body roll/pitch, so the horizon stays level whatever the chassis does.
   // Two things made this view sickening and both are fixed here:
   //  1. the heading was welded 1:1 to the chassis, so every steering tap and every degree of slip
-  //     angle swung the whole world. It is now a damped follow that aims where the car is TRAVELLING.
+  //     angle swung the whole world. It is now a damped follow.
   //  2. the field of view grew with speed. A FOV that breathes is a classic nausea trigger; it is fixed.
+  // It looks where the NOSE points (the car slides and spins, and the view has to turn with it), eased over ~0.1 s
   const c=player;
-  const tgt=c.ryaw-clamp(wrapA(c.ryaw-c.chi),-0.4,0.4)*0.6;
-  if(camYaw===null)camYaw=tgt;else camYaw+=wrapA(tgt-camYaw)*(1-Math.exp(-dt/0.2));
+  const tgt=c.ryaw;
+  if(camYaw===null)camYaw=tgt;else camYaw+=wrapA(tgt-camYaw)*(1-Math.exp(-dt/0.1));
   const hx=Math.cos(camYaw),hz=Math.sin(camYaw);
   // C toggles the view: the TV POD (default — the broadcast camera pod on top of the airbox: halo, mirrors and front
   // wheels in shot) and COCKPIT / 1st person (the driver's eye inside the helmet, rigid to the car, halo overhead,
