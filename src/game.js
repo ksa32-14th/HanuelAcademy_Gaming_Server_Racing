@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007a';
-import {perf} from './perf.js?v=20261007a';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007a';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007a';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007a';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007a';
-import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261007a';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007b';
+import {perf} from './perf.js?v=20261007b';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007b';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007b';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007b';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007b';
+import {lbLoad,lbSubmit,lbShared,lbFmt,checkName} from './leaderboard.js?v=20261007b';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007a';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007b';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007a'):import('./data/osm-songdo.js?v=20261007a')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007b'):import('./data/osm-songdo.js?v=20261007b')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1551,8 +1551,9 @@ function ttInvalidate(why){const c=player;if(session!=='tt'||tt.stage!=='flying'
 async function ttSubmit(lt){if(!ttName)return;
   const r=await lbSubmit(TRACK_ID,{name:ttName,t:+lt.toFixed(3),team:TEAMS[player.team].name,date:Date.now()});
   await refreshBoard(true);
-  // every valid lap goes on the board: say where this one landed
-  if(r.rank)msg('LEADERBOARD · P'+r.rank+(r.improved?' · NEW BEST':''),ttName+' · '+fmt(lt));}
+  // the board keeps the top 5 laps: say where this one landed (or that it missed it)
+  if(r.rank)msg('LEADERBOARD · P'+r.rank+(r.improved?' · NEW BEST':''),ttName+' · '+lbFmt(lt));
+  else msg('NOT IN THE TOP 5',ttName+' · '+lbFmt(lt));}
 async function refreshBoard(force){if(!force&&performance.now()/1000-tt.boardT<20)return;tt.boardT=performance.now()/1000;
   const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;}
 // lap progress for the delta to the personal best: time at each 1/64 of the lap
@@ -1571,7 +1572,7 @@ function updateTTInfo(){const c=player;
   const show=b.slice(0,10);if(me>=10)show.push(b[me]);
   if(!show.length)h+='<div class="tt-row"><span></span><span>No times yet</span><span></span></div>';
   for(const r of show){const p=b.indexOf(r)+1;
-    h+='<div class="tt-row'+(r.name===ttName?' me':'')+'"><span>'+p+'</span><b>'+esc(r.name)+'</b><span>'+(p===1?fmt(r.t):'+'+(r.t-lead).toFixed(3))+'</span></div>';}
+    h+='<div class="tt-row'+(r.name===ttName?' me':'')+'"><span>'+p+'</span><b>'+esc(r.name)+'</b><span>'+(p===1?r.time:'+'+(r.t-lead).toFixed(3))+'</span></div>';}
   elHtml(el('rows'),h);renderMfd();}
 const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
@@ -3085,7 +3086,7 @@ let ttFromPause=false;
 async function renderBoardTable(){$('ttLb').innerHTML='<tr><td colspan="5" style="color:var(--mute)">Loading…</td></tr>';
   const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;const lead=r.rows.length?r.rows[0].t:null;
   $('ttLbSrc').textContent=r.shared?'· ALL PLAYERS':lbShared?'· SERVER UNREACHABLE — THIS BROWSER ONLY':'· THIS BROWSER';
-  $('ttLb').innerHTML=r.rows.length?r.rows.slice(0,100).map((x,k)=>'<tr class="'+(x.name===ttName?'me':'')+'"><td class="num">'+(k+1)+'</td><td><b>'+esc(x.name)+'</b></td><td>'+esc(x.team||'')+'</td><td class="num">'+fmt(x.t)+'</td><td class="num">'+(k?'+'+(x.t-lead).toFixed(3):'—')+'</td></tr>').join('')
+  $('ttLb').innerHTML=r.rows.length?r.rows.map((x,k)=>'<tr class="'+(x.name===ttName?'me':'')+'"><td class="num">'+(k+1)+'</td><td><b>'+esc(x.name)+'</b></td><td>'+esc(x.team||'')+'</td><td class="num">'+x.time+'</td><td class="num">'+(k?'+'+(x.t-lead).toFixed(3):'—')+'</td></tr>').join('')
     :'<tr><td colspan="5" style="color:var(--mute)">No times yet on this circuit — be the first.</td></tr>';}
 function openTTDialog(fromPause=false){ttFromPause=fromPause;$('ttTrk').textContent=TR.label;$('ttName').value=ttName;
   $('ttName').classList.remove('bad');$('ttNameMsg').classList.remove('bad');

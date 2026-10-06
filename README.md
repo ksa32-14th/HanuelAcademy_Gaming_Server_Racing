@@ -85,14 +85,14 @@ FIA 국제 스포팅 코드 부록 H(깃발 신호)와 F1 스포팅 규정(세�
 로비의 **⏱ TIME TRIAL** → 드라이버 이름 입력 → 시작.
 - 혼자 달리며 파손이 없고, 새 소프트 타이어(마모 없음)로 롤링 스타트합니다. 컨트롤 라인부터 매 랩이 계측됩니다.
 - **벽에 닿거나 트랙 리밋을 벗어나면**(또는 피트레인 진입·`R` 복귀) 그 랩은 삭제되어 기록이 남지 않습니다. 다음 랩은 새로 시작합니다.
-- HUD: 개인 최고 기록 대비 델타(DELTA TO PB), 현재/지난/최고 랩, 왼쪽 위에 서킷 리더보드 상위 10개 랩(내 기록 강조).
+- HUD: 개인 최고 기록 대비 델타(DELTA TO PB), 현재/지난/최고 랩, 왼쪽 위에 서킷 리더보드 상위 5개 랩(내 기록 강조).
 - **이름**: 리더보드에 표시되므로 **본인의 실명**을 한국어(한글 2–5자, 예: 홍길동) 또는 영어(이름과 성, 예: Gildong Hong)로 입력해야 하고, 형식이 맞지 않으면 시작되지 않습니다. 이 브라우저에 저장되어 다음에 미리 채워집니다.
-- **리더보드**: 서킷별로 **유효한 랩이 모두** 빠른 순으로 올라갑니다(한 드라이버가 여러 순위를 차지할 수 있음). 랩을 마칠 때마다 그 랩의 순위가 표시됩니다. 일시정지 메뉴의 **LEADERBOARD**로도 볼 수 있습니다(상위 100개).
+- **리더보드**: 서킷별로 **가장 빠른 5개 랩**만 저장됩니다(모든 플레이어 통틀어, 한 드라이버가 여러 순위를 차지할 수 있음). 기록은 `분:초:밀리초` 형식(예: `1:32:456`)으로 저장·표시됩니다. 랩을 마칠 때마다 그 랩의 순위(또는 5위 밖)가 표시됩니다. 일시정지 메뉴의 **LEADERBOARD**로도 볼 수 있습니다.
   - 현재 `src/config.js`의 `LB_URL`이 Firebase Realtime Database(`hrc-racing-leader-board`, asia-southeast1)로 설정되어 **모든 사용자가 같은 리더보드**를 봅니다. `LB_URL`을 비우면 **이 브라우저에만** 저장됩니다.
-  - 서버는 Firebase Realtime Database(무료 요금제로 충분)이고 REST로 공유됩니다(랩 하나당 `/laps/<서킷>/<자동 ID>` 레코드 하나). 보안 규칙 예시(기록 형식만 허용, 새 랩 추가만 가능, 수정·삭제 불가):
+  - 서버는 Firebase Realtime Database(무료 요금제로 충분)이고 REST로 공유됩니다. 서킷마다 `/top5/<서킷>`에 `{name, time:"m:ss:mmm", team, date}` 기록 최대 5개(0–4번, 빠른 순)가 있고, 새 랩이 5위 안에 들면 목록 전체를 다시 씁니다(ETag 조건부 쓰기라 동시에 들어와도 덮어쓰지 않음). 보안 규칙 예시(형식에 맞는 최대 5개 기록만 허용, 통째로 삭제 불가):
     ```json
-    {"rules":{"laps":{"$track":{".read":true,"$lap":{".write":"!data.exists()",
-      ".validate":"newData.hasChildren(['name','t','team','date'])&&newData.child('t').isNumber()&&newData.child('t').val()>20&&newData.child('name').isString()&&newData.child('name').val().length<=30"}}}}}
+    {"rules":{"top5":{"$track":{".read":true,".write":"newData.exists()",".validate":"newData.numChildren()<=5",
+      "$i":{".validate":"$i.matches(/^[0-4]$/)&&newData.hasChildren(['name','time','team','date'])&&newData.child('name').isString()&&newData.child('name').val().length<=30&&newData.child('time').isString()&&newData.child('time').val().matches(/^[0-9]+:[0-5][0-9]:[0-9][0-9][0-9]$/)"}}}}}
     ```
     서버를 쓸 수 없을 때는 자동으로 이 브라우저 기록으로 보여 줍니다(리더보드 제목에 표시).
 
