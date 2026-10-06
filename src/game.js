@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006f';
-import {perf} from './perf.js?v=20261006f';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261006f';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006f';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006f';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261006f';
-import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006f';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261006g';
+import {perf} from './perf.js?v=20261006g';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261006g';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261006g';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261006g';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261006g';
+import {lbLoad,lbSubmit,lbShared,checkName} from './leaderboard.js?v=20261006g';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006f';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261006g';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006f'):import('./data/osm-songdo.js?v=20261006f')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261006g'):import('./data/osm-songdo.js?v=20261006g')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -2768,10 +2768,11 @@ function crackle(t,rpm){const n=2+Math.floor(Math.random()*4);
 // engine revs: road speed × gear. Pulling away in 1st the clutch slips and holds the revs at ~8 000 until the road
 // speed catches up (~50 km/h), and wheelspin flares them a little — never up to the shift point, so the rev counter
 // never sits high while the gearbox refuses to change
-// The revs rise in a straight line with the road speed through each gear; pulling away the clutch only holds them at
-// ~5 500 for the first ~30 km/h, and wheelspin adds a few hundred on top
+// The revs rise in a straight line with the road speed through each gear; on the throttle they never sit below
+// ~8 000 (the moment it goes down they are there — the clutch slips until the road speed catches up), and wheelspin
+// adds a few hundred on top
 function rpmOf(c){const kmh=c.v*3.6,g=gearOf(c);let r=clamp(engRpm(kmh,g),RPM_IDLE,12200);
-  if(g===0)r=Math.max(r,RPM_IDLE+c.throttle*1500);
+  r=Math.max(r,RPM_IDLE+c.throttle*4000);
   if(c.spin>0)r=Math.min(12200,r+c.spin*800);
   return r;}
 function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
