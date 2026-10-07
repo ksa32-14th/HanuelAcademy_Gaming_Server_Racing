@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261007f';
-import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261007f';
+import {clamp,wrapA,smooth} from './util.js?v=20261007g';
+import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261007g';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than

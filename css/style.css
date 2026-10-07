@@ -170,6 +170,13 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 #tower .tt-hd{padding:6px 10px;font:800 11px var(--f-disp);letter-spacing:.14em;color:#ffd200;border-bottom:1px solid var(--line)}
 #tower .tt-row{display:grid;grid-template-columns:22px 1fr auto;gap:6px;padding:3px 10px;font:600 12px var(--f-body)}
 #tower .tt-row.me{background:rgba(225,6,0,.28)}#tower .tt-row b{font-family:var(--f-disp)}#tower .tt-row span{color:var(--mute)}
+/* FASTEST LAP / FASTEST SECTOR: purple stopwatch tile, purple caps on black in a white frame, the time below */
+#fast{position:absolute;left:50%;top:30%;transform:translate(-50%,-8px);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;text-align:center}
+#fast.on{opacity:1;transform:translate(-50%,0)}
+#fast .fb{display:flex;align-items:stretch;background:#000;border:5px solid #fff;border-radius:7px;box-shadow:0 8px 26px rgba(0,0,0,.55)}
+#fast .fb-ic{background:#a632de;width:58px;display:flex;align-items:center;justify-content:center}
+#fast .fb-tx{color:#a632de;font:900 26px var(--f-disp);letter-spacing:.06em;padding:12px 30px;white-space:nowrap}
+#fast .ft{display:inline-block;margin-top:8px;background:rgba(8,11,16,.92);color:#fff;font:800 24px var(--f-disp);font-variant-numeric:tabular-nums;padding:5px 16px;border-radius:4px}
 .spec{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 0}
 .spec div{background:#10162a;border-radius:6px;padding:8px}
 .spec b{display:block;font:700 18px var(--f-disp)}

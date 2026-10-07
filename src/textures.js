@@ -1,8 +1,8 @@
 // Procedural textures (asphalt, kerbs, concrete, ads, crowd, windows). Generated on the CPU into canvases,
 // then uploaded once. `res` scales the size of the noise-based maps with the quality preset.
 import * as THREE from 'three';
-import {smooth} from './util.js?v=20261007f';
-import {TRACK_ID} from './config.js?v=20261007f';
+import {smooth} from './util.js?v=20261007g';
+import {TRACK_ID} from './config.js?v=20261007g';
 
 let MAXANI=1;
 export const setAniso=n=>{MAXANI=n;};
