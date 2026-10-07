@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261007o';
-import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261007o';
+import {clamp,wrapA,smooth} from './util.js?v=20261007p';
+import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261007p';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -71,6 +71,12 @@ if(TR.pitEntry){PIT_A=spI(idxOf(...TR.pitEntry));PIT_B=PIT_A+(TR.pitRamp||200);P
 // …and the exit (`pitExit`: where the lane starts to bend back, `pitExitLen`: how long the merge is)
 if(TR.pitExit){PIT_C=spI(idxOf(...TR.pitExit));PIT_D=PIT_C+(TR.pitExitLen||80);}
 export function pitOffSp(sp){if(sp<PIT_A||sp>PIT_D)return null;if(sp<PIT_B)return PIT_OFF*smooth((sp-PIT_A)/(PIT_B-PIT_A));if(sp>PIT_C)return PIT_OFF*(1-smooth((sp-PIT_C)/(PIT_D-PIT_C)));return PIT_OFF;}
+// the pit wall (between the track and the lane) starts as soon as the peeling-off lane has cleared it, not only where
+// the lane is fully out (PIT_B) — so on a short entry ramp it already stands before the corner the lane takes
+export const PIT_W=(()=>{for(let sp=PIT_A;sp<PIT_B;sp++)if(pitOffSp(sp)-PIT_HW>=PITWALL+0.6)return sp;return PIT_B;})();
+// the start line: `gridAhead` m past the timing line (as on circuits whose start and finish lines differ) — the grid
+// forms up behind it. The timing line, laps, sectors and the leaderboard all stay on the finish line (s = 0).
+export const GRID_S=TR.gridAhead||0;
 
 // half width per sample: the circuit is W metres wide, but a track can list stretches that are
 // deliberately narrower (`narrow: [[fromRaw],[toRaw],width], …`), blended in over ~60 m each end

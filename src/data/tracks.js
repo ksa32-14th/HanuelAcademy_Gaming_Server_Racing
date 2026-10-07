@@ -84,8 +84,10 @@ export const TRACKS={
   // pit lane in the BEXCO outdoor car park: the lane leaves APEC-ro before the BEXCO corner and takes the corner on the
   // inside, across the corner of the car park (60 km/h from just after the entry); back on the track before the BEXCO
   // auditorium, which stands right at the roadside at the north end of the car park. The car park is
-  // ~240 m long, so the boxes are packed tighter than the usual 40 m
-  pitEntry:[-376,258],pitRamp:175,pitLimit:30,pitExit:[-628,369],pitExitLen:70,boxStart:-120,boxGap:17,
+  // ~240 m long, so the boxes are packed tighter than the usual 40 m. The lane peels off over 110 m so it is clear of
+  // the track — and the pit wall stands — before the BEXCO corner. Boxes and exit sit 150 m up the straight, level
+  // with the grid, which forms up behind a start line 150 m past the timing line (gridAhead)
+  pitEntry:[-376,258],pitRamp:110,pitLimit:30,pitExit:[-708.6,495.5],pitExitLen:70,boxStart:30,boxGap:17,gridAhead:150,
   // the BEXCO corner opened from ~35 m to 55 m so the pit lane can take it on the inside at 60 km/h
   wide:[[-495,182,55,70]],
   osm:true,

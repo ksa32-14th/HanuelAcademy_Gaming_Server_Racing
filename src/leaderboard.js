@@ -7,7 +7,7 @@
 // Records: {name, time, s1, s2, s3 (lap and sector times as 'm:ss:mmm', e.g. '1:32:456'), team,
 //           date ('YYYY-MM-DD', the day it was set), at (ms, when it was set)}. Rows handed to the game also carry
 //           t (the lap, s) and st ([s1, s2, s3] in s, NaN where missing).
-import {LB_URL} from './config.js?v=20261007o';
+import {LB_URL} from './config.js?v=20261007p';
 
 export const lbShared=!!LB_URL;
 const base=LB_URL.replace(/\/+$/,'');
