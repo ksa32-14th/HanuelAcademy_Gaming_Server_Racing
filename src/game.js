@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007d';
-import {perf} from './perf.js?v=20261007d';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007d';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007d';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007d';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007d';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007d';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007e';
+import {perf} from './perf.js?v=20261007e';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007e';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007e';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007e';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007e';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007e';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007d';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007e';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007d'):import('./data/osm-songdo.js?v=20261007d')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007e'):import('./data/osm-songdo.js?v=20261007e')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1467,7 +1467,7 @@ function openBox(mode){
   const tb=$('boxTyres');tb.innerHTML='';
   for(const k of ['S','M','H'])tb.appendChild(chip(COMP[k].name,'',k===boxComp,()=>{boxComp=k;
     [...tb.children].forEach((b,i)=>b.classList.toggle('on',['S','M','H'][i]===boxComp));}));
-  $('boxGo').textContent=mode==='quali'?'LEAVE THE BOX':'TO THE GRID';
+  $('boxGo').textContent=mode==='quali'?'LEAVE THE BOX (P)':'TO THE GRID (P)';
   $('boxGo').onclick=leaveBox;
   $('box').hidden=false;
 }
@@ -1625,6 +1625,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;
 
 function startRace(){
   session='race';phase='grid';
+  setTimeout(()=>msg('RACE START','HOLD W + M (CLUTCH) · RELEASE M AT LIGHTS OUT'),600);
   qGrid.forEach((c,slot)=>{
     c.parked=false;c.mesh.root.visible=true;
     if(!c.isPlayer){const comp=slot<10?(rnd()<.5?'S':'M'):(rnd()<.5?'M':'H');
@@ -1665,15 +1666,16 @@ function physics(c,dt){
     const k=Math.min(1,2.5*dt);c.x+=Math.cos(c.yaw)*c.v*dt-TZ[i]*lat*k;c.z+=Math.sin(c.yaw)*c.v*dt+TX[i]*lat*k;
     c.throttle=0;c.brake=c.v>0.1?1:0;c.aLong=-dec;c.aLat=0;temps(c,dt,0,-dec);
     if(c.v<=0){c.autoBox=false;startPit(c);}return;}
-  // reverse (S): only a crawl, only in the pit lane — to back into the box after overshooting it
-  if(c.isPlayer&&c.revIn&&c.pitSide&&c.v<0.3&&c.throttle<0.05){const vr=2.2;c.v=0;c.aLong=0;c.aLat=0;c.r=0;
+  // reverse (S): a crawl — in the pit lane on S alone (to back into the box after overshooting it), anywhere else with
+  // the brake held too (SPACE + S), e.g. to back out of a run-off after a spin
+  if(c.isPlayer&&c.revIn&&(c.pitSide||c.brakeIn)&&c.v<0.3&&c.throttle<0.05){const vr=c.pitSide?2.2:4;c.v=0;c.aLong=0;c.aLat=0;c.r=0;
     c.delta+=clamp(c.steerIn*0.26-c.delta,-4*dt,4*dt);c.yaw-=vr*Math.tan(c.delta)/WB*dt;c.chi=c.yaw;
     c.x-=Math.cos(c.yaw)*vr*dt;c.z-=Math.sin(c.yaw)*vr*dt;return;}
   if(c.dnf){c.throttle=0;c.brake=1;c.deltaCmd=0;c.steerIn=0;}
   const v=c.v,m=MASS+c.fuel,tg=tyreGrip(c)*c.surf*(1-0.12*c.damage),mu=MU*tg*gripV(v);
   const cla=CLA*(c.drsOpen?0.9:1)*(1-0.3*c.damage),cda=CDA*(c.drsOpen?0.85:1)*(1-0.22*c.tow);
   const Nn=m*G+0.5*RHO*cla*v*v,aMax=mu*Nn/m;
-  const thr=c.fuel>0?c.throttle:0;
+  const thr=c.fuel>0&&!c.clutch?c.throttle:0; // clutch in: no drive
   // drive and wheelspin: TRACTION × grip is what the rear tyres can put down. A light traction control lets the driver
   // ask for up to TC_SLACK × that; past it the wheels spin (spin 0…1): the drive drops to ~75 % and the rears lose
   // some cornering grip, so too much throttle out of a slow corner is slower and pushes the car wide
@@ -1747,9 +1749,12 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   const dN=clamp(m*(c.aLong||0)*CG_H/WB,-0.35*Ns,0.35*Ns),Nf=m*G*CG_R/WB+Da*CG_R/WB*(1-0.15*k)-dN,Nr=m*G*CG_F/WB+Da*CG_F/WB*(1-0.35*k)+dN;
   // the (wider) rears have ~10 % more grip than the fronts: off the throttle the car runs wide at the limit, it doesn't spin
   const Ff=mu*Nf,Fr=mu*1.1*Nr,d=c.delta,cd=Math.cos(d),sd=Math.sin(d);
-  // the traction control lets nearly all of the rear grip go to drive in a straight line and less (TC_P) the harder the
+  // a tyre grips harder along its length than across it (friction ellipse, LONG × the cornering grip): that is what
+  // the drive and the brakes can use — more launch and stopping power, the same cornering
+  const LONG=1.3;Fdem*=1.15; // and the engine's torque is ~15 % up on the AI's
+  // the traction control lets ~85 % of the rears' grip go to drive in a straight line and less (TC_P) the harder the
   // car is cornering — it only steps aside a little, so a big throttle mid-corner still eats the rears' cornering grip
-  const tcL=Fr*(0.8-(0.8-TC_P)*Math.min(1,Math.abs(c.aLat||0)/(0.5*mu*Nn/m))),Fdrv=Math.min(Fdem,tcL);
+  const tcL=Fr*LONG*(0.85-(0.85-TC_P)*Math.min(1,Math.abs(c.aLat||0)/(0.5*mu*Nn/m))),Fdrv=Math.min(Fdem,tcL);
   // the TC holds the wheels near their peak slip: what it trims off shows as a little wheelspin, not a full flare
   c.spin=Fdem>tcL?0.3*Math.min(1,Fdem/tcL-1):0;
   // brakes, with ABS at its strongest: the bias follows the axle loads (forward under braking), and no wheel is ever
@@ -1758,9 +1763,10 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   // their cornering grip — the car turns as if off the brakes, and neither end lets go. (It goes on the steering, not
   // on the cornering it gets: with the fronts busy braking that never builds, and the ABS would never let go.)
   const abs=Math.min(1,Math.abs(c.steerIn||0)*1.5);
-  const Fbr=Math.min(Fb*0.9*Nr/(Nf+Nr),Fr*(0.7-0.45*abs)),Fbf=Math.min(Fb-Fbr,Ff*(0.95-0.65*abs));
+  // (the pedal asks for ~45 % more than before; the ABS and the tyres' longitudinal grip decide what it gets)
+  const FbP=Fb*1.45,Fbr=Math.min(FbP*0.9*Nr/(Nf+Nr),Fr*LONG*(0.7-0.45*abs)),Fbf=Math.min(FbP-Fbr,Ff*LONG*(0.95-0.65*abs));
   const Fxf=-Fbf,Fxr=Fdrv-Fbr;
-  const Fyf0=Math.sqrt(Math.max(0,Ff*Ff-Fxf*Fxf)),Fyr0=Math.sqrt(Math.max(0,Fr*Fr-Fxr*Fxr));
+  const Fyf0=Ff*Math.sqrt(Math.max(0,1-(Fxf/(LONG*Ff))**2)),Fyr0=Fr*Math.sqrt(Math.max(0,1-(Fxr/(LONG*Fr))**2));
   let fy=0,alr=0;
   for(let i=0;i<n;i++){const u=Math.max(vx,3),sp=Math.hypot(vx,vy)||1;
     const af=d-Math.atan2(vy+CG_F*r,u),ar=-Math.atan2(vy-CG_R*r,u);
@@ -1999,7 +2005,10 @@ function playerControl(dt){const c=player;if(c.auto){aiDrive(c,dt);return;}const
   const bTr=SLIDE>0&&c.chi!==undefined?wrapA(c.chi-c.yaw):0,catching=tg*bTr>0&&Math.abs(bTr)>0.03;
   const rate=catching?8:(tg===0||Math.sign(tg)!==Math.sign(c.steerIn))?5:4/(1+c.v/40);c.steerIn+=clamp(tg-c.steerIn,-rate*dt,rate*dt);
   c.throttle+=clamp((keys.KeyW?1:0)-c.throttle,-35*dt,30*dt);c.brake+=clamp((keys.Space?1:0)-c.brake,-35*dt,30*dt);
-  if(c.throttle<0.01)c.throttle=0;if(c.brake<0.01)c.brake=0;c.revIn=!!keys.KeyS;
+  if(c.throttle<0.01)c.throttle=0;if(c.brake<0.01)c.brake=0;c.revIn=!!keys.KeyS;c.brakeIn=!!keys.Space;
+  // M: the clutch. Held, the engine is off the wheels (it revs freely on the throttle); at the start, hold W + M through
+  // the lights and let M go to launch
+  c.clutch=!!keys.KeyM;
   if(c.dnf){c.throttle=0;c.brake=1;c.steerIn=0;}}
 
 function aiDrive(c,dt){
@@ -2823,7 +2832,8 @@ function crackle(t,rpm){const n=2+Math.floor(Math.random()*4);
 // The revs rise in a straight line with the road speed through each gear; on the throttle they never sit below
 // ~8 000 (the moment it goes down they are there — the clutch slips until the road speed catches up), and wheelspin
 // adds a few hundred on top
-function rpmOf(c){const kmh=c.v*3.6,g=gearOf(c);let r=clamp(engRpm(kmh,g),RPM_IDLE,12200);
+function rpmOf(c){if(c.clutch)return RPM_IDLE+c.throttle*7500; // clutch in: the engine revs freely
+  const kmh=c.v*3.6,g=gearOf(c);let r=clamp(engRpm(kmh,g),RPM_IDLE,12200);
   r=Math.max(r,RPM_IDLE+c.throttle*4000);
   if(c.spin>0)r=Math.min(12200,r+c.spin*800);
   return r;}
@@ -3100,14 +3110,17 @@ function idxNear(x,z,hint){let best=0,bd=1e18;
   for(let i=0;i<N;i++){const d=(X[i]-x)**2+(Z[i]-z)**2;if(d<bd){bd=d;best=i;}}return best;}
 
 /* ================= INPUT / BOOT ================= */
-addEventListener('keydown',e=>{if(phase==='menu'||phase==='box'||phase==='qdone')return;if(['Space','KeyW','KeyA','KeyD','KeyS','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys[e.code]=true;
+addEventListener('keydown',e=>{
+  // in the pit box before qualifying or the race, P drives out (same as the button)
+  if(phase==='box'&&e.code==='KeyP'&&!e.repeat&&!$('box').hidden){e.preventDefault();leaveBox();return;}
+  if(phase==='menu'||phase==='box'||phase==='qdone')return;if(['Space','KeyW','KeyA','KeyD','KeyS','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys[e.code]=true;
   if(!e.repeat&&!replay&&mfdKey(e.code))return;
   if(e.repeat)return;
   if(e.code==='KeyE'&&player){const c=player;if(drsEnabled&&c.zone>=0&&c.drsElig[c.zone]&&c.brake<0.05)c.drsOpen=true;else if(c.zone>=0&&drsEnabled&&!c.drsElig[c.zone])msg('DRS NOT AVAILABLE');}
   if(e.code==='KeyQ'){const i=MODES.indexOf(qState.mode);const m=MODES[(i+1)%MODES.length];setQualityMode(m);msg('GRAPHICS · '+(m==='auto'?'AUTO ('+PRESETS[qName].label+')':PRESETS[m].label));}
   if(e.code==='KeyL'){rlMode=(rlMode+1)%3;msg('RACING LINE · '+RL_MODES[rlMode]);}
   if(e.code==='KeyG'&&session==='tt'){setGhost(!ghostOn);msg('GHOST · '+(ghostOn?'ON':'OFF'),ghostOn?(ghost?'P1 · '+ghost.name+' · '+ghost.time:'NO GHOST LAP YET'):'');}
-  if(e.code==='KeyM')muted=!muted;
+  if(e.code==='KeyN'){muted=!muted;msg('SOUND · '+(muted?'OFF':'ON'));}
   if(e.code==='KeyC'){camMode=(camMode+1)%CAM_MODES.length;msg('CAMERA · '+CAM_MODES[camMode]);}
   if(e.code==='KeyH'){hudMode=(hudMode+1)%3;mRect=null;$('hud').className=['lite','','min'][hudMode];msg('HUD · '+['COMPACT','FULL','MINIMAL'][hudMode]);}
   if(e.code==='Digit0'||e.code==='Numpad0'){if(replay)endReplay();else startReplay();return;}

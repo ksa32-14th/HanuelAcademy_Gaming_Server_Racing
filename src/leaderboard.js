@@ -6,7 +6,7 @@
 //   finishing at once never overwrite each other. See README → Time Trial.
 // Records: {name, time, s1, s2, s3 (lap and sector times as 'm:ss:mmm', e.g. '1:32:456'), team,
 //           date ('YYYY-MM-DD', the day it was set), at (ms, when it was set)}. Rows handed to the game also carry t (s).
-import {LB_URL} from './config.js?v=20261007d';
+import {LB_URL} from './config.js?v=20261007e';
 
 export const lbShared=!!LB_URL;
 const base=LB_URL.replace(/\/+$/,'');

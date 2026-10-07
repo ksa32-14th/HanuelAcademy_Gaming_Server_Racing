@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "top5": {
+      "$track": {
+        ".read": true,
+        ".write": "newData.exists() && newData.numChildren() <= 5"
+      }
+    },
+    "ghost": {
+      "$track": {
+        ".read": true,
+        "$at": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['at', 'p'])"
+        }
+      }
+    }
+  }
+}

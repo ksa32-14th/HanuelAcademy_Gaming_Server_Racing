@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261007d';
-import {clamp} from './util.js?v=20261007d';
+import {TRACKS} from './data/tracks.js?v=20261007e';
+import {clamp} from './util.js?v=20261007e';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -31,7 +31,7 @@ export const BRK=0.90;
 // and cornering. TC_P: the share of the rear grip the (lighter) traction control lets the throttle use — what is left
 // is all the rears have for cornering, so a big throttle in a slow corner steps the tail out. SLIDE: how far a rear
 // tyre past its peak drops off (0 = the old planted model, 1 = a slide keeps going until it is countersteered).
-export const TC_P=0.68, SLIDE=0.5;
+export const TC_P=0.72, SLIDE=0.5;
 // mechanical grip is lower at low speed (no downforce to lean on, tyres slide more easily)
 export const gripV=v=>0.84+0.16*Math.min(1,v/55);
 export const PITWALL=HW+3.5, PIT_HW=6, PIT_OFF=PITWALL+1+PIT_HW+1, PIT_LIMIT=60/3.6;

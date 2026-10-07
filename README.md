@@ -93,18 +93,11 @@ FIA 국제 스포팅 코드 부록 H(깃발 신호)와 F1 스포팅 규정(세�
   - 서버는 Firebase Realtime Database(무료 요금제로 충분)이고 REST로 공유됩니다.
     - `/top5/<서킷>`: `{name, time, s1, s2, s3 ("m:ss:mmm"), team, date ("YYYY-MM-DD"), at (ms)}` 기록 최대 5개(0–4번, 빠른 순). 새 랩이 5위 안에 들면 목록 전체를 다시 씁니다(ETag 조건부 쓰기라 동시에 들어와도 덮어쓰지 않음).
     - `/ghost/<서킷>/<at>`: 그 랩의 주행 경로 `{at, name, time, hz, p}`. 랩이 5위 밖으로 밀리면 지워집니다.
-  - 보안 규칙 예시(형식에 맞는 최대 5개 기록만 허용, 리더보드 통째로 삭제 불가, 고스트는 크기 제한):
-    ```json
-    {"rules":{
-      "top5":{"$track":{".read":true,".write":"newData.exists()",".validate":"newData.numChildren()<=5",
-        "$i":{".validate":"$i.matches(/^[0-4]$/)&&newData.hasChildren(['name','time','date','at'])&&newData.child('name').isString()&&newData.child('name').val().length<=30&&newData.child('time').isString()&&newData.child('time').val().matches(/^[0-9]+:[0-5][0-9]:[0-9][0-9][0-9]$/)&&newData.child('at').isNumber()"}}},
-      "ghost":{"$track":{".read":true,"$at":{".write":true,
-        ".validate":"newData.hasChildren(['at','p'])&&newData.child('p').isString()&&newData.child('p').val().length<200000"}}}}}
-    ```
+  - 보안 규칙: 저장소의 [`database.rules.json`](database.rules.json) 내용을 Firebase 콘솔 → Realtime Database → **규칙** 탭에 **전체 덮어쓰기**로 붙여넣고 **게시**합니다(리더보드는 최대 5개, 통째로 삭제 불가 · 고스트는 형식 확인).
     서버를 쓸 수 없을 때는 자동으로 이 브라우저 기록으로 보여 줍니다(리더보드 제목에 표시).
 
 ## 조작
-`W` 스로틀 · `A`/`D` 조향 · `SPACE` 브레이크 · `S` 후진(피트레인) · `E` DRS · `1`/`2`/`3` 다음 타이어 · `F` MFD(페이지), MFD 안에서 `←↑↓→` · `C` 시점 · `L` 레이싱 라인 · `G` 고스트(Time Trial) · `H` HUD · `R` 복귀 · `P` 일시정지 · `0` 리플레이 · `M` 사운드.
+`W` 스로틀 · `A`/`D` 조향 · `SPACE` 브레이크 · `M` 클러치(레이스 스타트: `W`+`M`을 누른 채 기다리다 불이 꺼지면 `M`을 떼어 출발) · `SPACE`+`S` 후진(어디서나, 피트레인에서는 `S`만) · 피트 박스에서 `P` 출발 · `E` DRS · `1`/`2`/`3` 다음 타이어 · `F` MFD(페이지), MFD 안에서 `←↑↓→` · `C` 시점 · `L` 레이싱 라인 · `G` 고스트(Time Trial) · `H` HUD · `R` 복귀 · `P` 일시정지 · `0` 리플레이 · `N` 사운드.
 
 게임 내 `Q`: 그래픽 품질 순환 (AUTO→LOW→MEDIUM→HIGH→ULTRA). 로비에서도 선택 가능. 텍스처 해상도가 바뀌는 전환은 자동 새로고침됩니다.
 
