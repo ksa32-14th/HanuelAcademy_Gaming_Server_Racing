@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007n';
-import {perf} from './perf.js?v=20261007n';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007n';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007n';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007n';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007n';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007n';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007o';
+import {perf} from './perf.js?v=20261007o';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007o';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007o';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007o';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007o';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007o';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007n';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007o';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007n'):import('./data/osm-songdo.js?v=20261007n')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007o'):import('./data/osm-songdo.js?v=20261007o')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -232,10 +232,12 @@ async function buildWorld(){
   strip(0,N+1,i=>-WL[i],i=>WR[i],0.0,0.0,matRunoff,16);
   const pa=idxSp(PIT_A);strip(pa,rangeN(PIT_A,PIT_D),i=>pitOffSp(spI(i))-PIT_HW,i=>pitOffSp(spI(i))+PIT_HW,0.01,0.01,matPitRoad,10);
   const hwI=i=>HWa[i%N];
-  strip(0,N+1,i=>-hwI(i),hwI,0.02,0.02,matRoad,W);
+  // tarmac out to the track limits (TLL / TLR: the circuit's edge at the kerbs, close to the wall where there are none)
+  const elI=i=>TLL[i%N],erI=i=>TLR[i%N];
+  strip(0,N+1,i=>-elI(i),erI,0.02,0.02,matRoad,W);
   strip(0,N+1,i=>RL[i]-1.3,i=>RL[i]+1.3,0.025,0.025,matRubber,20,false); // rubbered-in racing line
-  strip(0,N+1,i=>-hwI(i)-0.05,i=>-hwI(i)+0.15,0.03,0.03,matLine);
-  strip(0,N+1,i=>hwI(i)-0.15,i=>hwI(i)+0.05,0.03,0.03,matLine);
+  strip(0,N+1,i=>-elI(i)-0.05,i=>-elI(i)+0.15,0.03,0.03,matLine);
+  strip(0,N+1,i=>erI(i)-0.15,i=>erI(i)+0.05,0.03,0.03,matLine);
   const pl=idxSp(PIT_B-30);strip(pl,rangeN(PIT_B-30,PIT_C+35),i=>pitOffSp(spI(i))-PIT_HW,i=>pitOffSp(spI(i))-PIT_HW+0.15,0.03,0.03,matLine);
   await stage("Kerbs & barriers…",.1);
   // kerbs: raised, sloped profile with a vertical outer lip
@@ -1552,6 +1554,8 @@ function ttCross(c){
       // outside the top 5, submit still in flight) is not beaten again by a slower one.
       const ref=tt.board[0],rec=Math.min(ref?ref.t:Infinity,c.bestLap??Infinity);
       if(pb){c.bestLap=lt;tt.pbSplits=c.cum?c.cum.slice():null;}
+      for(let k=0;k<3;k++){const st=c.sec[k];if(st==null)continue; // the valid lap's sectors now count as bests
+        if(c.bestSec[k]==null||st<c.bestSec[k])c.bestSec[k]=st;if(bestSecAll[k]==null||st<bestSecAll[k])bestSecAll[k]=st;}
       if(tt.path)tt.path.push(c.x,c.z,c.yaw); // the line itself as the last sample
       if(lt<rec-0.0005)banner('FASTEST LAP',fmt(lt));
       else if(tt.sec3Fast)secBanner(2,c.sec[2]);
@@ -1641,10 +1645,9 @@ function updateTTInfo(){const c=player;
   elSty(el('topc'),'display','none');elCls(el('timing'),'panel tt');
   elSty(el('gapA').parentElement,'display','');elTxt(el('gapALbl'),'DELTA TO PB');
   const b=tt.board,ref=b[0],ct=simTime-c.lapStart,live=tt.stage==='flying'&&!c.lapInvalid&&ct>0.5;
-  // to the PB: this session's best lap, point by point; before there is one, the driver's own lap on the board
-  let dl=null;if(live){
-    if(tt.pbSplits){const k=Math.min(63,Math.floor(c.s/L*64));const a=tt.pbSplits[k],bb=c.cum&&c.cum[k];if(a&&bb)dl=bb-a;}
-    else{const mine=ttName&&b.find(x=>x.name===ttName);if(mine)dl=ct-rowTimeAt(mine,c.s);}}
+  // to the PB: this session's best VALID lap, point by point — so it first shows on the lap after one is completed
+  // (never the board's data); while every lap gets deleted there is no PB and it stays blank
+  let dl=null;if(live&&tt.pbSplits){const k=Math.min(63,Math.floor(c.s/L*64));const a=tt.pbSplits[k],bb=c.cum&&c.cum[k];if(a&&bb)dl=bb-a;}
   elTxt(el('gapA'),fmtD(dl));elSty(el('gapA'),'color',colD(dl));
   // the record (the board's P1) and the delta to it: live from its driving line where it has one, else from its
   // sector times — so it runs from the first metre of the lap, not only after the first split
@@ -2006,12 +2009,14 @@ function sectorDone(c,k,t){const st=t-c.secStart;c.secStart=t;
   if(session==='tt'&&c.isPlayer){const ref=tt.board[0],rs=ref&&ref.st?ref.st[k]:NaN;
     const fast=!c.lapInvalid&&fastestSector(k,st);
     c.secCol[k]=c.lapInvalid?'ye':fast?'pu':(c.bestSec[k]==null||st<c.bestSec[k])?'gr':'ye';
-    tt.secDiff[k]=isFinite(rs)?st-rs:null;
+    tt.secDiff[k]=!c.lapInvalid&&isFinite(rs)?st-rs:null;
     if(k<2&&!c.lapInvalid&&tt.secDiff[k]!=null){const d=tt.secDiff.reduce((a,x)=>a+(x||0),0);
       tt.flash={txt:(d<0?'-':'+')+Math.abs(d).toFixed(3),cls:d<0?'ahead':'behind',until:simTime+4};}
     if(k<2&&fast)secBanner(k,st);
     if(k===2)tt.sec3Fast=fast;
-    if(c.lapInvalid)return;}
+    // a lap can still be deleted after this split, so its sectors only become bests once it ends valid (ttCross):
+    // a deleted lap's data is never used anywhere — no PB, no best sectors, no board, no ghost
+    return;}
   if(c.bestSec[k]==null||st<c.bestSec[k])c.bestSec[k]=st;if(bestSecAll[k]==null||st<bestSecAll[k])bestSecAll[k]=st;}
 function lapCross(c){
   if(session==='tt'){if(c===player){c.fuel=12;ttCross(c);}return;}
@@ -2038,7 +2043,8 @@ function post(c){
   walls(c);
   const hw=HWa[c.idx];
   const s=c.s,ad=Math.abs(c.d),inPit=sp>(c.pitPlan?PIT_A-70:PIT_A)&&sp<PIT_D&&c.d>hw;
-  c.surf=(ad<=hw||inPit)?1:(ad<=hw+KERB_W&&KB[c.idx])?0.95:0.8;
+  const edge=c.d<0?TLL[c.idx]:TLR[c.idx]; // the track limit on this side (see track.js)
+  c.surf=(ad<=edge||inPit)?1:(ad<=edge+KERB_W&&KB[c.idx])?0.95:0.8;
   c.limiter=c.pitSide&&sp>PIT_L&&sp<PIT_C;
   if(c.limiter&&c.v>PIT_LIMIT)c.v=PIT_LIMIT;
   const box=BOX_S[c.team],psp=spOf(ps);
@@ -2050,7 +2056,7 @@ function post(c){
       else if(!c.autoBox&&c.v<0.4&&Math.abs(along)<3.7&&Math.abs(lat)<1.8&&!c.revIn)startPit(c);}
     else if(c.pitPlan&&psp<box&&sp>=box)startPit(c);}
   if(sp>PIT_D&&sp<PIT_D+120&&c.boxDone){c.boxDone=false;c.pitPlan=false;}
-  if(phase==='race'||phase==='quali'){const off=ad>hw+KERB_W+1.2*CAR_SZ&&!inPit&&!c.pitSide;if(off&&!c.tlOut){c.tlOut=true;trackLimit(c);}else if(ad<hw)c.tlOut=false;}
+  if(phase==='race'||phase==='quali'){const off=ad>edge+KERB_W+1.2*CAR_SZ&&!inPit&&!c.pitSide;if(off&&!c.tlOut){c.tlOut=true;trackLimit(c);}else if(ad<edge)c.tlOut=false;}
   if(session==='tt'&&c.isPlayer){if(c.pitSide)ttInvalidate('PIT LANE');ttTrack(c);}
   if(ps>L-80&&s<80)lapCross(c);else if(ps<80&&s>L-80&&session!=='tt')c.lapCount--;
   if(c.lapCount>=0)for(let k=0;k<2;k++)if(ps<SEC[k]&&s>=SEC[k]&&s-ps<50)sectorDone(c,k,simTime);
@@ -2689,7 +2695,8 @@ function updateHud(){
   if(_hc.bh!==bh){_hc.bh=bh;const e=$('brk');e.setAttribute('height',bh);e.setAttribute('y',112-bh);}
   // DRS: ON (flap open), READY (in a zone and eligible — press E), OFF; DISABLED while race control has it switched off
   const avail=drsEnabled&&c.zone>=0&&c.drsElig[c.zone],dc=c.drsOpen?'open':avail?'av':drsEnabled||phase==='quali'?'off':'dis';
-  if(_hc.drs!==dc){_hc.drs=dc;$('gDrs').setAttribute('class','g-drs '+dc);setTxt('drsTxt',c.drsOpen?'ON':'OFF');
+  // beep as DRS becomes available (not when the flap closes again inside the zone: open → av)
+  if(_hc.drs!==dc){if(dc==='av'&&(_hc.drs==='off'||_hc.drs==='dis')&&!replay)beep();_hc.drs=dc;$('gDrs').setAttribute('class','g-drs '+dc);setTxt('drsTxt',c.drsOpen?'ON':'OFF');
     setTxt('drsSub',dc==='av'?'READY · E':dc==='dis'?'DISABLED':dc==='open'?'OPEN':'');}
   const lc=c.limiter?'limtxt on':'limtxt';if(_hc.lim!==lc){_hc.lim=lc;$('lim').setAttribute('class',lc);}
   audioUpdate(rpm,c.held?0:g);
@@ -2908,7 +2915,9 @@ function audioInit(){try{const ac=new (window.AudioContext||window.webkitAudioCo
   const buf=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   const mk=(type,fr,q)=>{const n=ac.createBufferSource();n.buffer=buf;n.loop=true;const bf=ac.createBiquadFilter();bf.type=type;bf.frequency.value=fr;bf.Q.value=q;const g=ac.createGain();g.gain.value=0;n.connect(bf).connect(g).connect(master);n.start();return g;};
   const cyc=engineCycle(ac);
-  au={ac,master,buf,me:engineVoice(ac,master,buf,.34,cyc),opp:engineVoice(ac,master,buf,0,cyc),sq:mk('bandpass',1250,4),wn:mk('lowpass',500,.7)};
+  au={ac,master,buf,me:engineVoice(ac,master,buf,.34,cyc),opp:engineVoice(ac,master,buf,0,cyc),sq:mk('bandpass',1250,4),wn:mk('lowpass',500,.7),
+    // scraping the barrier: a bright grinding hiss (carbon on concrete) over a low scrubbing rumble
+    scrHi:mk('bandpass',2600,1.4),scrLo:mk('lowpass',220,1.2)};
   // swap in the real-time exhaust as soon as its worklet has loaded (the looped voice plays until then, or for good)
   if(ac.audioWorklet&&window.AudioWorkletNode){const url=URL.createObjectURL(new Blob([ENGINE_WORKLET],{type:'text/javascript'}));
     ac.audioWorklet.addModule(url).then(()=>{if(!au)return;const me=workletVoice(ac,master,buf,.36),opp=workletVoice(ac,master,buf,0);
@@ -2942,7 +2951,14 @@ function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
   if(o){const dx=o.x-c.x,dz=o.z-c.z,d=Math.max(bd,1),vr=((Math.cos(o.yaw)*o.v-Math.cos(c.yaw)*c.v)*dx+(Math.sin(o.yaw)*o.v-Math.sin(c.yaw)*c.v)*dz)/d;
     au.opp.set(rpmOf(o)*clamp(343/(343+vr),0.7,1.4),o.throttle,t,clamp(9/d,0,1)*0.28);}else au.opp.set(4000,0,t,0);
   au.sq.gain.setTargetAtTime(Math.min(.25,(c.slip+(c.spin||0)*.5)*.6)*(c.v>3?1:0),t,.05);
-  au.wn.gain.setTargetAtTime(Math.min(.3,(c.v/85)**2*.3),t,.1);}
+  au.wn.gain.setTargetAtTime(Math.min(.3,(c.v/85)**2*.3),t,.1);
+  // against the wall: the scrape, louder with speed and with a jittery grind; dies away the moment the car is off it
+  const scr=c.onWall&&c.v>1.5?Math.min(1,.25+c.v/60):0,j=.7+Math.random()*.6;
+  au.scrHi.gain.setTargetAtTime(scr*.3*j,t,scr?.015:.06);au.scrLo.gain.setTargetAtTime(scr*.45,t,scr?.02:.08);}
+// DRS ready: one short electronic beep, as the dash chirps when the system arms
+function beep(){if(!au)return;const ac=au.ac,t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();
+  o.type='sine';o.frequency.value=1760;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22,t+.008);
+  g.gain.setValueAtTime(.22,t+.11);g.gain.exponentialRampToValueAtTime(.001,t+.16);o.connect(g).connect(au.master);o.start(t);o.stop(t+.18);}
 
 /* ================= CAMERA / VISUALS ================= */
 function updateVisuals(dt){

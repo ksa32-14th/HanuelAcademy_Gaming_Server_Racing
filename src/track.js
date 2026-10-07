@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261007n';
-import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261007n';
+import {clamp,wrapA,smooth} from './util.js?v=20261007o';
+import {TR,TRACK_LEN,W,HW,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261007o';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -90,6 +90,20 @@ for(let pass=0;pass<4;pass++){for(const A of [WL,WR]){const c=A.slice();for(let 
 for(let i=0;i<N;i++){const sp=spI(i),p=pitOffSp(sp);if(p!=null)WR[i]=Math.max(WR[i],p+PIT_HW+(sp<PIT_B?3.2:1.8));}
 {const raw=new Uint8Array(N);for(let i=0;i<N;i++)raw[i]=Math.abs(K[i])>1/140?1:0;
  for(let i=0;i<N;i++){for(let j=-6;j<=6;j++)if(raw[(i+j+N)%N]){KB[i]=1;break;}}}
+// the track limits (white line) per side, left TLL / right TLR, as an offset from the centre line. With a kerb it is the
+// circuit's edge (HWa) as before, kerb outside it; where there is no kerb (the straights) the tarmac runs on to within
+// EDGE_GAP of the wall, as on a street circuit. It eases out over EDGE_RAMP metres from each kerb, and never widens
+// into the pit lane (entry and exit included).
+export const TLL=new Float32Array(N),TLR=new Float32Array(N);
+{const EDGE_GAP=0.6,EDGE_RAMP=40,R=Math.max(1,Math.round(EDGE_RAMP/DS)),dist=new Float32Array(N).fill(1e9);
+ // samples to the nearest kerb, both ways round the lap
+ for(let pass=0;pass<2;pass++)for(let k=0;k<2*N;k++){const i=k%N,p=(i-1+N)%N;dist[i]=KB[i]?0:Math.min(dist[i],dist[p]+1);}
+ for(let pass=0;pass<2;pass++)for(let k=2*N-1;k>=0;k--){const i=k%N,q=(i+1)%N;dist[i]=KB[i]?0:Math.min(dist[i],dist[q]+1);}
+ for(let i=0;i<N;i++){const f=smooth(Math.min(1,dist[i]/R)),hw=HWa[i];
+   TLL[i]=hw+f*Math.max(0,WL[i]-EDGE_GAP-hw);
+   TLR[i]=pitOffSp(spI(i))!=null?hw:hw+f*Math.max(0,WR[i]-EDGE_GAP-hw);}
+ // the pit entry / exit ends: ease the right edge back in rather than stepping
+ for(let pass=0;pass<6;pass++){const c=TLR.slice();for(let i=0;i<N;i++)TLR[i]=Math.max(HWa[i],Math.min(c[i],(c[(i-1+N)%N]+2*c[i]+c[(i+1)%N])*0.25));}}
 
 // DRS zones (detection / activation start / end), sectors, pit boxes
 // auto DRS: the three longest near-straight runs (≥300 m); activation starts 40 m after the
