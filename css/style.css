@@ -1,8 +1,18 @@
+/* the site's typeface: Formula1 Display. It is a licensed font, so the game does not ship it: put the licensed files
+   in fonts/ (Formula1-Display-Regular / -Bold / -Black .woff2, see README) and the whole site uses them; a viewer who
+   has it installed gets it too. Until then: Titillium Web (F1's own typeface before it), Noto Sans KR for Hangul. */
+@font-face{font-family:'HRC F1';font-weight:100 599;font-display:swap;
+  src:local('Formula1 Display Regular'),local('Formula1-Display-Regular'),url('../fonts/Formula1-Display-Regular.woff2') format('woff2')}
+@font-face{font-family:'HRC F1';font-weight:600 799;font-display:swap;
+  src:local('Formula1 Display Bold'),local('Formula1-Display-Bold'),url('../fonts/Formula1-Display-Bold.woff2') format('woff2')}
+@font-face{font-family:'HRC F1';font-weight:800 1000;font-display:swap;
+  src:local('Formula1 Display Black'),local('Formula1-Display-Black'),url('../fonts/Formula1-Display-Black.woff2') format('woff2'),
+  local('Formula1 Display Bold'),local('Formula1-Display-Bold'),url('../fonts/Formula1-Display-Bold.woff2') format('woff2')}
 :root{
   --bg:#04060c; --panel:rgba(9,13,24,.9); --panel-solid:#0b1020; --ink:#f2f4fa; --mute:#8f9ab3;
   --line:rgba(255,255,255,.12); --red:#e10600; --drs:#1be26b; --purple:#b347ff; --green:#1be26b;
   --yellow:#ffd200; --blue:#2aa7ff; --orange:#ff8a00;
-  --f-disp:'Titillium Web','Noto Sans KR',system-ui,sans-serif; --f-body:'Noto Sans KR','Titillium Web',system-ui,sans-serif;
+  --f-disp:'HRC F1','Titillium Web','Noto Sans KR',system-ui,sans-serif; --f-body:'HRC F1','Titillium Web','Noto Sans KR',system-ui,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
