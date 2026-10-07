@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261007p';
-import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261007p';
+import {clamp,wrapA,smooth} from './util.js?v=20261007r';
+import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261007r';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -101,10 +101,15 @@ for(let i=0;i<N;i++){const sp=spI(i),p=pitOffSp(sp);if(p!=null)WR[i]=Math.max(WR
 // EDGE_GAP of the wall, as on a street circuit. It eases out over EDGE_RAMP metres from each kerb, and never widens
 // into the pit lane (entry and exit included).
 export const TLL=new Float32Array(N),TLR=new Float32Array(N);
-{const EDGE_GAP=0.6,EDGE_RAMP=40,R=Math.max(1,Math.round(EDGE_RAMP/DS)),dist=new Float32Array(N).fill(1e9);
- // samples to the nearest kerb, both ways round the lap
- for(let pass=0;pass<2;pass++)for(let k=0;k<2*N;k++){const i=k%N,p=(i-1+N)%N;dist[i]=KB[i]?0:Math.min(dist[i],dist[p]+1);}
- for(let pass=0;pass<2;pass++)for(let k=2*N-1;k>=0;k--){const i=k%N,q=(i+1)%N;dist[i]=KB[i]?0:Math.min(dist[i],dist[q]+1);}
+{const EDGE_GAP=0.6,EDGE_RAMP=40,MIN_RUN=220,R=Math.max(1,Math.round(EDGE_RAMP/DS)),dist=new Float32Array(N).fill(1e9);
+ // a short kerb-free gap between kerbs (a chicane, a run of corners) keeps the original edge: only a real straight —
+ // at least MIN_RUN m without a kerb — is widened, so the limits never zig-zag in and out through a corner sequence
+ const KX=KB.slice();{let k0=0;while(k0<N&&!KB[k0])k0++;
+   if(k0<N)for(let k=1;k<=N;k++){const i=(k0+k)%N;if(KB[i])continue;let n=0;while(n<N&&!KB[(i+n)%N])n++;
+     if(n*DS<MIN_RUN)for(let j=0;j<n;j++)KX[(i+j)%N]=1;k+=n-1;}}
+ // samples to the nearest kerb (or short gap), both ways round the lap
+ for(let pass=0;pass<2;pass++)for(let k=0;k<2*N;k++){const i=k%N,p=(i-1+N)%N;dist[i]=KX[i]?0:Math.min(dist[i],dist[p]+1);}
+ for(let pass=0;pass<2;pass++)for(let k=2*N-1;k>=0;k--){const i=k%N,q=(i+1)%N;dist[i]=KX[i]?0:Math.min(dist[i],dist[q]+1);}
  for(let i=0;i<N;i++){const f=smooth(Math.min(1,dist[i]/R)),hw=HWa[i];
    TLL[i]=hw+f*Math.max(0,WL[i]-EDGE_GAP-hw);
    TLR[i]=pitOffSp(spI(i))!=null?hw:hw+f*Math.max(0,WR[i]-EDGE_GAP-hw);}

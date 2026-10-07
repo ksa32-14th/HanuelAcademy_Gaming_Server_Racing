@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007p';
-import {perf} from './perf.js?v=20261007p';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007p';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007p';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007p';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007p';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007p';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007r';
+import {perf} from './perf.js?v=20261007r';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007r';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007r';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007r';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007r';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007r';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007p';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007r';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007p'):import('./data/osm-songdo.js?v=20261007p')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007r'):import('./data/osm-songdo.js?v=20261007r')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -2924,8 +2924,7 @@ function audioInit(){try{const ac=new (window.AudioContext||window.webkitAudioCo
   const mk=(type,fr,q)=>{const n=ac.createBufferSource();n.buffer=buf;n.loop=true;const bf=ac.createBiquadFilter();bf.type=type;bf.frequency.value=fr;bf.Q.value=q;const g=ac.createGain();g.gain.value=0;n.connect(bf).connect(g).connect(master);n.start();return g;};
   const cyc=engineCycle(ac);
   au={ac,master,buf,me:engineVoice(ac,master,buf,.34,cyc),opp:engineVoice(ac,master,buf,0,cyc),sq:mk('bandpass',1250,4),wn:mk('lowpass',500,.7),
-    // scraping the barrier: a bright grinding hiss (carbon on concrete) over a low scrubbing rumble
-    scrHi:mk('bandpass',2600,1.4),scrLo:mk('lowpass',220,1.2),kerb:kerbVoice(ac,master)};
+    scrape:scrapeVoice(ac,master,buf),kerb:kerbVoice(ac,master,buf)};
   // swap in the real-time exhaust as soon as its worklet has loaded (the looped voice plays until then, or for good)
   if(ac.audioWorklet&&window.AudioWorkletNode){const url=URL.createObjectURL(new Blob([ENGINE_WORKLET],{type:'text/javascript'}));
     ac.audioWorklet.addModule(url).then(()=>{if(!au)return;const me=workletVoice(ac,master,buf,.36),opp=workletVoice(ac,master,buf,0);
@@ -2960,17 +2959,40 @@ function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
     au.opp.set(rpmOf(o)*clamp(343/(343+vr),0.7,1.4),o.throttle,t,clamp(9/d,0,1)*0.28);}else au.opp.set(4000,0,t,0);
   au.sq.gain.setTargetAtTime(Math.min(.25,(c.slip+(c.spin||0)*.5)*.6)*(c.v>3?1:0),t,.05);
   au.wn.gain.setTargetAtTime(Math.min(.3,(c.v/85)**2*.3),t,.1);
-  // against the wall: the scrape, louder with speed and with a jittery grind; dies away the moment the car is off it
-  const scr=c.onWall&&c.v>1.5?Math.min(1,.25+c.v/60):0,j=.7+Math.random()*.6;
-  au.scrHi.gain.setTargetAtTime(scr*.3*j,t,scr?.015:.06);au.scrLo.gain.setTargetAtTime(scr*.45,t,scr?.02:.08);
+  // against the wall: the scrape, louder and higher-pitched with speed; dies away the moment the car is off it
+  const scr=c.onWall&&c.v>1.5?Math.min(1,.25+c.v/60):0,sw=au.scrape;
+  sw.g.gain.setTargetAtTime(scr*.5,t,scr?.015:.06);
+  sw.body.frequency.setTargetAtTime(380+c.v*6,t,.05);sw.grit.frequency.setTargetAtTime(1000+c.v*12,t,.05);
   const kb=c.v>3&&onKerb(c)?Math.min(1,.4+c.v/70):0;
-  au.kerb.o.frequency.setTargetAtTime(clamp(c.v/KERB_RIDGE,12,140),t,.03);au.kerb.g.gain.setTargetAtTime(kb*.32,t,kb?.012:.04);}
-// riding a kerb: the "brrrrr" of the tyres hammering over its ridges — a buzz whose pitch is the ridge rate (speed /
-// ridge spacing), low-passed so it thumps rather than whines
-const KERB_RIDGE=0.9; // m between ridges
-function kerbVoice(ac,master){const o=ac.createOscillator(),f=ac.createBiquadFilter(),g=ac.createGain();
-  o.type='square';o.frequency.value=40;f.type='lowpass';f.frequency.value=380;f.Q.value=2;g.gain.value=0;
-  o.connect(f).connect(g).connect(master);o.start();return {o,g};}
+  au.kerb.o.frequency.setTargetAtTime(clamp(c.v/KERB_RIDGE,12,38),t,.03);au.kerb.g.gain.setTargetAtTime(kb*.38,t,kb?.012:.04);}
+// scraping the barrier: carbon and steel grinding on concrete — not a steady hiss (that reads as plastic sheeting) but
+// a coarse, broken-up grind: a low gritty body and a harsher mid band, both chopped by a fast random flutter (the bodywork
+// catching and skipping on the rough wall), a faint metallic ring on top and a scrubbing rumble underneath
+function scrapeVoice(ac,master,buf){
+  const src=ac.createBufferSource();src.buffer=buf;src.loop=true;
+  const bp=(f,q,gv,dst)=>{const b=ac.createBiquadFilter();b.type='bandpass';b.frequency.value=f;b.Q.value=q;const g=ac.createGain();g.gain.value=gv;src.connect(b).connect(g).connect(dst);return b;};
+  const am=ac.createGain();am.gain.value=0.55;
+  const body=bp(520,0.8,1.0,am),grit=bp(1400,2.5,0.6,am);bp(3300,10,0.25,am);
+  // the flutter: a second, independent noise, low-passed to ~45 Hz, drives the chopper hard (0 … 1+, jagged)
+  const fl=ac.createBufferSource();fl.buffer=buf;fl.loop=true;fl.playbackRate.value=0.73;
+  const flp=ac.createBiquadFilter();flp.type='lowpass';flp.frequency.value=45;const dep=ac.createGain();dep.gain.value=3.2;
+  fl.connect(flp).connect(dep).connect(am.gain);
+  const rum=ac.createBiquadFilter();rum.type='lowpass';rum.frequency.value=150;const rg=ac.createGain();rg.gain.value=0.9;
+  const g=ac.createGain();g.gain.value=0;src.connect(rum).connect(rg).connect(g);am.connect(g);g.connect(master);
+  src.start(0,Math.random()*1.5);fl.start(0,Math.random()*1.5);return {g,body,grit};}
+// riding a kerb: the "드르르르르" of the tyres hammering over its ridges — not a tone but a fast train of separate hits.
+// Each hit is a burst of noise (the rattle) over a low thump (the body), switched on and off by a square wave at the
+// ridge rate: speed / ridge spacing, kept in the 12–38 hits a second the ear hears as a rattle rather than a buzz.
+const KERB_RIDGE=2.0; // m between the ridges the tyres hit
+function kerbVoice(ac,master,buf){
+  const n=ac.createBufferSource();n.buffer=buf;n.loop=true;const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=420;bp.Q.value=0.9;
+  const th=ac.createOscillator();th.type='triangle';th.frequency.value=70;const thg=ac.createGain();thg.gain.value=0.9;
+  // the chopper: gain = 0.5 + 0.5 × square → 0 / 1 at the ridge rate
+  const am=ac.createGain();am.gain.value=0.5;const lfo=ac.createOscillator();lfo.type='square';lfo.frequency.value=20;
+  const dep=ac.createGain();dep.gain.value=0.5;lfo.connect(dep).connect(am.gain);
+  const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;const g=ac.createGain();g.gain.value=0;
+  n.connect(bp).connect(am);th.connect(thg).connect(am);am.connect(lp).connect(g).connect(master);
+  n.start();th.start();lfo.start();return {o:lfo,g};}
 // is any wheel on a kerb? (the car is ~2 m wide: a wheel is on it from ~1 m inside the white line to ~1 m past it)
 function onKerb(c){if(!KB[c.idx]||c.pitSide)return false;const edge=c.d<0?TLL[c.idx]:TLR[c.idx],ad=Math.abs(c.d);
   return ad>edge-1.0&&ad<edge+KERB_W+1.0;}
