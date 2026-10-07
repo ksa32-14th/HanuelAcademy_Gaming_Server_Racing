@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007l';
-import {perf} from './perf.js?v=20261007l';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007l';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007l';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007l';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007l';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007l';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007m';
+import {perf} from './perf.js?v=20261007m';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007m';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007m';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007m';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007m';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007m';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007l';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007m';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007l'):import('./data/osm-songdo.js?v=20261007l')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007m'):import('./data/osm-songdo.js?v=20261007m')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1551,7 +1551,7 @@ function ttCross(c){
       if(tt.path)tt.path.push(c.x,c.z,c.yaw); // the line itself as the last sample
       // quicker than the record (or the first lap on the board): FASTEST LAP; else a record-beating last sector
       const ref=tt.board[0];
-      if(!ref||lt<ref.t-0.0005)fast('FASTEST LAP',lbFmt(lt));
+      if(!ref||lt<ref.t-0.0005)banner('FASTEST LAP',fmt(lt));
       else if(tt.sec3Fast)secBanner(2,c.sec[2]);
       msg(pb?'PERSONAL BEST':'LAP TIME',fmt(lt));ttSubmit(lt,c.sec.slice(),tt.path&&tt.path.length>=6?encodePath(tt.path):null);}}
   tt.path=[]; // record the line of the lap that starts now
@@ -2580,25 +2580,26 @@ function gapStr(A,B){if(!A||!B)return '—';const dl=Math.floor((A.progress-B.pr
 
 /* ================= HUD ================= */
 let msgTimer=null;
-// FASTEST LAP / FASTEST SECTOR n (time trial: quicker than the record), with the time under the banner
-// (it takes the top spot under the mirror; other messages shown meanwhile drop below it)
-let fastTimer=0,fastUntil=0;
-function fast(t,time){$('fastT').textContent=t;$('fastTime').textContent=time;const f=$('fast');f.classList.add('on');
-  fastUntil=performance.now()+3200;$('msg').classList.add('low');
-  clearTimeout(fastTimer);fastTimer=setTimeout(()=>f.classList.remove('on'),3200);}
-// FASTEST SECTOR, broadcast style: purple tile (SECTOR n / time) and the driver in the team colour; after ~2.6 s the
-// driver and time fade, the tile becomes a bar with the title alone, then it wipes out from the left in pixel steps
 const surname=n=>String(n||'').trim().split(/\s+/).pop().toUpperCase();
 // is st the fastest sector k yet? Against the best of that sector on the board (any lap, as the broadcast's purple),
 // or — with no sector times there — against this session's best so far (call before bestSecAll takes st)
 function fastestSector(k,st){let best=Infinity;for(const r of tt.board)if(r.st&&isFinite(r.st[k]))best=Math.min(best,r.st[k]);
   return isFinite(best)?st<best-0.0005:(bestSecAll[k]==null||st<bestSecAll[k]-0.0005);}
-let sbT=[];
-function secBanner(k,st){const b=$('secB');sbT.forEach(clearTimeout);b.className='';void b.offsetWidth;
-  $('sbT').textContent='SECTOR '+(k+1);$('sbTime').textContent=st<60?st.toFixed(3):lbFmt(st);$('sbName').textContent=surname(ttName||'YOU');
-  b.style.setProperty('--tc',hex(TEAMS[player.team].c));b.classList.add('on');
-  sbT=[setTimeout(()=>b.classList.add('p2'),2600),setTimeout(()=>b.classList.add('p3'),3100),
-    setTimeout(()=>b.classList.add('p4'),3900),setTimeout(()=>{b.className='';},4600)];}
+// FASTEST SECTOR n / FASTEST LAP, as on the broadcast (time trial: quicker than the board). The purple bar with the
+// title builds in from the right in pixel steps, then folds to a tile with the time under the title while the driver's
+// panel opens beside it (surname in the team colour); ~2.5 s later it folds back to the bar and breaks up the same way.
+// It takes the top spot under the mirror; other messages shown meanwhile drop below it.
+let sbT=[],fastUntil=0;
+function banner(title,time){const b=$('secB');sbT.forEach(clearTimeout);
+  b.className='notr bar clip';void b.offsetWidth;
+  $('sbT').textContent=title;$('sbTime').textContent=time;$('sbName').textContent=surname(ttName||'YOU');
+  b.style.setProperty('--tc',hex(TEAMS[player.team].c));b.style.setProperty('--lw',title.length>9?'132px':'96px');
+  b.classList.remove('notr');b.classList.add('on','dith');b.classList.remove('clip');
+  fastUntil=performance.now()+4900;$('msg').classList.add('low');
+  sbT=[setTimeout(()=>b.classList.remove('dith'),550),setTimeout(()=>b.classList.remove('bar'),900),
+    setTimeout(()=>b.classList.add('bar'),3700),setTimeout(()=>b.classList.add('dith','clip'),4200),
+    setTimeout(()=>{b.className='';},4800)];}
+const secBanner=(k,st)=>banner('SECTOR '+(k+1),st<60?st.toFixed(3):fmt(st));
 function msg(t,sub=''){const m=$('msg');m.classList.toggle('low',performance.now()<fastUntil);m.innerHTML=t+(sub?'<small>'+sub+'</small>':'');m.classList.add('on');clearTimeout(msgTimer);msgTimer=setTimeout(()=>m.classList.remove('on'),2600);}
 function setLights(n){[...$('lights').children].forEach((l,i)=>l.classList.toggle('on',i<n));gantryLamps.forEach((m,i)=>m.color.setHex(i<n?0xff1a0a:0x220404));}
 let rowEls=[];
