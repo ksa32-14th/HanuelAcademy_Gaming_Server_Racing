@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007g';
-import {perf} from './perf.js?v=20261007g';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007g';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007g';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007g';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007g';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007g';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007h';
+import {perf} from './perf.js?v=20261007h';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007h';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007h';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007h';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007h';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007h';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007g';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007h';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007g'):import('./data/osm-songdo.js?v=20261007g')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007h'):import('./data/osm-songdo.js?v=20261007h')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -2538,10 +2538,12 @@ function gapStr(A,B){if(!A||!B)return '—';const dl=Math.floor((A.progress-B.pr
 /* ================= HUD ================= */
 let msgTimer=null;
 // FASTEST LAP / FASTEST SECTOR n (time trial: quicker than the record), with the time under the banner
-let fastTimer=0;
+// (it takes the top spot under the mirror; other messages shown meanwhile drop below it)
+let fastTimer=0,fastUntil=0;
 function fast(t,time){$('fastT').textContent=t;$('fastTime').textContent=time;const f=$('fast');f.classList.add('on');
+  fastUntil=performance.now()+3200;$('msg').classList.add('low');
   clearTimeout(fastTimer);fastTimer=setTimeout(()=>f.classList.remove('on'),3200);}
-function msg(t,sub=''){const m=$('msg');m.innerHTML=t+(sub?'<small>'+sub+'</small>':'');m.classList.add('on');clearTimeout(msgTimer);msgTimer=setTimeout(()=>m.classList.remove('on'),2600);}
+function msg(t,sub=''){const m=$('msg');m.classList.toggle('low',performance.now()<fastUntil);m.innerHTML=t+(sub?'<small>'+sub+'</small>':'');m.classList.add('on');clearTimeout(msgTimer);msgTimer=setTimeout(()=>m.classList.remove('on'),2600);}
 function setLights(n){[...$('lights').children].forEach((l,i)=>l.classList.toggle('on',i<n));gantryLamps.forEach((m,i)=>m.color.setHex(i<n?0xff1a0a:0x220404));}
 let rowEls=[];
 function buildTower(){const r=$('rows');r.innerHTML='';rowEls=cars.map(()=>{const d=document.createElement('div');d.className='row';d.innerHTML='<span class="p"></span><span class="bar"></span><span class="cd"></span><span class="gp"></span><span class="ty"></span>';r.appendChild(d);return d;});}
@@ -3171,7 +3173,7 @@ async function fillBoard(body,src){$(body).innerHTML='<tr><td colspan="8" style=
 const renderBoardTable=()=>fillBoard('ttLb','ttLbSrc');
 function openTTDialog(fromPause=false){ttFromPause=fromPause;$('ttTrk').textContent=TR.label;$('ttName').value=ttName;
   $('ttName').classList.remove('bad');$('ttNameMsg').classList.remove('bad');
-  $('ttNameMsg').textContent='리더보드에 표시됩니다. 한국어 이름(2–5자) 또는 영어 이름(이름과 성)으로 입력하세요.';
+  $('ttNameMsg').textContent='리더보드에 표시됩니다. 영어 이름(이름과 성, 예: Gildong Hong)으로 입력하세요.';
   $('ttGo').textContent=fromPause?'RESTART TIME TRIAL':'START TIME TRIAL';
   if(fromPause)$('pause').hidden=true;else $('menu').hidden=true;
   $('ttDlg').hidden=false;renderBoardTable();if(!fromPause)setTimeout(()=>$('ttName').focus(),50);}
@@ -3181,7 +3183,7 @@ $('ttBack').onclick=()=>{$('ttDlg').hidden=true;if(ttFromPause)$('pause').hidden
 $('ttName').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('ttGo').click();});
 $('ttGo').onclick=()=>{const r=checkName($('ttName').value);
   if(!r.ok){$('ttName').classList.add('bad');$('ttNameMsg').classList.add('bad');
-    $('ttNameMsg').textContent='본인의 실명을 입력하세요: 한국어 2–5자(예: 홍길동) 또는 영어 이름과 성(예: Gildong Hong). 숫자·기호·별명은 안 됩니다.';return;}
+    $('ttNameMsg').textContent='본인의 실명을 영어로 입력하세요: 이름과 성(예: Gildong Hong). 한글·숫자·기호·별명은 안 됩니다.';return;}
   ttName=r.name;try{localStorage.setItem('hrc-name',ttName);}catch(e){}
   $('ttDlg').hidden=true;document.activeElement.blur();
   $('menu').hidden=true;$('hud').hidden=false;if(!ttFromPause)$('hud').className='lite';setupSession('tt');};

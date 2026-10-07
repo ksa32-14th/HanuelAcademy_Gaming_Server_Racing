@@ -7,7 +7,7 @@
 // Records: {name, time, s1, s2, s3 (lap and sector times as 'm:ss:mmm', e.g. '1:32:456'), team,
 //           date ('YYYY-MM-DD', the day it was set), at (ms, when it was set)}. Rows handed to the game also carry
 //           t (the lap, s) and st ([s1, s2, s3] in s, NaN where missing).
-import {LB_URL} from './config.js?v=20261007g';
+import {LB_URL} from './config.js?v=20261007h';
 
 export const lbShared=!!LB_URL;
 const base=LB_URL.replace(/\/+$/,'');
@@ -78,9 +78,8 @@ export async function lbSubmit(track,lap){
     throw new Error('busy');}
   catch(e){return {...result(loc),shared:false,error:String(e.message||e)};}}
 
-// the driver's real name, Korean (2–5 Hangul syllables, e.g. 홍길동) or English (first and last name, Latin letters)
+// the driver's real name in English: first and last name, Latin letters (e.g. Gildong Hong)
 export function checkName(raw){const n=(raw||'').trim().replace(/\s+/g,' ');
-  if(/^[가-힣]{2,5}$/.test(n))return {ok:true,name:n};
   if(n.length<=30&&/^[A-Za-z][A-Za-z'\-]*( [A-Za-z][A-Za-z'\-]*){1,3}$/.test(n))
     return {ok:true,name:n.split(' ').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')};
   return {ok:false,name:n};}

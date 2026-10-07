@@ -171,7 +171,8 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 #tower .tt-row{display:grid;grid-template-columns:22px 1fr auto;gap:6px;padding:3px 10px;font:600 12px var(--f-body)}
 #tower .tt-row.me{background:rgba(225,6,0,.28)}#tower .tt-row b{font-family:var(--f-disp)}#tower .tt-row span{color:var(--mute)}
 /* FASTEST LAP / FASTEST SECTOR: purple stopwatch tile, purple caps on black in a white frame, the time below */
-#fast{position:absolute;left:50%;top:30%;transform:translate(-50%,-8px);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;text-align:center}
+#msg.low{top:calc(12px + min(440px,46vw)/3.6 + 150px)}
+#fast{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 12px);transform:translate(-50%,-8px);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;text-align:center}
 #fast.on{opacity:1;transform:translate(-50%,0)}
 #fast .fb{display:flex;align-items:stretch;background:#000;border:5px solid #fff;border-radius:7px;box-shadow:0 8px 26px rgba(0,0,0,.55)}
 #fast .fb-ic{background:#a632de;width:58px;display:flex;align-items:center;justify-content:center}
