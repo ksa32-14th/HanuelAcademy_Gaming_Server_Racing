@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007b';
-import {perf} from './perf.js?v=20261007b';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007b';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007b';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007b';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007b';
-import {lbLoad,lbSubmit,lbShared,lbFmt,checkName} from './leaderboard.js?v=20261007b';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007d';
+import {perf} from './perf.js?v=20261007d';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007d';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007d';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007d';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007d';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007d';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007b';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007d';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007b'):import('./data/osm-songdo.js?v=20261007b')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007d'):import('./data/osm-songdo.js?v=20261007d')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1543,21 +1543,68 @@ function ttCross(c){
     if(c.lapInvalid)msg('LAP DELETED · NO TIME',c.invWhy||'');
     else{c.lastLap=lt;const pb=c.bestLap==null||lt<c.bestLap;
       if(pb){c.bestLap=lt;tt.pbSplits=c.cum?c.cum.slice():null;}
-      msg(pb?'PERSONAL BEST':'LAP TIME',fmt(lt));ttSubmit(lt);}}
+      if(tt.path)tt.path.push(c.x,c.z,c.yaw); // the line itself as the last sample
+      msg(pb?'PERSONAL BEST':'LAP TIME',fmt(lt));ttSubmit(lt,c.sec.slice(),tt.path&&tt.path.length>=6?encodePath(tt.path):null);}}
+  tt.path=[]; // record the line of the lap that starts now
   // the next lap starts at once
   c.lapCount=0;c.lapStart=t;c.secStart=t;c.lapInvalid=false;c.invWhy=null;c.sec=[null,null,null];c.secCol=['','',''];c.cum=new Float32Array(64);}
 function ttInvalidate(why){const c=player;if(session!=='tt'||tt.stage!=='flying'||!c||c.lapInvalid)return;
   c.lapInvalid=true;c.invWhy=why;msg('LAP DELETED',why+' · THIS LAP WILL NOT COUNT');}
-async function ttSubmit(lt){if(!ttName)return;
-  const r=await lbSubmit(TRACK_ID,{name:ttName,t:+lt.toFixed(3),team:TEAMS[player.team].name,date:Date.now()});
+async function ttSubmit(lt,sec,path){if(!ttName)return;
+  const r=await lbSubmit(TRACK_ID,{name:ttName,t:+lt.toFixed(3),sec,team:TEAMS[player.team].name,path,hz:GH_HZ});
   await refreshBoard(true);
   // the board keeps the top 5 laps: say where this one landed (or that it missed it)
   if(r.rank)msg('LEADERBOARD · P'+r.rank+(r.improved?' · NEW BEST':''),ttName+' · '+lbFmt(lt));
   else msg('NOT IN THE TOP 5',ttName+' · '+lbFmt(lt));}
 async function refreshBoard(force){if(!force&&performance.now()/1000-tt.boardT<20)return;tt.boardT=performance.now()/1000;
-  const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;}
+  const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;loadGhost();}
 // lap progress for the delta to the personal best: time at each 1/64 of the lap
-function ttTrack(c){if(session!=='tt'||tt.stage!=='flying'||!c.cum)return;const k=Math.min(63,Math.floor(c.s/L*64));if(!c.cum[k])c.cum[k]=simTime-c.lapStart;}
+function ttTrack(c){if(session!=='tt'||tt.stage!=='flying'||!c.cum)return;const k=Math.min(63,Math.floor(c.s/L*64));if(!c.cum[k])c.cum[k]=simTime-c.lapStart;
+  // the driving line, GH_HZ samples a second (position and heading), stored with the lap if it makes the top 5
+  if(tt.path){const n=Math.floor((simTime-c.lapStart)*GH_HZ);while(tt.path.length/3<=n)tt.path.push(c.x,c.z,c.yaw);}}
+
+/* ---- ghost: the fastest lap on the board, driven again as a see-through car from the line, in step with the
+   player's flying lap. G (or the button in the time trial dialog) turns it on / off; the choice is remembered. ---- */
+const GH_HZ=20;
+// path ⇄ text: x, z to 0.1 m and heading to 0.01 rad, each as the change from the previous sample (small numbers)
+function encodePath(a){const o=[];let px=0,pz=0,py=0;
+  for(let i=0;i<a.length;i+=3){const x=Math.round(a[i]*10),z=Math.round(a[i+1]*10),y=Math.round(a[i+2]*100);o.push(x-px,z-pz,y-py);px=x;pz=z;py=y;}
+  return o.join(',');}
+function decodePath(s){const v=s.split(',').map(Number),n=Math.floor(v.length/3),x=new Float32Array(n),z=new Float32Array(n),y=new Float32Array(n);
+  let px=0,pz=0,py=0;for(let i=0;i<n;i++){px+=v[3*i];pz+=v[3*i+1];py+=v[3*i+2];x[i]=px/10;z[i]=pz/10;y[i]=py/100;}return {x,z,y,n};}
+let ghostOn=true;try{ghostOn=localStorage.getItem('hrc-ghost')!=='off';}catch(e){}
+let ghost=null,ghostCar=null,ghostAt=null;
+function setGhost(on){ghostOn=on;try{localStorage.setItem('hrc-ghost',on?'on':'off');}catch(e){}
+  const b=$('ttGhost');if(b)b.textContent='GHOST: '+(on?'ON':'OFF');}
+// follow the board's P1: fetch its line when it changes
+async function loadGhost(){const top=tt.board[0];if(!top||!top.at||top.at===ghostAt)return;ghostAt=top.at;
+  const g=await lbGhost(TRACK_ID,top.at);if(ghostAt!==top.at)return;
+  ghost=g&&g.p?{...decodePath(g.p),hz:g.hz||GH_HZ,name:g.name,time:g.time}:null;}
+// The ghost is one flat pale-blue shell, not a see-through car: each part is drawn twice — first only into the depth
+// buffer, then in colour where it is the nearest surface — so only the outside of the car shows (no cockpit, wheels
+// or chassis through the bodywork). Both passes sit in the transparent queue, so the ghost never hides the opaque
+// scene (or the player's car) behind it.
+const GH_MAT=new THREE.MeshLambertMaterial({color:0x8fd3ff,emissive:0x2a5a80,transparent:true,opacity:0.5,depthWrite:false,depthFunc:THREE.LessEqualDepth});
+const GH_DEPTH=new THREE.MeshBasicMaterial({colorWrite:false,transparent:true,depthWrite:true});
+function ghostMesh(){const m=carMesh(0x9fd8ff,0xffffff,0);if(m.far)m.far.visible=false;if(m.contact)m.contact.visible=false;
+  const parts=[];m.root.traverse(o=>{if(o.isMesh&&o!==m.contact)parts.push(o);});
+  for(const o of parts){o.material=GH_MAT;o.renderOrder=11;const d=new THREE.Mesh(o.geometry,GH_DEPTH);d.renderOrder=10;o.add(d);}
+  return m;}
+// Catmull-Rom through the samples: a smooth line and heading between them, not straight hops from point to point
+const cr=(p0,p1,p2,p3,a)=>p1+0.5*a*(p2-p0+a*(2*p0-5*p1+4*p2-p3+a*(3*(p1-p2)+p3-p0)));
+function ghostUpdate(){const show=session==='tt'&&ghostOn&&ghost&&tt.stage==='flying'&&player&&!replay;
+  if(!show){if(ghostCar)ghostCar.root.visible=false;return;}
+  // the same moment the player's car is drawn at (it is shown between its last two physics states)
+  const tr=simTime-H*(1-clamp(acc/H,0,1)),f=(tr-player.lapStart)*ghost.hz,i=Math.floor(f),g=ghost;
+  if(i<0||i>=g.n-1){if(ghostCar)ghostCar.root.visible=false;return;}
+  const a=f-i,i0=Math.max(0,i-1),i2=i+1,i3=Math.min(g.n-1,i+2);
+  const x=cr(g.x[i0],g.x[i],g.x[i2],g.x[i3],a),z=cr(g.z[i0],g.z[i],g.z[i2],g.z[i3],a),y=cr(g.y[i0],g.y[i],g.y[i2],g.y[i3],a);
+  // close by it fades out (gone inside ~5 m, so it never sits in the cockpit view), fully there from ~20 m
+  const d=Math.hypot(x-player.rx,z-player.rz),op=0.5*clamp((d-5)/15,0,1);
+  if(op<=0.01){if(ghostCar)ghostCar.root.visible=false;return;}
+  if(!ghostCar)ghostCar=ghostMesh();
+  GH_MAT.opacity=op;ghostCar.root.visible=true;ghostCar.root.position.set(x,CAR_Y,z);ghostCar.root.rotation.y=-y;
+  for(const w of ghostCar.wheels)w.rotation.z-=Math.hypot(g.x[i2]-g.x[i],g.z[i2]-g.z[i])*g.hz/60/(0.36*WHEEL_S);}
 function updateTTInfo(){const c=player;
   elTxt(el('lapNum'),c.lapInvalid&&tt.stage==='flying'?'LAP DELETED':tt.stage==='out'?'OUT LAP':'TIME TRIAL');
   elSty(el('gapA').parentElement,'display','');elTxt(el('gapALbl'),'DELTA TO PB');
@@ -2800,6 +2847,7 @@ function updateVisuals(dt){
   // render between the last two physics states so motion is smooth at any refresh rate
   for(const c of cars){if(c.px===undefined){c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;}
     c.rx=c.px+(c.x-c.px)*al;c.rz=c.pz+(c.z-c.pz)*al;c.ryaw=c.pyaw+wrapA(c.yaw-c.pyaw)*al;}
+  ghostUpdate();
   for(const c of cars){const m=c.mesh;m.root.position.set(c.rx,CAR_Y+(c.pitStop>0?.13:0),c.rz);if(m.contact)m.contact.visible=!(c.pitStop>0);
     c.visSlide=0; // real slip angle is simulated now (body yaw ≠ travel direction)
     // impact twist is applied to the whole car (body + wheels) so the body never shears off its wheels
@@ -3058,6 +3106,7 @@ addEventListener('keydown',e=>{if(phase==='menu'||phase==='box'||phase==='qdone'
   if(e.code==='KeyE'&&player){const c=player;if(drsEnabled&&c.zone>=0&&c.drsElig[c.zone]&&c.brake<0.05)c.drsOpen=true;else if(c.zone>=0&&drsEnabled&&!c.drsElig[c.zone])msg('DRS NOT AVAILABLE');}
   if(e.code==='KeyQ'){const i=MODES.indexOf(qState.mode);const m=MODES[(i+1)%MODES.length];setQualityMode(m);msg('GRAPHICS · '+(m==='auto'?'AUTO ('+PRESETS[qName].label+')':PRESETS[m].label));}
   if(e.code==='KeyL'){rlMode=(rlMode+1)%3;msg('RACING LINE · '+RL_MODES[rlMode]);}
+  if(e.code==='KeyG'&&session==='tt'){setGhost(!ghostOn);msg('GHOST · '+(ghostOn?'ON':'OFF'),ghostOn?(ghost?'P1 · '+ghost.name+' · '+ghost.time:'NO GHOST LAP YET'):'');}
   if(e.code==='KeyM')muted=!muted;
   if(e.code==='KeyC'){camMode=(camMode+1)%CAM_MODES.length;msg('CAMERA · '+CAM_MODES[camMode]);}
   if(e.code==='KeyH'){hudMode=(hudMode+1)%3;mRect=null;$('hud').className=['lite','','min'][hudMode];msg('HUD · '+['COMPACT','FULL','MINIMAL'][hudMode]);}
@@ -3083,11 +3132,15 @@ $('pLeaderboard').onclick=()=>{document.activeElement.blur();openTTDialog(true);
 /* ---- time trial entry: the driver's real name (Korean or English), checked before the session starts; the dialog
    also shows the circuit's leaderboard. Opened from the pause menu it only shows the board (BACK returns to it). ---- */
 let ttFromPause=false;
-async function renderBoardTable(){$('ttLb').innerHTML='<tr><td colspan="5" style="color:var(--mute)">Loading…</td></tr>';
+// the circuit's top 5 as table rows (lap, gap, the three sectors and the day it was set) into a <tbody>, with the
+// source note next to its heading — used by the lobby and the time trial dialog
+async function fillBoard(body,src){$(body).innerHTML='<tr><td colspan="8" style="color:var(--mute)">Loading…</td></tr>';
   const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;const lead=r.rows.length?r.rows[0].t:null;
-  $('ttLbSrc').textContent=r.shared?'· ALL PLAYERS':lbShared?'· SERVER UNREACHABLE — THIS BROWSER ONLY':'· THIS BROWSER';
-  $('ttLb').innerHTML=r.rows.length?r.rows.map((x,k)=>'<tr class="'+(x.name===ttName?'me':'')+'"><td class="num">'+(k+1)+'</td><td><b>'+esc(x.name)+'</b></td><td>'+esc(x.team||'')+'</td><td class="num">'+x.time+'</td><td class="num">'+(k?'+'+(x.t-lead).toFixed(3):'—')+'</td></tr>').join('')
-    :'<tr><td colspan="5" style="color:var(--mute)">No times yet on this circuit — be the first.</td></tr>';}
+  $(src).textContent=r.shared?'· ALL PLAYERS':lbShared?'· SERVER UNREACHABLE — THIS BROWSER ONLY':'· THIS BROWSER';
+  const sc=s=>'<td class="num" style="color:var(--mute)">'+(s||'—')+'</td>';
+  $(body).innerHTML=r.rows.length?r.rows.map((x,k)=>'<tr class="'+(x.name===ttName?'me':'')+'"><td class="num">'+(k+1)+'</td><td><b>'+esc(x.name)+'</b></td><td class="num">'+x.time+'</td><td class="num">'+(k?'+'+(x.t-lead).toFixed(3):'—')+'</td>'+sc(x.s1)+sc(x.s2)+sc(x.s3)+'<td class="num">'+esc(x.date||'—')+'</td></tr>').join('')
+    :'<tr><td colspan="8" style="color:var(--mute)">No times yet on this circuit — be the first.</td></tr>';}
+const renderBoardTable=()=>fillBoard('ttLb','ttLbSrc');
 function openTTDialog(fromPause=false){ttFromPause=fromPause;$('ttTrk').textContent=TR.label;$('ttName').value=ttName;
   $('ttName').classList.remove('bad');$('ttNameMsg').classList.remove('bad');
   $('ttNameMsg').textContent='리더보드에 표시됩니다. 한국어 이름(2–5자) 또는 영어 이름(이름과 성)으로 입력하세요.';
@@ -3095,6 +3148,7 @@ function openTTDialog(fromPause=false){ttFromPause=fromPause;$('ttTrk').textCont
   if(fromPause)$('pause').hidden=true;else $('menu').hidden=true;
   $('ttDlg').hidden=false;renderBoardTable();if(!fromPause)setTimeout(()=>$('ttName').focus(),50);}
 $('ttBtn').onclick=()=>{document.activeElement.blur();audioInit();openTTDialog(false);};
+$('ttGhost').onclick=()=>{document.activeElement.blur();setGhost(!ghostOn);};setGhost(ghostOn);
 $('ttBack').onclick=()=>{$('ttDlg').hidden=true;if(ttFromPause)$('pause').hidden=false;else $('menu').hidden=false;};
 $('ttName').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('ttGo').click();});
 $('ttGo').onclick=()=>{const r=checkName($('ttName').value);
@@ -3260,6 +3314,9 @@ function buildLobby(){
 }
 $('trkSub').textContent=TR.label+' · '+(TR.len/1000).toFixed(3)+' km';
 loadOpts();if(!LAP_CHOICES.includes(optLaps)&&optLaps!==TR.fullLaps)optLaps=5;buildLobby();
+// the lobby shows this circuit's time trial top 5 (reloaded whenever the lobby comes back)
+$('lobbyLbTrk').textContent=TR.label;fillBoard('lobbyLb','lobbyLbSrc');
+new MutationObserver(()=>{if(!$('menu').hidden)fillBoard('lobbyLb','lobbyLbSrc');}).observe($('menu'),{attributes:true,attributeFilter:['hidden']});
 
 // every session opens with the circuit intro (skippable); the lobby can replay it on its own
 $('startBtn').onclick=()=>{document.activeElement.blur();audioInit();

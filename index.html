@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261007b">
+<link rel="stylesheet" href="css/style.css?v=20261007d">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -80,6 +80,8 @@
     <div class="sec"><h3>GRAND PRIX</h3><div class="chips" id="gpSel"></div>
       <canvas id="trkMap" width="880" height="330" style="width:100%;height:auto;margin-top:12px;background:#080c16;border:1px solid var(--line);border-radius:8px"></canvas>
       <div class="keyl" style="margin-top:6px"><span style="color:#1be26b">■ DRS zone</span><span style="color:#ffb000">● DRS detection</span><span style="color:#c9d3ea">— Sector split</span><span style="color:#fff">▮ Start / finish</span></div></div>
+    <div class="sec"><h3>TIME TRIAL · TOP 5 · <span id="lobbyLbTrk"></span> <span id="lobbyLbSrc" style="color:var(--mute);font-weight:400;letter-spacing:0"></span></h3>
+      <div class="tblw"><table><thead><tr><th>P</th><th>DRIVER</th><th class="num">LAP</th><th class="num">GAP</th><th class="num">S1</th><th class="num">S2</th><th class="num">S3</th><th class="num">DATE</th></tr></thead><tbody id="lobbyLb"></tbody></table></div></div>
     <div class="secrow">
       <div class="sec"><h3>RACE LENGTH</h3><div class="chips" id="lapSel"></div></div>
       <div class="sec"><h3>AI DIFFICULTY</h3><div class="chips" id="aiSel"></div></div>
@@ -87,7 +89,7 @@
     <div class="sec" id="todSec" hidden><h3>TIME OF DAY</h3><div class="chips" id="todSel"></div></div>
     <div class="sec"><h3>GRAPHICS QUALITY <span id="qInfo" style="color:var(--mute);font-weight:400;letter-spacing:0"></span></h3><div class="chips" id="qSel"></div></div>
     <div class="sec"><h3>TEAM / LIVERY</h3><div class="teams" id="teamSel"></div></div>
-    <div class="keyl"><span><kbd>W</kbd> Throttle</span><span><kbd>A</kbd><kbd>D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>S</kbd> Reverse (pit lane)</span><span><kbd>E</kbd> DRS</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Pit tyre S/M/H</span><span><kbd>F</kbd> MFD (<kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>)</span><span><kbd>C</kbd> Camera</span><span><kbd>L</kbd> Racing line</span><span><kbd>H</kbd> HUD</span><span><kbd>R</kbd> Recover</span><span><kbd>P</kbd> Pause</span><span><kbd>0</kbd> Replay</span></div>
+    <div class="keyl"><span><kbd>W</kbd> Throttle</span><span><kbd>A</kbd><kbd>D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>S</kbd> Reverse (pit lane)</span><span><kbd>E</kbd> DRS</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Pit tyre S/M/H</span><span><kbd>F</kbd> MFD (<kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>)</span><span><kbd>C</kbd> Camera</span><span><kbd>L</kbd> Racing line</span><span><kbd>G</kbd> Ghost (time trial)</span><span><kbd>H</kbd> HUD</span><span><kbd>R</kbd> Recover</span><span><kbd>P</kbd> Pause</span><span><kbd>0</kbd> Replay</span></div>
     <button class="btn ghost" id="introBtn">▶ CIRCUIT INTRO</button>
     <button class="btn ghost" id="ttBtn">⏱ TIME TRIAL</button>
     <button class="btn" id="startBtn">ENTER PIT BOX</button>
@@ -97,7 +99,7 @@
 
 <!-- time trial: the driver's real name for the leaderboard, and the board for this circuit -->
 <div id="ttDlg" class="ov" hidden>
-  <div class="card" style="width:min(620px,100%)">
+  <div class="card" style="width:min(780px,100%)">
     <div class="eyebrow">TIME TRIAL · <span id="ttTrk"></span></div>
     <h1 style="font-size:34px">Time <em>Trial</em></h1>
     <p class="sub">Alone on track, no damage. Hitting a wall or exceeding track limits deletes that lap. The leaderboard keeps the 5 fastest laps — a driver can hold several places.</p>
@@ -105,8 +107,9 @@
       <input id="ttName" maxlength="30" autocomplete="name" placeholder="홍길동 / Gildong Hong">
       <div id="ttNameMsg" class="namemsg">리더보드에 표시됩니다. 한국어 이름(2–5자) 또는 영어 이름(이름과 성)으로 입력하세요.</div></div>
     <div class="sec"><h3>LEADERBOARD <span id="ttLbSrc" style="color:var(--mute);font-weight:400;letter-spacing:0"></span></h3>
-      <div class="tblw" style="max-height:34vh"><table><thead><tr><th>P</th><th>DRIVER</th><th>TEAM</th><th class="num">LAP</th><th class="num">GAP</th></tr></thead><tbody id="ttLb"></tbody></table></div></div>
+      <div class="tblw" style="max-height:34vh"><table><thead><tr><th>P</th><th>DRIVER</th><th class="num">LAP</th><th class="num">GAP</th><th class="num">S1</th><th class="num">S2</th><th class="num">S3</th><th class="num">DATE</th></tr></thead><tbody id="ttLb"></tbody></table></div></div>
     <button class="btn ghost" id="ttBack">BACK</button>
+    <button class="btn ghost" id="ttGhost" title="G in the session">GHOST: ON</button>
     <button class="btn" id="ttGo">START TIME TRIAL</button>
   </div>
 </div>
@@ -165,6 +168,6 @@
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261007b"></script>
+<script type="module" src="src/main.js?v=20261007d"></script>
 </body>
 </html>
