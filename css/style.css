@@ -262,13 +262,16 @@ td .sw{display:inline-block;width:4px;height:12px;margin-right:6px;vertical-alig
 .pts{font-weight:700;color:var(--yellow)}
 /* the sector records: three small tables side by side (stacked on a narrow screen), the record time in purple */
 .secb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
-.secb table{table-layout:fixed}
+/* place, time and gap keep their natural width; the name takes what is left and ends in … (width:100% + max-width:0
+   is what lets a table cell shrink below its text), so nothing ever runs out of its table into the next */
 .secb th{color:var(--ink)}
 .secb td,.secb th{padding:5px 4px}
-.secb td:nth-child(4){text-align:right;padding-left:8px}
+.secb td{white-space:nowrap}
+.secb td.nm{width:100%;max-width:0}
+.secb td:nth-child(4){text-align:right;padding-left:6px}
 .secb td b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .secb td.pu{color:var(--purple);font-weight:700}
-@media (max-width:760px){.secb{grid-template-columns:1fr}}
+@media (max-width:900px){.secb{grid-template-columns:1fr}}
 @media (max-width:560px){#tower,#minimap,#timing{display:none} #keys{display:none} #info{width:calc(50% - 20px)} #dash{width:min(300px,70vw)} #mfd{width:calc(100% - 32px);bottom:150px}}
 @media (prefers-reduced-motion:reduce){#msg{transition:none}}
 /* loading screen */
