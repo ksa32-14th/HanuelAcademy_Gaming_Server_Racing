@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261007e">
+<link rel="stylesheet" href="css/style.css?v=20261007f">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -28,8 +28,10 @@
   <div id="msg"></div>
   <div id="timing" class="panel">
     <div><div class="lbl" id="gapALbl">DELTA TO POLE</div><div class="big" id="gapA">—</div></div>
+    <div id="gapBRow" style="display:none"><div class="lbl">DELTA TO RECORD</div><div class="big" id="gapB">—</div></div>
     <div><div class="lbl">CURRENT LAP</div><div class="big" id="curLap">—</div></div>
     <div class="secs"><i id="s1">S1</i><i id="s2">S2</i><i id="s3">S3</i></div>
+    <div class="secs" id="secD" style="display:none"><i id="d1"></i><i id="d2"></i><i id="d3"></i></div>
     <div class="kv"><span>LAST</span><b id="lastLap">—</b></div>
     <div class="kv"><span>BEST</span><b id="bestLap">—</b></div>
   </div>
@@ -168,6 +170,6 @@
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261007e"></script>
+<script type="module" src="src/main.js?v=20261007f"></script>
 </body>
 </html>

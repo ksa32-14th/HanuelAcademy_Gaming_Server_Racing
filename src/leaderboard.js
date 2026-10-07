@@ -5,8 +5,9 @@
 //   5th out); the write is conditional on the list not having changed since it was read (ETag), so two drivers
 //   finishing at once never overwrite each other. See README → Time Trial.
 // Records: {name, time, s1, s2, s3 (lap and sector times as 'm:ss:mmm', e.g. '1:32:456'), team,
-//           date ('YYYY-MM-DD', the day it was set), at (ms, when it was set)}. Rows handed to the game also carry t (s).
-import {LB_URL} from './config.js?v=20261007e';
+//           date ('YYYY-MM-DD', the day it was set), at (ms, when it was set)}. Rows handed to the game also carry
+//           t (the lap, s) and st ([s1, s2, s3] in s, NaN where missing).
+import {LB_URL} from './config.js?v=20261007f';
 
 export const lbShared=!!LB_URL;
 const base=LB_URL.replace(/\/+$/,'');
@@ -23,7 +24,7 @@ const secStr=s=>typeof s==='number'&&isFinite(s)&&s>0?lbFmt(s):'';
 const rowsOf=list=>(Array.isArray(list)?list:Object.values(list||{})).filter(r=>r&&r.name&&typeof r.time==='string')
   .map(r=>{const at=typeof r.at==='number'?r.at:typeof r.date==='number'?r.date:0;
     return {name:r.name,time:r.time,s1:r.s1||'',s2:r.s2||'',s3:r.s3||'',team:r.team||'',
-      date:typeof r.date==='string'?r.date:at?dayOf(at):'',at,t:lbParse(r.time)};})
+      date:typeof r.date==='string'?r.date:at?dayOf(at):'',at,t:lbParse(r.time),st:[lbParse(r.s1),lbParse(r.s2),lbParse(r.s3)]};})
   .filter(r=>isFinite(r.t)).sort((a,b)=>a.t-b.t||a.at-b.at);
 const recOf=r=>({name:r.name,time:r.time,s1:r.s1,s2:r.s2,s3:r.s3,team:r.team,date:r.date,at:r.at});
 // the board with this lap merged in, cut to the top 5
