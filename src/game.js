@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007s';
-import {perf} from './perf.js?v=20261007s';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007s';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007s';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007s';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007s';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007s';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007t';
+import {perf} from './perf.js?v=20261007t';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007t';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007t';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007t';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007t';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007t';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007s';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007t';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007s'):import('./data/osm-songdo.js?v=20261007s')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007t'):import('./data/osm-songdo.js?v=20261007t')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -2996,14 +2996,12 @@ function kerbVoice(ac,master,buf){
 // is any wheel on a kerb? (the car is ~2 m wide: a wheel is on it from ~1 m inside the white line to ~1 m past it)
 function onKerb(c){if(!KB[c.idx]||c.pitSide)return false;const edge=c.d<0?TLL[c.idx]:TLR[c.idx],ad=Math.abs(c.d);
   return ad>edge-1.0&&ad<edge+KERB_W+1.0;}
-// DRS ready: the dash "삡" — measured off an F1 25 onboard: two near-pure tones stepping down, ~1170 Hz for ~100 ms
-// then ~990 Hz for ~60 ms, standing ~8–10 dB clear of the engine (a touch of 2nd harmonic so it cuts through)
-function beep(){if(!au)return;const ac=au.ac,t=ac.currentTime;
-  const tone=(f,t0,len)=>{const o=ac.createOscillator(),h=ac.createOscillator(),hg=ac.createGain(),g=ac.createGain();
-    o.type='sine';o.frequency.value=f;h.type='sine';h.frequency.value=f*2;hg.gain.value=.12;
-    g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.3,t0+.006);g.gain.setValueAtTime(.3,t0+len-.012);g.gain.linearRampToValueAtTime(0,t0+len);
-    o.connect(g);h.connect(hg).connect(g);g.connect(au.master);o.start(t0);h.start(t0);o.stop(t0+len+.02);h.stop(t0+len+.02);};
-  tone(1172,t,.1);tone(987,t+.105,.06);}
+// DRS ready: the dash "삡" — measured off an F1 25 onboard (the beep ~1 s before DRS opens): ONE short pure sine at
+// ~3.9 kHz, ~70 ms, no harmonics, ~15 dB clear of the engine at that pitch
+function beep(){if(!au)return;const ac=au.ac,t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();
+  o.type='sine';o.frequency.value=3900;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.2,t+.004);g.gain.setValueAtTime(.2,t+.062);g.gain.linearRampToValueAtTime(0,t+.07);
+  o.connect(g).connect(au.master);o.start(t);o.stop(t+.09);}
 
 /* ================= CAMERA / VISUALS ================= */
 function updateVisuals(dt){
