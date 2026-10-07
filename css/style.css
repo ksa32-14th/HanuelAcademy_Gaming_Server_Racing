@@ -166,10 +166,52 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 #ttName:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
 #ttName.bad{border-color:var(--red)}
 .namemsg{margin-top:6px;font-size:12px;color:var(--mute)}.namemsg.bad{color:#ff6b6b}
-/* time trial: the leaderboard takes the place of the timing tower */
-#tower .tt-hd{padding:6px 10px;font:800 11px var(--f-disp);letter-spacing:.14em;color:#ffd200;border-bottom:1px solid var(--line)}
-#tower .tt-row{display:grid;grid-template-columns:22px 1fr auto;gap:6px;padding:3px 10px;font:600 12px var(--f-body)}
-#tower .tt-row.me{background:rgba(225,6,0,.28)}#tower .tt-row b{font-family:var(--f-disp)}#tower .tt-row span{color:var(--mute)}
+/* time trial: the leaderboard takes the place of the timing tower — broadcast style: a logo block with the session,
+   then one dark row per lap (place, team colour, SURNAME, time), P1's place on red */
+#tower:has(.f1-hd),#hud.lite #tower:has(.f1-hd){width:214px;opacity:1;background:#15151e;border:0;border-radius:0}
+#tower .f1-hd{background:#15151e;text-align:center;padding:7px 8px 6px;border-bottom:1px solid #2a2a36}
+#tower .f1-hd b{display:block;font:900 italic 22px/1 var(--f-disp);letter-spacing:.04em;color:#fff}
+#tower .f1-hd small{display:block;margin-top:5px;font:700 13px var(--f-disp);letter-spacing:.04em;color:#fff}
+#tower .f1-row{display:grid;grid-template-columns:24px 4px 1fr auto;gap:6px;align-items:center;height:21px;padding:0 8px 0 0;background:#15151e;
+  font:700 13px var(--f-disp);color:#fff;text-transform:uppercase;letter-spacing:.02em}
+#tower .f1-row+.f1-row{border-top:1px solid #20202a}
+#tower .f1-row .p{text-align:center;height:100%;line-height:21px}#tower .f1-row.p1 .p{background:var(--red)}
+#tower .f1-row i{width:4px;height:13px;border-radius:1px}
+#tower .f1-row b{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}#tower .f1-row span.t{font-weight:600;font-variant-numeric:tabular-nums;color:#e6e8ef}
+#tower .f1-row.me{background:#2a2a38}#tower .f1-row.nt span.t{color:#8a8fa0}
+/* top right: the record and the live delta to it */
+#timing .recref{margin-top:3px;font:700 12px var(--f-disp);letter-spacing:.04em;color:#c7cbd8;text-transform:uppercase}
+/* the lap box, broadcast style (right of the dash) */
+#lapbox{position:absolute;left:calc(50% + min(190px,46vw) + 14px);bottom:34px;width:252px;background:#15151e;color:#fff;font-family:var(--f-disp);
+  box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#lapbox .lb-hd{display:grid;grid-template-columns:30px 1fr auto;align-items:stretch;height:28px;border-bottom:3px solid var(--tc,#e10600)}
+#lapbox .lb-hd span{background:#000;font:900 17px/28px var(--f-disp);text-align:center}#lapbox .lb-hd span.p1{background:var(--red)}
+#lapbox .lb-hd b{font:800 17px/28px var(--f-disp);letter-spacing:.03em;padding:0 9px;text-transform:uppercase;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#lapbox .lb-hd i{font:900 17px/28px var(--f-disp);font-style:normal;padding:0 9px}
+#lapbox .lb-mid{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:6px 12px 2px;min-height:44px}
+#lapbox #lbTime{font:800 28px/1 var(--f-disp);font-variant-numeric:tabular-nums;text-align:center}
+#lapbox #lbTime.ahead{color:#26d14a} #lapbox #lbTime.behind{color:#ffd200}
+#lapbox .lb-ref{text-align:center;line-height:1.05}#lapbox .lb-ref b{display:block;font:700 15px var(--f-disp);font-variant-numeric:tabular-nums}
+#lapbox .lb-ref small{font:700 12px var(--f-disp);letter-spacing:.04em;color:#c9cdd8;text-transform:uppercase}
+#lapbox .lb-sec{display:grid;grid-template-columns:repeat(3,1fr)}
+#lapbox .lb-sec div{font:700 12px var(--f-disp);letter-spacing:.04em;color:#8a8fa0;text-align:center;padding:1px 0 2px;border-bottom:3px solid #3a3b46}
+#lapbox .lb-sec .now{color:#fff}
+#lapbox .lb-sec .gr{color:#26d14a;border-color:#26d14a}#lapbox .lb-sec .pu{color:#b347ff;border-color:#b347ff}#lapbox .lb-sec .ye{color:#ffd200;border-color:#ffd200}
+#hud.min #lapbox{display:none!important}
+/* FASTEST SECTOR, broadcast style: in (title + time | driver) → the time and driver fade → the purple bar alone with the
+   title → wiped out from the left in pixel steps */
+#secB{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 14px);transform:translateX(-50%);display:flex;width:266px;height:42px;
+  opacity:0;pointer-events:none;font-family:var(--f-disp);clip-path:inset(0 0 0 0)}
+#secB .sb-l{background:#a10fd8;width:96px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:width .35s ease}
+#secB .sb-l b{font:800 14px/1 var(--f-disp);letter-spacing:.12em;color:#fff}
+#secB .sb-l i{font:800 19px/1.05 var(--f-disp);font-style:normal;font-variant-numeric:tabular-nums;color:#fff;transition:opacity .3s,max-height .35s;max-height:22px;overflow:hidden}
+#secB .sb-r{flex:1;background:linear-gradient(90deg,#1d1238,#2a0f2c);display:flex;align-items:center;justify-content:center;
+  font:900 19px var(--f-disp);letter-spacing:.04em;text-transform:uppercase;color:var(--tc,#e10600);transition:opacity .3s;overflow:hidden;white-space:nowrap}
+#secB.on{opacity:1}
+#secB.p2 .sb-r{opacity:0} #secB.p2 .sb-l i{opacity:.25}
+#secB.p3 .sb-l{width:266px} #secB.p3 .sb-l i{opacity:0;max-height:0} #secB.p3 .sb-r{display:none}
+#secB.p4{clip-path:inset(0 0 0 100%);transition:clip-path .55s steps(9)}
+#secB.p4 .sb-l{background:repeating-linear-gradient(90deg,#a10fd8 0 5px,#5a0a7a 5px 7px)}
 /* FASTEST LAP / FASTEST SECTOR: purple stopwatch tile, purple caps on black in a white frame, the time below */
 #msg.low{top:calc(12px + min(440px,46vw)/3.6 + 150px)}
 #fast{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 12px);transform:translate(-50%,-8px);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;text-align:center}

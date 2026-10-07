@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261007h">
+<link rel="stylesheet" href="css/style.css?v=20261007i">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -27,8 +27,17 @@
   <div id="lights" hidden><i></i><i></i><i></i><i></i><i></i></div>
   <div id="msg"></div>
   <div id="fast"><div class="fb"><div class="fb-ic"><svg width="34" height="38" viewBox="0 0 34 38" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><rect x="13" y="1.5" width="8" height="3" rx="1" fill="#fff" stroke="none"/><path d="M28 9.5l2 2"/><circle cx="17" cy="22" r="12.5"/><path d="M17 22l5.5-5"/><circle cx="17" cy="22" r="1.6" fill="#fff" stroke="none"/></svg></div><div class="fb-tx" id="fastT">FASTEST LAP</div></div><div class="ft" id="fastTime"></div></div>
+  <!-- broadcast-style FASTEST SECTOR: purple tile (SECTOR n / time) + the driver, then folds to the title and wipes out -->
+  <div id="secB"><div class="sb-l"><b id="sbT">SECTOR 1</b><i id="sbTime"></i></div><div class="sb-r" id="sbName"></div></div>
+  <!-- broadcast-style lap box: place · driver · tyre / running time (delta at the splits) · the record / sectors -->
+  <div id="lapbox" style="display:none">
+    <div class="lb-hd"><span id="lbPos">—</span><b id="lbName"></b><i id="lbTy">S</i></div>
+    <div class="lb-mid"><div id="lbTime">—</div><div class="lb-ref"><b id="lbRefT"></b><small id="lbRefN"></small></div></div>
+    <div class="lb-sec"><div id="lbS1">S1</div><div id="lbS2">S2</div><div id="lbS3">S3</div></div>
+  </div>
   <div id="timing" class="panel">
     <div><div class="lbl" id="gapALbl">DELTA TO POLE</div><div class="big" id="gapA">—</div></div>
+    <div id="recRow" style="display:none"><div class="lbl">DELTA TO RECORD</div><div class="big" id="gapB">—</div><div class="recref" id="recRef"></div></div>
     <div><div class="lbl">CURRENT LAP</div><div class="big" id="curLap">—</div></div>
     <div class="secs"><i id="s1">S1</i><i id="s2">S2</i><i id="s3">S3</i></div>
     <div class="kv"><span>LAST</span><b id="lastLap">—</b></div>
@@ -169,6 +178,6 @@
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261007h"></script>
+<script type="module" src="src/main.js?v=20261007i"></script>
 </body>
 </html>

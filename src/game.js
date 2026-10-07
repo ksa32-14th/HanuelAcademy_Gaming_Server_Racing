@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007h';
-import {perf} from './perf.js?v=20261007h';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007h';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007h';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007h';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007h';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007h';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007i';
+import {perf} from './perf.js?v=20261007i';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007i';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007i';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007i';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007i';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007i';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007h';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007i';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007h'):import('./data/osm-songdo.js?v=20261007h')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007i'):import('./data/osm-songdo.js?v=20261007i')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1525,10 +1525,10 @@ function finishQuali(t){
    The player alone on the circuit on fresh softs (no wear, no fuel worries, no damage), from a rolling start. Every
    lap from the line is timed; touching a wall or going beyond the track limits deletes that lap. Each valid lap is
    offered to the leaderboard (only a driver's best counts), under the real name entered before the session. */
-let ttName='',tt={stage:'out',laps:0,best:null,board:[],boardShared:false,boardT:-99,pbSplits:null};
+let ttName='',tt={stage:'out',laps:0,best:null,board:[],boardShared:false,boardT:-99,pbSplits:null,secDiff:[null,null,null],flash:null};
 try{ttName=localStorage.getItem('hrc-name')||'';}catch(e){}
 function startTT(){const c=player;
-  tt={stage:'out',laps:0,best:null,board:tt.board,boardShared:tt.boardShared,boardT:-99,pbSplits:null};
+  tt={stage:'out',laps:0,best:null,board:tt.board,boardShared:tt.boardShared,boardT:-99,pbSplits:null,secDiff:[null,null,null],flash:null};
   phase='quali';c.comp='S';c.used=new Set(['S']);c.nextComp='M';c.mesh.band.color.setHex(COMP.S.hex);
   c.wear=0;c.damage=0;c.dm=newDmg();c.fuel=12;c.tT=[90,90,90,90];c.bT=[400,400,400,400];c.held=false;c.lapInvalid=false;
   c.bestLap=null;c.lastLap=null;c.sec=[null,null,null];c.secCol=['','',''];c.bestSec=[null,null,null];
@@ -1540,6 +1540,9 @@ function ttCross(c){
   const t=simTime;
   if(tt.stage==='out'){tt.stage='flying';}
   else{const lt=t-c.lapStart;sectorDone(c,2,t);tt.laps++;
+    // the lap box holds the finished lap (time, sectors, where it ranks) for a few seconds
+    tt.flash={txt:c.lapInvalid?'DELETED':lbFmt(lt),cls:'',until:simTime+6,secs:c.secCol.slice(),
+      pos:c.lapInvalid?null:1+tt.board.filter(x=>x.t<lt).length};
     if(c.lapInvalid)msg('LAP DELETED · NO TIME',c.invWhy||'');
     else{c.lastLap=lt;const pb=c.bestLap==null||lt<c.bestLap;
       if(pb){c.bestLap=lt;tt.pbSplits=c.cum?c.cum.slice():null;}
@@ -1547,7 +1550,7 @@ function ttCross(c){
       // quicker than the record (or the first lap on the board): FASTEST LAP; else a record-beating last sector
       const ref=tt.board[0];
       if(!ref||lt<ref.t-0.0005)fast('FASTEST LAP',lbFmt(lt));
-      else if(isFinite(ref.st[2])&&c.sec[2]<ref.st[2]-0.0005)fast('FASTEST SECTOR 3',lbFmt(c.sec[2]));
+      else if(isFinite(ref.st[2])&&c.sec[2]<ref.st[2]-0.0005)secBanner(2,c.sec[2]);
       msg(pb?'PERSONAL BEST':'LAP TIME',fmt(lt));ttSubmit(lt,c.sec.slice(),tt.path&&tt.path.length>=6?encodePath(tt.path):null);}}
   tt.path=[]; // record the line of the lap that starts now
   // the next lap starts at once
@@ -1557,6 +1560,7 @@ function ttInvalidate(why){const c=player;if(session!=='tt'||tt.stage!=='flying'
 async function ttSubmit(lt,sec,path){if(!ttName)return;
   const r=await lbSubmit(TRACK_ID,{name:ttName,t:+lt.toFixed(3),sec,team:TEAMS[player.team].name,path,hz:GH_HZ});
   await refreshBoard(true);
+  if(tt.flash&&tt.flash.secs&&r.rank)tt.flash.pos=r.rank;
   // the board keeps the top 5 laps: say where this one landed (or that it missed it)
   if(r.rank)msg('LEADERBOARD · P'+r.rank+(r.improved?' · NEW BEST':''),ttName+' · '+lbFmt(lt));
   else msg('NOT IN THE TOP 5',ttName+' · '+lbFmt(lt));}
@@ -1583,7 +1587,17 @@ function setGhost(on){ghostOn=on;try{localStorage.setItem('hrc-ghost',on?'on':'o
 // follow the board's P1: fetch its line when it changes
 async function loadGhost(){const top=tt.board[0];if(!top||!top.at||top.at===ghostAt)return;ghostAt=top.at;
   const g=await lbGhost(TRACK_ID,top.at);if(ghostAt!==top.at)return;
-  ghost=g&&g.p?{...decodePath(g.p),hz:g.hz||GH_HZ,name:g.name,time:g.time}:null;}
+  ghost=g&&g.p?{...decodePath(g.p),hz:g.hz||GH_HZ,name:g.name,time:g.time}:null;
+  // where along the lap (s, m from the line) each sample was: the record's time at any point, for the live delta
+  if(ghost){const sp=new Float32Array(ghost.n);let hint=null,prev=0;
+    for(let j=0;j<ghost.n;j++){const i=idxNear(ghost.x[j],ghost.z[j],hint);hint=i;
+      let s=i*DS+(ghost.x[j]-X[i])*TX[i]+(ghost.z[j]-Z[i])*TZ[i];
+      if(j===0){if(s>L/2)s-=L;}else{while(s<prev-L/2)s+=L;while(s>prev+L/2)s-=L;}sp[j]=prev=s;}
+    ghost.sp=sp;}}
+// the record lap's time (s from its line) when it was at s, or null outside it
+function ghostTimeAt(s){const g=ghost,sp=g&&g.sp;if(!sp||s<sp[0]||s>sp[g.n-1])return null;
+  let lo=0,hi=g.n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(sp[m]<=s)lo=m;else hi=m;}
+  const f=sp[hi]>sp[lo]?(s-sp[lo])/(sp[hi]-sp[lo]):0;return (lo+f)/g.hz;}
 // The ghost is one flat pale-blue shell, not a see-through car: each part is drawn twice — first only into the depth
 // buffer, then in colour where it is the nearest surface — so only the outside of the car shows (no cockpit, wheels
 // or chassis through the bodywork). Both passes sit in the transparent queue, so the ghost never hides the opaque
@@ -1614,16 +1628,38 @@ function updateTTInfo(){const c=player;
   elSty(el('gapA').parentElement,'display','');elTxt(el('gapALbl'),'DELTA TO PB');
   let dl=null;if(tt.stage==='flying'&&tt.pbSplits&&!c.lapInvalid){const k=Math.min(63,Math.floor(c.s/L*64));const a=tt.pbSplits[k],b=c.cum&&c.cum[k];if(a&&b)dl=b-a;}
   elTxt(el('gapA'),dl==null?'—':(dl>=0?'+':'')+dl.toFixed(3));elSty(el('gapA'),'color',dl==null?'':(dl<0?'#1be26b':'#ff5252'));
-  elTxt(el('curLap'),tt.stage==='flying'?fmt(simTime-c.lapStart):'—');elTxt(el('lastLap'),fmt(c.lastLap));elTxt(el('bestLap'),fmt(c.bestLap));
+  // the record (the board's P1) and the delta to it: live from its driving line where it has one, else summed at the
+  // sector splits
+  const b=tt.board,ref=b[0],ct=simTime-c.lapStart;let dr=null;
+  if(tt.stage==='flying'&&!c.lapInvalid&&ref){
+    if(ghost&&ghost.sp&&ghostAt===ref.at){const tg=ct>0.5?ghostTimeAt(c.s):null;if(tg!=null)dr=ct-tg;}
+    else{let sum=0,n=0;for(const d of tt.secDiff)if(d!=null){sum+=d;n++;}if(n)dr=sum;}}
+  elSty(el('recRow'),'display','');
+  elTxt(el('gapB'),dr==null?'—':(dr>=0?'+':'')+dr.toFixed(3));elSty(el('gapB'),'color',dr==null?'':(dr<0?'#1be26b':'#ff5252'));
+  elTxt(el('recRef'),ref?'RECORD '+ref.time+' · '+surname(ref.name):'NO RECORD YET');
+  elTxt(el('curLap'),tt.stage==='flying'?fmt(ct):'—');elTxt(el('lastLap'),fmt(c.lastLap));elTxt(el('bestLap'),fmt(c.bestLap));
   infoTyres(c);
   elHtml(el('flags'),c.lapInvalid&&tt.stage==='flying'?'<span class="flag ret"><i></i>LAP DELETED · '+(c.invWhy||'')+'</span>':'');
   refreshBoard(false);
-  const b=tt.board,lead=b.length?b[0].t:null,me=b.findIndex(x=>x.name===ttName);
-  let h='<div class="tt-hd">LEADERBOARD'+(tt.boardShared?'':' · THIS BROWSER')+'</div>';
-  const show=b.slice(0,10);if(me>=10)show.push(b[me]);
-  if(!show.length)h+='<div class="tt-row"><span></span><span>No times yet</span><span></span></div>';
-  for(const r of show){const p=b.indexOf(r)+1;
-    h+='<div class="tt-row'+(r.name===ttName?' me':'')+'"><span>'+p+'</span><b>'+esc(r.name)+'</b><span>'+(p===1?r.time:'+'+(r.t-lead).toFixed(3))+'</span></div>';}
+  // the lap box: place (projected from the delta while driving, the lap's own once it is done) · driver · tyre /
+  // running time to the tenth — or for a few seconds the gap at a split, the finished lap — beside the record / sectors
+  // (done ones in their colour, the one being driven spelled out; the last one spelled out on a finished lap)
+  const fl=tt.flash&&simTime<tt.flash.until?tt.flash:null,lastLap=fl&&fl.secs;
+  const pos=lastLap?fl.pos:dr!=null?1+b.filter(x=>x.t<ref.t+dr).length:null;
+  elSty(el('lapbox'),'display','');el('lapbox').style.setProperty('--tc',hex(TEAMS[c.team].c));
+  elTxt(el('lbPos'),pos||'—');elCls(el('lbPos'),pos===1?'p1':'');elTxt(el('lbName'),surname(ttName||'YOU'));
+  elTxt(el('lbTy'),c.comp);elSty(el('lbTy'),'color',COMP[c.comp].col);
+  const tm=fl?fl.txt:tt.stage==='flying'?Math.floor(ct/60)+':'+(ct%60).toFixed(1).padStart(4,'0'):'OUT LAP';
+  elTxt(el('lbTime'),tm);elCls(el('lbTime'),fl?fl.cls:'');
+  elTxt(el('lbRefT'),ref?ref.time:'');elTxt(el('lbRefN'),ref?surname(ref.name):'');
+  const cur=lastLap?-1:tt.stage==='flying'?c.sec.findIndex(x=>x==null):-1;
+  for(let k=0;k<3;k++){const e=el('lbS'+(k+1)),col=lastLap?fl.secs[k]:tt.stage==='flying'&&c.sec[k]!=null?c.secCol[k]:'';
+    elTxt(e,k===cur||(lastLap&&k===2)?'SECTOR '+(k+1):'S'+(k+1));elCls(e,col||(k===cur?'now':''));}
+  // the board, broadcast style: logo block with the session, then place · team colour · SURNAME · time
+  let h='<div class="f1-hd"><b>HRC</b><small>TIME TRIAL'+(tt.boardShared?'':' · LOCAL')+'</small></div>';
+  const tcol=r=>{const t=TEAMS.find(x=>x.name===r.team);return t?hex(t.c):'#666';};
+  if(!b.length)h+='<div class="f1-row p1 nt"><span class="p">1</span><i style="background:'+hex(TEAMS[c.team].c)+'"></i><b>'+esc(surname(ttName||'YOU'))+'</b><span class="t">No Time</span></div>';
+  b.slice(0,10).forEach((r,k)=>{h+='<div class="f1-row'+(k===0?' p1':'')+(r.name===ttName?' me':'')+'" title="'+esc(r.name)+'"><span class="p">'+(k+1)+'</span><i style="background:'+tcol(r)+'"></i><b>'+esc(surname(r.name))+'</b><span class="t">'+r.time+'</span></div>';});
   elHtml(el('rows'),h);renderMfd();}
 const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
@@ -1949,10 +1985,13 @@ function trackLimit(c){
 function sectorDone(c,k,t){const st=t-c.secStart;c.secStart=t;
   if(k===0){c.sec=[st,null,null];c.secCol=['','',''];}else c.sec[k]=st;
   c.secCol[k]=(bestSecAll[k]==null||st<bestSecAll[k])?'pu':(c.bestSec[k]==null||st<c.bestSec[k])?'gr':'ye';
-  // time trial: quicker than the RECORD's sector (the board's P1) — a FASTEST SECTOR banner with the time (sector 3
-  // is announced with the lap, in ttCross)
-  if(session==='tt'&&c.isPlayer){const ref=tt.board[0],rs=ref&&ref.st?ref.st[k]:NaN;
-    if(k<2&&!c.lapInvalid&&isFinite(rs)&&st<rs-0.0005)fast('FASTEST SECTOR '+(k+1),lbFmt(st));}
+  // time trial, against the RECORD (the board's P1): the gap at this split flashes in the lap box, and a sector quicker
+  // than the record's gets the FASTEST SECTOR banner (sector 3 is announced with the lap, in ttCross)
+  if(session==='tt'&&c.isPlayer){const ref=tt.board[0],rs=ref&&ref.st?ref.st[k]:NaN;if(k===0)tt.secDiff=[null,null,null];
+    tt.secDiff[k]=isFinite(rs)?st-rs:null;
+    if(k<2&&!c.lapInvalid&&tt.secDiff[k]!=null){const d=tt.secDiff.reduce((a,x)=>a+(x||0),0);
+      tt.flash={txt:(d<0?'-':'+')+Math.abs(d).toFixed(3),cls:d<0?'ahead':'behind',until:simTime+4};}
+    if(k<2&&!c.lapInvalid&&isFinite(rs)&&st<rs-0.0005)secBanner(k,st);}
   if(c.bestSec[k]==null||st<c.bestSec[k])c.bestSec[k]=st;if(bestSecAll[k]==null||st<bestSecAll[k])bestSecAll[k]=st;}
 function lapCross(c){
   if(session==='tt'){if(c===player){c.fuel=12;ttCross(c);}return;}
@@ -2543,6 +2582,15 @@ let fastTimer=0,fastUntil=0;
 function fast(t,time){$('fastT').textContent=t;$('fastTime').textContent=time;const f=$('fast');f.classList.add('on');
   fastUntil=performance.now()+3200;$('msg').classList.add('low');
   clearTimeout(fastTimer);fastTimer=setTimeout(()=>f.classList.remove('on'),3200);}
+// FASTEST SECTOR, broadcast style: purple tile (SECTOR n / time) and the driver in the team colour; after ~2.6 s the
+// driver and time fade, the tile becomes a bar with the title alone, then it wipes out from the left in pixel steps
+const surname=n=>String(n||'').trim().split(/\s+/).pop().toUpperCase();
+let sbT=[];
+function secBanner(k,st){const b=$('secB');sbT.forEach(clearTimeout);b.className='';void b.offsetWidth;
+  $('sbT').textContent='SECTOR '+(k+1);$('sbTime').textContent=st<60?st.toFixed(3):lbFmt(st);$('sbName').textContent=surname(ttName||'YOU');
+  b.style.setProperty('--tc',hex(TEAMS[player.team].c));b.classList.add('on');
+  sbT=[setTimeout(()=>b.classList.add('p2'),2600),setTimeout(()=>b.classList.add('p3'),3100),
+    setTimeout(()=>b.classList.add('p4'),3900),setTimeout(()=>{b.className='';},4600)];}
 function msg(t,sub=''){const m=$('msg');m.classList.toggle('low',performance.now()<fastUntil);m.innerHTML=t+(sub?'<small>'+sub+'</small>':'');m.classList.add('on');clearTimeout(msgTimer);msgTimer=setTimeout(()=>m.classList.remove('on'),2600);}
 function setLights(n){[...$('lights').children].forEach((l,i)=>l.classList.toggle('on',i<n));gantryLamps.forEach((m,i)=>m.color.setHex(i<n?0xff1a0a:0x220404));}
 let rowEls=[];
@@ -2623,6 +2671,7 @@ function updateHud(){
 function updateInfo(){
   const c=player;
   if(session==='tt'){updateTTInfo();return;}
+  elSty(el('lapbox'),'display','none');elSty(el('recRow'),'display','none'); // time trial only
   if(session==='quali'){updateQualiInfo();return;}
   // (no gap-ahead read-out in the race; tyres, fuel, damage, track limits and penalties live in the MFD)
   elSty(el('gapA').parentElement,'display','none');
