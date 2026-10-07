@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261007m">
+<link rel="stylesheet" href="css/style.css?v=20261007n">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -37,11 +37,12 @@
   </div>
   <div id="timing" class="panel">
     <div><div class="lbl" id="gapALbl">DELTA TO POLE</div><div class="big" id="gapA">—</div></div>
-    <div id="recRow" style="display:none"><div class="lbl">DELTA TO RECORD</div><div class="big" id="gapB">—</div><div class="recref" id="recRef"></div></div>
-    <div><div class="lbl">CURRENT LAP</div><div class="big" id="curLap">—</div></div>
-    <div class="secs"><i id="s1">S1</i><i id="s2">S2</i><i id="s3">S3</i></div>
+    <div id="recRow" style="display:none"><div class="lbl">DELTA TO RECORD</div><div class="big" id="gapB">—</div></div>
+    <!-- .nott: race / qualifying only (the time trial keeps just the two deltas here) -->
+    <div class="nott"><div class="lbl">CURRENT LAP</div><div class="big" id="curLap">—</div></div>
+    <div class="secs nott"><i id="s1">S1</i><i id="s2">S2</i><i id="s3">S3</i></div>
     <div class="kv"><span>LAST</span><b id="lastLap">—</b></div>
-    <div class="kv"><span>BEST</span><b id="bestLap">—</b></div>
+    <div class="kv nott"><span>BEST</span><b id="bestLap">—</b></div>
   </div>
   <div id="leftcol">
   <canvas id="minimap" class="panel" width="230" height="230"></canvas>
@@ -111,7 +112,7 @@
 <div id="ttDlg" class="ov" hidden>
   <div class="card" style="width:min(780px,100%)">
     <div class="eyebrow">TIME TRIAL · <span id="ttTrk"></span></div>
-    <h1 style="font-size:34px">Time <em>Trial</em></h1>
+    <h1 style="font-size:28px">Time <em>Trial</em></h1>
     <p class="sub">Alone on track, no damage. Hitting a wall or exceeding track limits deletes that lap. The leaderboard keeps the 5 fastest laps — a driver can hold several places.</p>
     <div class="sec"><h3>DRIVER NAME <span style="color:var(--mute);font-weight:400;letter-spacing:0">· 본인의 실명 (영어 대문자)</span></h3>
       <input id="ttName" maxlength="30" autocomplete="name" autocapitalize="characters" spellcheck="false" placeholder="GILDONG HONG" style="text-transform:uppercase">
@@ -146,7 +147,7 @@
 <div id="qres" class="ov" hidden>
   <div class="card" style="width:min(760px,100%)">
     <div class="eyebrow">ONE-SHOT QUALIFYING · CLASSIFICATION</div>
-    <h1 style="font-size:36px">Qualifying <em>Result</em></h1>
+    <h1 style="font-size:28px">Qualifying <em>Result</em></h1>
     <p class="sub" id="qresSub"></p>
     <div style="max-height:50vh;overflow:auto;margin-top:12px"><table><thead><tr><th>P</th><th>DRIVER</th><th>TEAM</th><th class="num">TIME</th><th class="num">GAP</th></tr></thead><tbody id="qresBody"></tbody></table></div>
     <button class="btn" id="qresBtn">TO THE PIT BOX</button>
@@ -156,7 +157,7 @@
 <div id="pause" class="ov" hidden>
   <div class="card" style="width:min(420px,100%);text-align:center">
     <div class="eyebrow">RED FLAG · PAUSED</div>
-    <h1 style="font-size:40px">Paused</h1>
+    <h1 style="font-size:30px">Paused</h1>
     <button class="btn" id="resumeBtn">RESUME (P)</button>
     <button class="btn ghost rs-race" id="pRestartRace">RESTART RACE</button>
     <button class="btn ghost rs-gp" id="pRestartQuali">RESTART FROM QUALIFYING</button>
@@ -169,7 +170,7 @@
 <div id="results" class="ov" hidden>
   <div class="card">
     <div class="eyebrow">CHEQUERED FLAG · FINAL CLASSIFICATION</div>
-    <h1 style="font-size:40px">Race <em>Classification</em></h1>
+    <h1 style="font-size:30px">Race <em>Classification</em></h1>
     <p class="sub" id="resSub"></p>
     <div class="tblw"><table><thead><tr><th>POS</th><th>DRIVER</th><th>TEAM</th><th>LAPS</th><th>TIME / GAP</th><th>PEN</th><th>BEST LAP</th><th>PTS</th></tr></thead><tbody id="resBody"></tbody></table></div>
     <button class="btn" id="rRestartRace">RESTART RACE</button>
@@ -178,6 +179,6 @@
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261007m"></script>
+<script type="module" src="src/main.js?v=20261007n"></script>
 </body>
 </html>
