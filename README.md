@@ -104,7 +104,7 @@ FIA 국제 스포팅 코드 부록 H(깃발 신호)와 F1 스포팅 규정(세�
     서버를 쓸 수 없을 때는 자동으로 이 브라우저 기록으로 보여 줍니다(리더보드 제목에 표시).
 
 ## 글꼴
-사이트 전체 글꼴은 **Formula1 Display**입니다. 라이선스가 있는 글꼴이라 저장소에 포함하지 않았습니다. 정식으로 받은 글꼴 파일을 [`fonts/`](fonts/README.md)에 `Formula1-Display-Regular.woff2`, `Formula1-Display-Bold.woff2`(선택: `-Black.woff2`)로 넣으면 코드 수정 없이 사이트 전체가 이 글꼴로 바뀝니다. 파일이 없으면 Titillium Web(한글은 Noto Sans KR)으로 표시됩니다.
+사이트 전체 글꼴은 **Formula1 Display**입니다([`fonts/`](fonts/README.md): Regular · Bold · Wide). 큰 제목에는 Wide를 씁니다. 라이선스가 있는 글꼴이라 문제가 되면 `fonts/`의 `.ttf` 파일만 지우면 Titillium Web(한글은 Noto Sans KR)으로 돌아갑니다.
 
 ## 조작
 `W` 스로틀 · `A`/`D` 조향 · `SPACE` 브레이크 · `M` 클러치(레이스 스타트: `W`+`M`을 누른 채 기다리다 불이 꺼지면 `M`을 떼어 출발) · `SPACE`+`S` 후진(어디서나, 피트레인에서는 `S`만) · 피트 박스에서 `P` 출발 · `E` DRS · `1`/`2`/`3` 다음 타이어 · `F` MFD(페이지), MFD 안에서 `←↑↓→` · `C` 시점 · `L` 레이싱 라인 · `G` 고스트(Time Trial) · `H` HUD · `R` 복귀 · `P` 일시정지 · `0` 리플레이 · `N` 사운드.

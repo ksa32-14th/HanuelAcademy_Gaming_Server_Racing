@@ -1,21 +1,19 @@
-/* the site's typeface: Formula1 Display. It is a licensed font, so the game does not ship it: put the licensed files
-   in fonts/ (Formula1-Display-Regular / -Bold / -Black .woff2, see README) and the whole site uses them; a viewer who
-   has it installed gets it too. Until then: Titillium Web (F1's own typeface before it), Noto Sans KR for Hangul. */
-@font-face{font-family:'HRC F1';font-weight:100 599;font-display:swap;
-  src:local('Formula1 Display Regular'),local('Formula1-Display-Regular'),url('../fonts/Formula1-Display-Regular.woff2') format('woff2')}
-@font-face{font-family:'HRC F1';font-weight:600 799;font-display:swap;
-  src:local('Formula1 Display Bold'),local('Formula1-Display-Bold'),url('../fonts/Formula1-Display-Bold.woff2') format('woff2')}
-@font-face{font-family:'HRC F1';font-weight:800 1000;font-display:swap;
-  src:local('Formula1 Display Black'),local('Formula1-Display-Black'),url('../fonts/Formula1-Display-Black.woff2') format('woff2'),
-  local('Formula1 Display Bold'),local('Formula1-Display-Bold'),url('../fonts/Formula1-Display-Bold.woff2') format('woff2')}
+/* the site's typeface: Formula1 Display (fonts/, see fonts/README.md) — Regular for light text, Bold for everything
+   from semi-bold up, and the Wide cut for the big titles. Without the files: Titillium Web; Hangul: Noto Sans KR.
+   (These web cuts draw ':' as a single dot — '1:32.4' read '1.32.4' — so the colon is left to Titillium Web.) */
+@font-face{font-family:'HRC F1';font-weight:100 599;font-display:swap;unicode-range:U+0000-0039,U+003B-FFFF;src:url('../fonts/Formula1-Display-Regular.ttf') format('truetype')}
+@font-face{font-family:'HRC F1';font-weight:600 1000;font-display:swap;unicode-range:U+0000-0039,U+003B-FFFF;src:url('../fonts/Formula1-Display-Bold.ttf') format('truetype')}
+@font-face{font-family:'HRC F1 Wide';font-display:swap;unicode-range:U+0000-0039,U+003B-FFFF;src:url('../fonts/Formula1-Display-Wide.ttf') format('truetype')}
 :root{
   --bg:#04060c; --panel:rgba(9,13,24,.9); --panel-solid:#0b1020; --ink:#f2f4fa; --mute:#8f9ab3;
   --line:rgba(255,255,255,.12); --red:#e10600; --drs:#1be26b; --purple:#b347ff; --green:#1be26b;
   --yellow:#ffd200; --blue:#2aa7ff; --orange:#ff8a00;
   --f-disp:'HRC F1','Titillium Web','Noto Sans KR',system-ui,sans-serif; --f-body:'HRC F1','Titillium Web','Noto Sans KR',system-ui,sans-serif;
+  --f-wide:'HRC F1 Wide','HRC F1','Titillium Web','Noto Sans KR',system-ui,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+button,input,select,textarea,kbd{font-family:inherit} /* form controls don't inherit the typeface by default */
 canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .num{font-family:var(--f-disp);font-variant-numeric:tabular-nums}
 #hud{position:fixed;inset:0;pointer-events:none}
@@ -160,7 +158,7 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .ov[hidden]{display:none!important}
 .card{width:min(960px,100%);background:var(--panel-solid);border:1px solid var(--line);border-radius:10px;padding:26px 28px}
 .eyebrow{font:700 12px var(--f-disp);letter-spacing:.24em;color:var(--red)}
-h1{font:900 clamp(34px,6vw,58px)/1 var(--f-disp);margin:6px 0 4px;letter-spacing:-.01em;text-wrap:balance}
+h1{font:400 clamp(22px,3.3vw,36px)/1.15 var(--f-wide);margin:6px 0 4px;letter-spacing:0;text-wrap:balance}
 h1 em{font-style:normal;color:var(--red)}
 .sub{color:var(--mute);margin:0 0 18px;font-size:14px}
 .grid2{display:grid;grid-template-columns:1.05fr 1fr;gap:24px}
@@ -178,9 +176,9 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 .namemsg{margin-top:6px;font-size:12px;color:var(--mute)}.namemsg.bad{color:#ff6b6b}
 /* time trial: the leaderboard takes the place of the timing tower — broadcast style: a logo block with the session,
    then one dark row per lap (place, team colour, SURNAME, time), P1's place on red */
-#tower:has(.f1-hd),#hud.lite #tower:has(.f1-hd){width:214px;opacity:1;background:#15151e;border:0;border-radius:0}
+#tower:has(.f1-hd),#hud.lite #tower:has(.f1-hd){width:272px;opacity:1;background:#15151e;border:0;border-radius:0}
 #tower .f1-hd{background:#15151e;text-align:center;padding:7px 8px 6px;border-bottom:1px solid #2a2a36}
-#tower .f1-hd b{display:block;font:900 italic 22px/1 var(--f-disp);letter-spacing:.04em;color:#fff}
+#tower .f1-hd b{display:block;font:400 20px/1 var(--f-wide);letter-spacing:.02em;color:#fff}
 #tower .f1-hd small{display:block;margin-top:5px;font:700 13px var(--f-disp);letter-spacing:.04em;color:#fff}
 #tower .f1-row{display:grid;grid-template-columns:24px 4px 1fr auto;gap:6px;align-items:center;height:21px;padding:0 8px 0 0;background:#15151e;
   font:700 13px var(--f-disp);color:#fff;text-transform:uppercase;letter-spacing:.02em}
@@ -192,7 +190,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 /* top right: the record and the live delta to it */
 #timing .recref{margin-top:3px;font:700 12px var(--f-disp);letter-spacing:.04em;color:#c7cbd8;text-transform:uppercase}
 /* the lap box, broadcast style (right of the dash) */
-#lapbox{position:absolute;left:calc(50% + min(190px,46vw) + 14px);bottom:34px;width:252px;background:#15151e;color:#fff;font-family:var(--f-disp);
+#lapbox{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(30px + min(380px,92vw)*132/360 + 10px);width:252px;background:#15151e;color:#fff;font-family:var(--f-disp);
   box-shadow:0 6px 18px rgba(0,0,0,.5)}
 #lapbox .lb-hd{display:grid;grid-template-columns:30px 1fr auto;align-items:stretch;height:28px;border-bottom:3px solid var(--tc,#e10600)}
 #lapbox .lb-hd span{background:#000;font:900 17px/28px var(--f-disp);text-align:center}#lapbox .lb-hd span.p1{background:var(--red)}
@@ -270,7 +268,7 @@ td .sw{display:inline-block;width:4px;height:12px;margin-right:6px;vertical-alig
 #loading{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#101833,#04060c 70%);transition:opacity .5s}
 #loading.done{opacity:0;pointer-events:none}
 .ld-card{width:min(360px,80vw);text-align:center}
-.ld-title{font:900 64px var(--f-disp);letter-spacing:.06em;color:#fff}
+.ld-title{font:400 56px var(--f-wide);letter-spacing:.04em;color:#fff}
 .ld-sub{font:700 12px var(--f-disp);letter-spacing:.28em;color:var(--mute);margin-bottom:26px}
 .ld-bar{height:4px;background:#1b2133;border-radius:2px;overflow:hidden}
 .ld-bar i{display:block;height:100%;width:0;background:var(--red);transition:width .25s}

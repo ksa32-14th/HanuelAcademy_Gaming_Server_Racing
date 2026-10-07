@@ -1,12 +1,10 @@
 # fonts/
 
-The site uses **Formula1 Display** as its typeface (`css/style.css` → `@font-face 'HRC F1'`).
-It is a licensed font, so it is not included here. Put the licensed files in this folder with these names and the whole
-site switches to it — no code change needed:
+The site's typeface, **Formula1 Display** (`css/style.css` → `@font-face 'HRC F1'` / `'HRC F1 Wide'`):
 
-- `Formula1-Display-Regular.woff2`
-- `Formula1-Display-Bold.woff2`
-- `Formula1-Display-Black.woff2` (optional; Bold is used for the heaviest text otherwise)
+- `Formula1-Display-Regular.ttf` — light text (weights up to 500)
+- `Formula1-Display-Bold.ttf` — everything from semi-bold up
+- `Formula1-Display-Wide.ttf` — big titles (menu headings, the loading screen, the HRC block on the board)
 
-`.ttf` / `.otf` files can be converted to `.woff2` with any woff2 converter.
-Until the files are here, the site falls back to Titillium Web (and Noto Sans KR for Hangul).
+Formula1 Display is a licensed typeface. These files were supplied by the site owner; if they have to go, delete them —
+the site then falls back to Titillium Web (and Noto Sans KR for Hangul) with no code change.

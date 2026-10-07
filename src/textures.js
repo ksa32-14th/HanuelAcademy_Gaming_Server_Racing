@@ -1,8 +1,8 @@
 // Procedural textures (asphalt, kerbs, concrete, ads, crowd, windows). Generated on the CPU into canvases,
 // then uploaded once. `res` scales the size of the noise-based maps with the quality preset.
 import * as THREE from 'three';
-import {smooth} from './util.js?v=20261007j';
-import {TRACK_ID} from './config.js?v=20261007j';
+import {smooth} from './util.js?v=20261007l';
+import {TRACK_ID} from './config.js?v=20261007l';
 
 let MAXANI=1;
 export const setAniso=n=>{MAXANI=n;};
@@ -43,7 +43,7 @@ const texAds=canvasTex(2048,128,(x)=>{const ads=[['#0d1f4a','#16307a','MARINA BA
   if(TRACK_ID==='busan')ads.splice(0,8,['#073a6b','#0b5aa3','BUSAN','#fff'],['#c8102e','#e8364f','HAEUNDAE','#fff'],['#f4f4f4','#d9dde3','CENTUM CITY','#0b5aa3'],['#0e0e10','#23252b','GRAND PRIX','#1be26b'],
     ['#0a7c8c','#13a3b5','MARINE CITY','#fff'],['#1a2f55','#2a4a82','BEXCO','#ffcf00'],['#e9b44c','#f6cf7a','GWANGANLI','#0a2140'],['#1c2230','#2d3650','STREET CIRCUIT','#fff']);
   for(let p=0;p<16;p++){const a=ads[(p*3)%ads.length],X0=p*128;const g=x.createLinearGradient(0,0,0,128);g.addColorStop(0,a[1]);g.addColorStop(1,a[0]);x.fillStyle=g;x.fillRect(X0,0,128,128);
-    x.fillStyle=a[3];x.textAlign='center';x.textBaseline='middle';let fs=22;do{x.font=`900 ${fs}px Titillium Web, sans-serif`;}while(x.measureText(a[2]).width>118&&--fs>14);x.fillText(a[2],X0+64,62);
+    x.fillStyle=a[3];x.textAlign='center';x.textBaseline='middle';let fs=22;do{x.font=`900 ${fs}px "HRC F1", Titillium Web, sans-serif`;}while(x.measureText(a[2]).width>118&&--fs>14);x.fillText(a[2],X0+64,62);
     x.fillStyle='rgba(255,255,255,.18)';x.fillRect(X0,0,128,40);x.fillStyle='rgba(0,0,0,.35)';x.fillRect(X0,122,128,6);x.fillStyle='rgba(0,0,0,.5)';x.fillRect(X0+127,0,1,128);}},true);
 const texCrowd=canvasTex(256,128,(x,w,h)=>{x.fillStyle='#15161c';x.fillRect(0,0,w,h);for(let r=0;r<16;r++){x.fillStyle='#262833';x.fillRect(0,r*8+6,w,2);for(let i=0;i<64;i++){x.fillStyle=`hsl(${Math.random()*360},${40+Math.random()*40}%,${35+Math.random()*40}%)`;x.fillRect(i*4+Math.random(),r*8+1,3,4);}}},true);
   return {texAsphalt,texAsphaltN,texAsphaltR,texKerb,texCheck,texRubber,texConcrete,texConcreteN,texFence,texAds,texCrowd};

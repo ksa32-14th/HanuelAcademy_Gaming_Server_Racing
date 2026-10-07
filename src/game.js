@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007j';
-import {perf} from './perf.js?v=20261007j';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007j';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007j';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007j';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007j';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007j';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007l';
+import {perf} from './perf.js?v=20261007l';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261007l';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007l';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007l';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261007l';
+import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007l';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007j';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007l';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007j'):import('./data/osm-songdo.js?v=20261007j')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007l'):import('./data/osm-songdo.js?v=20261007l')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -38,7 +38,7 @@ if(NOSCALER)scaler.enabled=false;
 // the render targets are re-sized and the shadow map redrawn.
 const ctxOv=document.createElement('div');
 ctxOv.style.cssText='position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:#05070d;'+
-  'color:#c9d3ea;font:700 16px/1.5 Titillium Web,sans-serif;letter-spacing:.14em';
+  'color:#c9d3ea;font:700 16px/1.5 "HRC F1",Titillium Web,sans-serif;letter-spacing:.14em';
 ctxOv.textContent='GRAPHICS RESET · RESTORING…';document.body.appendChild(ctxOv);
 let ctxLost=false;
 $('gl').addEventListener('webglcontextlost',e=>{e.preventDefault();ctxLost=true;ctxOv.style.display='flex';perf.ctx('lost');
@@ -134,7 +134,9 @@ function applyQuality(){
   setAniso(Q.aniso);
   resizeAll();
 }
-try{await Promise.race([document.fonts.load('900 22px "Titillium Web"'),new Promise(r=>setTimeout(r,1500))]);}catch(e){}
+// the canvas textures (car numbers, signs, boards) are drawn in the site's typeface: have it loaded first
+try{await Promise.race([Promise.all(['900 22px "HRC F1"','400 22px "HRC F1"','22px "HRC F1 Wide"','900 22px "Titillium Web"'].map(f=>document.fonts.load(f))),
+  new Promise(r=>setTimeout(r,2500))]);}catch(e){}
 const texSet=createTextures(BUILT_TEX,Math.min(Q.aniso,MAXANI));
 const {texAsphalt,texAsphaltN,texAsphaltR,texKerb,texCheck,texRubber,texConcrete,texConcreteN,texFence,texAds,texCrowd}=texSet;
 function setQualityMode(mode){qState.mode=mode;qName=mode==='auto'?detectPreset(renderer.getContext()):mode;Q=PRESETS[qName];
@@ -339,7 +341,7 @@ function buildBrakingBoards(){
   const atlas=canvasTex(512,512,(x)=>{['200','150','100','50'].forEach((t,n)=>{const cx=(n%2)*256,cy=(n>>1)*256;
       x.fillStyle='#0d1a3a';x.fillRect(cx,cy,256,256);x.fillStyle='#e10600';x.fillRect(cx,cy,256,30); // navy board, red header
       x.strokeStyle='#ffffff';x.lineWidth=10;x.strokeRect(cx+14,cy+44,228,198);
-      x.fillStyle='#ffffff';x.font='900 128px Titillium Web, Arial, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(t,cx+128,cy+148);});},false);
+      x.fillStyle='#ffffff';x.font='900 128px "HRC F1", Titillium Web, Arial, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(t,cx+128,cy+148);});},false);
   const face=new THREE.MeshBasicMaterial({map:atlas}),frame=mat({color:0x2a2f3a,roughness:.6,metalness:.3});
   const BW=2.6,BH=2.3,BY=1.25; // a board 2.6 × 2.3 m standing on the 1.05 m barrier
   for(const z of brakingZones()){const dists=z.brake>220?[200,150,100,50]:[150,100,50];
@@ -654,7 +656,7 @@ async function buildOSM(){
   const nearestTrack=(x,z)=>{let bi=0,bd=1e18;for(let i=0;i<N;i+=4){const d=(X[i]-x)**2+(Z[i]-z)**2;if(d<bd){bd=d;bi=i;}}return [X[bi],Z[bi]];};
   // a lettered sign on a facade: transparent unless `bg`; `logo` adds Shinsegae's red flower before the name
   const signAt=(fe,text,y,w,hgt,fg,bg,wt=1,logo=false)=>{const t=canvasTex(1024,256,(x)=>{if(bg){x.fillStyle=bg;x.fillRect(0,0,1024,256);}
-      let fs=170;x.font=`900 ${fs}px Titillium Web, Arial, sans-serif`;const tw=x.measureText(text).width+(logo?220:0);if(tw>960){fs*=960/tw;x.font=`900 ${fs}px Titillium Web, Arial, sans-serif`;}
+      let fs=170;x.font=`900 ${fs}px "HRC F1", Titillium Web, Arial, sans-serif`;const tw=x.measureText(text).width+(logo?220:0);if(tw>960){fs*=960/tw;x.font=`900 ${fs}px "HRC F1", Titillium Web, Arial, sans-serif`;}
       const full=x.measureText(text).width+(logo?fs*1.25:0);let sx=512-full/2;
       if(logo){const cx=sx+fs*0.5,cy=128;x.fillStyle='#e8352b';
         for(let k=0;k<5;k++){const a=k/5*Math.PI*2-Math.PI/2;x.beginPath();x.ellipse(cx+Math.cos(a)*fs*0.22,cy+Math.sin(a)*fs*0.22,fs*0.2,fs*0.11,a,0,Math.PI*2);x.fill();}
@@ -1150,7 +1152,7 @@ function tyreGeo(R,w,rim,seg=24){const h=w/2,p=[[rim,-h],[R-.06,-h],[R-.018,-h+.
    T-camera on top (black for the team's first car, fluorescent yellow for the second), undercut sidepods with their
    letterbox inlets, mirrors, the venturi floor with its edge fences and diffuser, push/pull-rod wishbones, the rolled
    rear wing with its DRS flap, the beam wing below it, and the rain light (plus endplate LEDs). x is forward. */
-function numTex(n,acc){return canvasTex(256,64,(x)=>{x.font='900 54px Titillium Web, sans-serif';x.fillStyle=acc;x.textAlign='center';x.textBaseline='middle';x.fillText(String(n),128,34);});}
+function numTex(n,acc){return canvasTex(256,64,(x)=>{x.font='900 54px "HRC F1", Titillium Web, sans-serif';x.fillStyle=acc;x.textAlign='center';x.textBaseline='middle';x.fillText(String(n),128,34);});}
 // A car used to be ~65 separate meshes = ~65 draw calls, x20 cars, plus the same again for the shadow pass and the mirror.
 // On ANGLE/D3D11 draw calls are the expensive part, so every static part of a group is baked into one mesh per material.
 // `recolor` (optional Map: material → shared vertex-coloured material): parts whose materials differ only in colour
@@ -1193,10 +1195,10 @@ function setFar(car,far){if(car.isFar===far)return;car.isFar=far;car.far.visible
 const SENT_B=0xff0000,SENT_A=0x00ff00,SENT_C=0x0000ff;let carTpl=null;
 // shared textures: the steering-wheel display and the sponsor lettering on the chassis top
 const swScreenMat=new THREE.MeshBasicMaterial({map:canvasTex(160,96,(x)=>{x.fillStyle='#05070b';x.fillRect(0,0,160,96);
-  x.fillStyle='#1be26b';x.fillRect(8,8,144,6);x.font='900 46px Titillium Web, sans-serif';x.textAlign='center';x.fillStyle='#fff';x.fillText('8',80,62);
-  x.font='700 14px Titillium Web, sans-serif';x.fillStyle='#ffd200';x.fillText('DELTA +0.12',80,86);x.fillStyle='#8fd3ff';x.textAlign='left';x.fillText('BB 56',8,40);x.textAlign='right';x.fillText('ERS',152,40);})});
+  x.fillStyle='#1be26b';x.fillRect(8,8,144,6);x.font='900 46px "HRC F1", Titillium Web, sans-serif';x.textAlign='center';x.fillStyle='#fff';x.fillText('8',80,62);
+  x.font='700 14px "HRC F1", Titillium Web, sans-serif';x.fillStyle='#ffd200';x.fillText('DELTA +0.12',80,86);x.fillStyle='#8fd3ff';x.textAlign='left';x.fillText('BB 56',8,40);x.textAlign='right';x.fillText('ERS',152,40);})});
 const noseTxtMat=new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,map:canvasTex(512,128,(x)=>{x.clearRect(0,0,512,128);
-  x.font='900 76px Titillium Web, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='rgba(255,255,255,.92)';x.fillText('HANEUL',256,68);})});
+  x.font='900 76px "HRC F1", Titillium Web, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='rgba(255,255,255,.92)';x.fillText('HANEUL',256,68);})});
 function carTemplate(){if(carTpl)return carTpl;
   const car=buildCar(SENT_B,SENT_A,0),recol=new Map();
   car.root.traverse(o=>{if(!o.isMesh)return;if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();
@@ -1378,8 +1380,8 @@ function buildBoxMarker(team){
   const rim=new THREE.Mesh(new THREE.ConeGeometry(1.12,1.75,4).rotateX(Math.PI),new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,toneMapped:false}));arrow.add(rim);
   const tex=canvasTex(512,192,(x)=>{x.fillStyle='rgba(8,11,16,.88)';x.beginPath();x.roundRect(6,6,500,180,22);x.fill();
     x.lineWidth=10;x.strokeStyle=hex(t.c===0x1b1d21?t.a:t.c);x.stroke();
-    x.textAlign='center';x.textBaseline='middle';x.fillStyle='#ffd200';x.font='900 84px Titillium Web, sans-serif';x.fillText('YOUR BOX',256,82);
-    x.fillStyle='#fff';x.font='700 30px Titillium Web, sans-serif';x.fillText(t.name.toUpperCase(),256,150);});
+    x.textAlign='center';x.textBaseline='middle';x.fillStyle='#ffd200';x.font='900 84px "HRC F1", Titillium Web, sans-serif';x.fillText('YOUR BOX',256,82);
+    x.fillStyle='#fff';x.font='700 30px "HRC F1", Titillium Web, sans-serif';x.fillText(t.name.toUpperCase(),256,150);});
   const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true,toneMapped:false}));sign.scale.set(8.5,3.2,1);sign.position.y=9.2;g.add(sign);
   g.userData={fillM,lineM,arrow};scene.add(g);boxMarker=g;}
 function animBoxMarker(){if(!boxMarker)return;const u=boxMarker.userData,t=performance.now()/1000,p=0.5+0.5*Math.sin(t*4);
@@ -1550,7 +1552,7 @@ function ttCross(c){
       // quicker than the record (or the first lap on the board): FASTEST LAP; else a record-beating last sector
       const ref=tt.board[0];
       if(!ref||lt<ref.t-0.0005)fast('FASTEST LAP',lbFmt(lt));
-      else if(isFinite(ref.st[2])&&c.sec[2]<ref.st[2]-0.0005)secBanner(2,c.sec[2]);
+      else if(tt.sec3Fast)secBanner(2,c.sec[2]);
       msg(pb?'PERSONAL BEST':'LAP TIME',fmt(lt));ttSubmit(lt,c.sec.slice(),tt.path&&tt.path.length>=6?encodePath(tt.path):null);}}
   tt.path=[]; // record the line of the lap that starts now
   // the next lap starts at once
@@ -1655,11 +1657,11 @@ function updateTTInfo(){const c=player;
   const cur=lastLap?-1:tt.stage==='flying'?c.sec.findIndex(x=>x==null):-1;
   for(let k=0;k<3;k++){const e=el('lbS'+(k+1)),col=lastLap?fl.secs[k]:tt.stage==='flying'&&c.sec[k]!=null?c.secCol[k]:'';
     elTxt(e,k===cur||(lastLap&&k===2)?'SECTOR '+(k+1):'S'+(k+1));elCls(e,col||(k===cur?'now':''));}
-  // the board, broadcast style: logo block with the session, then place · team colour · SURNAME · time
+  // the board, broadcast style: logo block with the session, then place · team colour · FIRST LAST · time
   let h='<div class="f1-hd"><b>HRC</b><small>TIME TRIAL'+(tt.boardShared?'':' · LOCAL')+'</small></div>';
   const tcol=r=>{const t=TEAMS.find(x=>x.name===r.team);return t?hex(t.c):'#666';};
-  if(!b.length)h+='<div class="f1-row p1 nt"><span class="p">1</span><i style="background:'+hex(TEAMS[c.team].c)+'"></i><b>'+esc(surname(ttName||'YOU'))+'</b><span class="t">No Time</span></div>';
-  b.slice(0,10).forEach((r,k)=>{h+='<div class="f1-row'+(k===0?' p1':'')+(r.name===ttName?' me':'')+'" title="'+esc(r.name)+'"><span class="p">'+(k+1)+'</span><i style="background:'+tcol(r)+'"></i><b>'+esc(surname(r.name))+'</b><span class="t">'+r.time+'</span></div>';});
+  if(!b.length)h+='<div class="f1-row p1 nt"><span class="p">1</span><i style="background:'+hex(TEAMS[c.team].c)+'"></i><b>'+esc((ttName||'YOU').toUpperCase())+'</b><span class="t">No Time</span></div>';
+  b.slice(0,10).forEach((r,k)=>{h+='<div class="f1-row'+(k===0?' p1':'')+(r.name===ttName?' me':'')+'" title="'+esc(r.name)+'"><span class="p">'+(k+1)+'</span><i style="background:'+tcol(r)+'"></i><b>'+esc(r.name.toUpperCase())+'</b><span class="t">'+r.time+'</span></div>';});
   elHtml(el('rows'),h);renderMfd();}
 const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
@@ -1985,13 +1987,15 @@ function trackLimit(c){
 function sectorDone(c,k,t){const st=t-c.secStart;c.secStart=t;
   if(k===0){c.sec=[st,null,null];c.secCol=['','',''];}else c.sec[k]=st;
   c.secCol[k]=(bestSecAll[k]==null||st<bestSecAll[k])?'pu':(c.bestSec[k]==null||st<c.bestSec[k])?'gr':'ye';
-  // time trial, against the RECORD (the board's P1): the gap at this split flashes in the lap box, and a sector quicker
-  // than the record's gets the FASTEST SECTOR banner (sector 3 is announced with the lap, in ttCross)
+  // time trial: the gap to the RECORD (the board's P1) at this split flashes in the lap box; and as on the broadcast,
+  // a sector quicker than the fastest anyone on the board has done it (or, with no sector times on the board yet,
+  // the quickest of this session) gets the FASTEST SECTOR banner (sector 3 is announced with the lap, in ttCross)
   if(session==='tt'&&c.isPlayer){const ref=tt.board[0],rs=ref&&ref.st?ref.st[k]:NaN;if(k===0)tt.secDiff=[null,null,null];
     tt.secDiff[k]=isFinite(rs)?st-rs:null;
     if(k<2&&!c.lapInvalid&&tt.secDiff[k]!=null){const d=tt.secDiff.reduce((a,x)=>a+(x||0),0);
       tt.flash={txt:(d<0?'-':'+')+Math.abs(d).toFixed(3),cls:d<0?'ahead':'behind',until:simTime+4};}
-    if(k<2&&!c.lapInvalid&&isFinite(rs)&&st<rs-0.0005)secBanner(k,st);}
+    if(k<2&&!c.lapInvalid&&fastestSector(k,st))secBanner(k,st);
+    if(k===2)tt.sec3Fast=fastestSector(2,st);}
   if(c.bestSec[k]==null||st<c.bestSec[k])c.bestSec[k]=st;if(bestSecAll[k]==null||st<bestSecAll[k])bestSecAll[k]=st;}
 function lapCross(c){
   if(session==='tt'){if(c===player){c.fuel=12;ttCross(c);}return;}
@@ -2484,7 +2488,7 @@ function buildSCMesh(){
   const head=[0,1].map(k=>{const m=new THREE.MeshBasicMaterial({color:0xf4f8ff});const o=new THREE.Mesh(new THREE.BoxGeometry(.06,.07,.3),m);o.position.set(2.13,.6,(k?1:-1)*.62);o.rotation.y=(k?-1:1)*.35;root.add(o);return m;});
   const tail=new THREE.MeshBasicMaterial({color:0x7a0806});{const o=new THREE.Mesh(new THREE.BoxGeometry(.04,.05,1.5),tail);o.position.set(-2.4,.78,0);root.add(o);}
   // "SAFETY CAR" on both doors and across the tail
-  const txt=canvasTex(512,96,(x)=>{x.fillStyle='rgba(0,0,0,0)';x.fillRect(0,0,512,96);x.font='900 64px Titillium Web, sans-serif';x.textAlign='center';x.textBaseline='middle';
+  const txt=canvasTex(512,96,(x)=>{x.fillStyle='rgba(0,0,0,0)';x.fillRect(0,0,512,96);x.font='900 64px "HRC F1", Titillium Web, sans-serif';x.textAlign='center';x.textBaseline='middle';
     x.lineWidth=8;x.strokeStyle='#111';x.strokeText('SAFETY CAR',256,52);x.fillStyle='#ffd200';x.fillText('SAFETY CAR',256,52);});
   const tm=new THREE.MeshBasicMaterial({map:txt,transparent:true,depthWrite:false});
   for(const s of [-1,1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(1.25,.24),tm);p.position.set(-.15,.55,s*.975);if(s<0)p.rotation.y=Math.PI;g.add(p);}
@@ -2585,6 +2589,10 @@ function fast(t,time){$('fastT').textContent=t;$('fastTime').textContent=time;co
 // FASTEST SECTOR, broadcast style: purple tile (SECTOR n / time) and the driver in the team colour; after ~2.6 s the
 // driver and time fade, the tile becomes a bar with the title alone, then it wipes out from the left in pixel steps
 const surname=n=>String(n||'').trim().split(/\s+/).pop().toUpperCase();
+// is st the fastest sector k yet? Against the best of that sector on the board (any lap, as the broadcast's purple),
+// or — with no sector times there — against this session's best so far (call before bestSecAll takes st)
+function fastestSector(k,st){let best=Infinity;for(const r of tt.board)if(r.st&&isFinite(r.st[k]))best=Math.min(best,r.st[k]);
+  return isFinite(best)?st<best-0.0005:(bestSecAll[k]==null||st<bestSecAll[k]-0.0005);}
 let sbT=[];
 function secBanner(k,st){const b=$('secB');sbT.forEach(clearTimeout);b.className='';void b.offsetWidth;
   $('sbT').textContent='SECTOR '+(k+1);$('sbTime').textContent=st<60?st.toFixed(3):lbFmt(st);$('sbName').textContent=surname(ttName||'YOU');
@@ -2631,8 +2639,8 @@ function drawMinimap(dt){mmAcc+=dt;if(mmAcc<1/15)return;mmAcc=0;
       else if(msFlag[k]===2)run(k,blink?'#ffd200':'#ff9d00',8);
       else if(msFlag[k]===1)run(k,'#ffd200',6);
       else if(msGreen[k]>simTime)run(k,'#1be26b',5);}
-    if(sc&&scMesh&&scMesh.visible){const p=mmT(sc.x,sc.z);mctx.fillStyle='#111';mctx.fillRect(p[0]-6,p[1]-4.5,12,9);mctx.fillStyle='#ffd200';mctx.font='900 7px Titillium Web, sans-serif';mctx.textAlign='center';mctx.textBaseline='middle';mctx.fillText('SC',p[0],p[1]+.5);}
-    if(neutral){mctx.fillStyle='#ffd200';mctx.fillRect(8,8,scOn()?26:32,15);mctx.fillStyle='#111';mctx.font='900 11px Titillium Web, sans-serif';mctx.textAlign='left';mctx.textBaseline='middle';mctx.fillText(scOn()?'SC':'VSC',12,16);}}
+    if(sc&&scMesh&&scMesh.visible){const p=mmT(sc.x,sc.z);mctx.fillStyle='#111';mctx.fillRect(p[0]-6,p[1]-4.5,12,9);mctx.fillStyle='#ffd200';mctx.font='900 7px "HRC F1", Titillium Web, sans-serif';mctx.textAlign='center';mctx.textBaseline='middle';mctx.fillText('SC',p[0],p[1]+.5);}
+    if(neutral){mctx.fillStyle='#ffd200';mctx.fillRect(8,8,scOn()?26:32,15);mctx.fillStyle='#111';mctx.font='900 11px "HRC F1", Titillium Web, sans-serif';mctx.textAlign='left';mctx.textBaseline='middle';mctx.fillText(scOn()?'SC':'VSC',12,16);}}
   for(const c of cars){if(c===player||c.parked)continue;const p=mmT(c.x,c.z);mctx.fillStyle=c.hexCol||(c.hexCol=hex(c.col));mctx.beginPath();mctx.arc(p[0],p[1],3.4,0,7);mctx.fill();}
   const p=mmT(player.x,player.z),x=p[0],z=p[1];mctx.fillStyle='#fff';mctx.beginPath();mctx.arc(x,z,5.5,0,7);mctx.fill();mctx.fillStyle='#e10600';mctx.beginPath();mctx.arc(x,z,3.4,0,7);mctx.fill();}
 
@@ -2987,7 +2995,7 @@ let camMode=1;const CAM_MODES=["COCKPIT (1ST PERSON)","TV POD"]; // the TV POD i
 /* ---- pit banner: counts down the approach to the entry, then narrates the stop itself ---- */
 const pitHud=document.createElement('div');
 pitHud.style.cssText='position:fixed;left:50%;top:19%;transform:translateX(-50%);z-index:35;display:none;'+
- 'text-align:center;font:800 15px/1.55 Titillium Web,sans-serif;color:#fff;letter-spacing:.07em;'+
+ 'text-align:center;font:800 15px/1.55 "HRC F1",Titillium Web,sans-serif;color:#fff;letter-spacing:.07em;'+
  'background:rgba(8,11,16,.84);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:9px 20px;white-space:nowrap';
 document.body.appendChild(pitHud);
 function updatePitHud(){
@@ -3131,7 +3139,7 @@ const TVC=[];{const step=Math.round(200/DS);
     if(sp>PIT_A-60&&sp<PIT_D+60)side=-1; // never stand in the pit lane
     const off=side>0?WR[i]+2.2:-(WL[i]+2.2);TVC.push({i,x:X[i]-TZ[i]*off,z:Z[i]+TX[i]*off,y:8});}}
 const rpBadge=document.createElement('div');
-rpBadge.style.cssText='position:fixed;left:18px;top:16px;z-index:40;display:none;font:800 15px/1.4 Titillium Web,sans-serif;color:#fff;'+
+rpBadge.style.cssText='position:fixed;left:18px;top:16px;z-index:40;display:none;font:800 15px/1.4 "HRC F1",Titillium Web,sans-serif;color:#fff;'+
   'letter-spacing:.12em;background:rgba(8,11,16,.84);border-left:4px solid #e10600;border-radius:4px;padding:7px 14px';
 document.body.appendChild(rpBadge);
 function startReplay(){
@@ -3277,7 +3285,7 @@ function drawTrackMap(cv=$('trkMap'),hi=-1){
   const tick=(i,col,w,len)=>{const nx=-TZ[i],nz=TX[i],l=len*sc;g.strokeStyle=col;g.lineWidth=w;
     g.beginPath();g.moveTo(PX(i)+nx*l,PZ(i)+nz*l);g.lineTo(PX(i)-nx*l,PZ(i)-nz*l);g.stroke();};
   tick(S[1]%N,'#c9d3ea',3,17);tick(S[2]%N,'#c9d3ea',3,17);
-  g.font='700 14px Titillium Web,sans-serif';g.textAlign='center';g.textBaseline='middle';
+  g.font='700 14px "HRC F1",Titillium Web,sans-serif';g.textAlign='center';g.textBaseline='middle';
   for(let k=0;k<3;k++){const i=Math.round((S[k]+S[k+1])/2)%N,nx=-TZ[i],nz=TX[i];
     const lx=PX(i)+nx*34,lz=PZ(i)+nz*34;
     g.fillStyle='#0b1020';g.beginPath();g.arc(lx,lz,12,0,7);g.fill();
@@ -3314,7 +3322,7 @@ function buildIntroLines(){const g=new THREE.Group(),cols=[0xff2d48,0x2a9dff,0xf
     // the tag over the middle of the sector
     const cv=document.createElement('canvas');cv.width=256;cv.height=128;const x=cv.getContext('2d');
     x.fillStyle='rgba(8,11,18,.82)';x.beginPath();x.roundRect(8,8,240,112,22);x.fill();x.fillStyle='#'+cols[k].toString(16).padStart(6,'0');x.fillRect(8,8,16,112);
-    x.fillStyle='#fff';x.font='900 64px Titillium Web, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('S'+(k+1),136,66);
+    x.fillStyle='#fff';x.font='900 64px "HRC F1", Titillium Web, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('S'+(k+1),136,66);
     const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;
     const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,toneMapped:false,fog:false}));const im=Math.round((bounds[k]+bounds[k+1])/2/DS)%N;
     sp.position.set(X[im],ORB*0.09,Z[im]);sp.scale.set(ORB*0.16,ORB*0.08,1);sp.renderOrder=60;g.add(sp);
