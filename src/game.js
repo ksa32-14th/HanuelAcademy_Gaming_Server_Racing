@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261007t';
-import {perf} from './perf.js?v=20261007t';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261007t';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261007t';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261007t';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261007t';
-import {lbLoad,lbSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261007t';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008a';
+import {perf} from './perf.js?v=20261008a';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261008a';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008a';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008a';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261008a';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008a';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261007t';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008a';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261007t'):import('./data/osm-songdo.js?v=20261007t')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008a'):import('./data/osm-songdo.js?v=20261008a')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1534,10 +1534,10 @@ function finishQuali(t){
    The player alone on the circuit on fresh softs (no wear, no fuel worries, no damage), from a rolling start. Every
    lap from the line is timed; touching a wall or going beyond the track limits deletes that lap. Each valid lap is
    offered to the leaderboard (only a driver's best counts), under the real name entered before the session. */
-let ttName='',tt={stage:'out',laps:0,best:null,board:[],boardShared:false,boardT:-99,pbSplits:null,secDiff:[null,null,null],flash:null};
+let ttName='',tt={stage:'out',laps:0,best:null,board:[],boardShared:false,secBoard:[[],[],[]],boardT:-99,pbSplits:null,secDiff:[null,null,null],flash:null};
 try{ttName=localStorage.getItem('hrc-name')||'';}catch(e){}
 function startTT(){const c=player;
-  tt={stage:'out',laps:0,best:null,board:tt.board,boardShared:tt.boardShared,boardT:-99,pbSplits:null,secDiff:[null,null,null],flash:null};
+  tt={stage:'out',laps:0,best:null,board:tt.board,boardShared:tt.boardShared,secBoard:tt.secBoard,boardT:-99,pbSplits:null,secDiff:[null,null,null],flash:null};
   phase='quali';c.comp='S';c.used=new Set(['S']);c.nextComp='M';c.mesh.band.color.setHex(COMP.S.hex);
   c.wear=0;c.damage=0;c.dm=newDmg();c.fuel=12;c.tT=[90,90,90,90];c.bT=[400,400,400,400];c.held=false;c.lapInvalid=false;
   c.bestLap=null;c.lastLap=null;c.sec=[null,null,null];c.secCol=['','',''];c.bestSec=[null,null,null];
@@ -1572,14 +1572,20 @@ function ttCross(c){
 function ttInvalidate(why){const c=player;if(session!=='tt'||tt.stage!=='flying'||!c||c.lapInvalid)return;
   c.lapInvalid=true;c.invWhy=why;msg('LAP DELETED',why+' · THIS LAP WILL NOT COUNT');}
 async function ttSubmit(lt,sec,path){if(!ttName)return;
-  const r=await lbSubmit(TRACK_ID,{name:ttName,t:+lt.toFixed(3),sec,team:TEAMS[player.team].name,path,hz:GH_HZ});
+  const team=TEAMS[player.team].name,r=await lbSubmit(TRACK_ID,{name:ttName,t:+lt.toFixed(3),sec,team,path,hz:GH_HZ});
+  // every valid lap's sectors go to the sector records too (a lap outside the top 5 can still hold one)
+  const rs=await lbSecSubmit(TRACK_ID,{name:ttName,sec,team},tt.board);
   await refreshBoard(true);
   if(tt.flash&&tt.flash.secs&&r.rank)tt.flash.pos=r.rank;
   // the board keeps the top 5 laps: say where this one landed (or that it missed it)
   if(r.rank)msg('LEADERBOARD · P'+r.rank+(r.improved?' · NEW BEST':''),ttName+' · '+lbFmt(lt));
-  else msg('NOT IN THE TOP 5',ttName+' · '+lbFmt(lt));}
+  else msg('NOT IN THE TOP 5',ttName+' · '+lbFmt(lt));
+  // …then any sector records it set
+  const got=rs.ranks.map((p,k)=>p?'S'+(k+1)+' P'+p:'').filter(Boolean);
+  if(got.length)setTimeout(()=>msg('SECTOR RECORD · '+got.join(' · ')),2800);}
 async function refreshBoard(force){if(!force&&performance.now()/1000-tt.boardT<20)return;tt.boardT=performance.now()/1000;
-  const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;loadGhost();}
+  const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;loadGhost();
+  tt.secBoard=(await lbSecLoad(TRACK_ID,r.rows)).s;} // the sector records (top 3 of each sector)
 // lap progress for the delta to the personal best: time at each 1/64 of the lap
 function ttTrack(c){if(session!=='tt'||tt.stage!=='flying'||!c.cum)return;const k=Math.min(63,Math.floor(c.s/L*64));if(!c.cum[k])c.cum[k]=simTime-c.lapStart;
   // the driving line, GH_HZ samples a second (position and heading), stored with the lap if it makes the top 5
@@ -2615,6 +2621,7 @@ const surname=n=>String(n||'').trim().split(/\s+/).pop().toUpperCase();
 // AND this session's valid laps — a lap that never reached the board (outside the top 5, no name, submit still in
 // flight) still sets the bar (call before bestSecAll takes st)
 function fastestSector(k,st){let best=bestSecAll[k]??Infinity;for(const r of tt.board)if(r.st&&isFinite(r.st[k]))best=Math.min(best,r.st[k]);
+  const sr=tt.secBoard&&tt.secBoard[k]&&tt.secBoard[k][0];if(sr)best=Math.min(best,sr.t); // the sector record
   return st<best-0.0005;}
 // FASTEST SECTOR n / FASTEST LAP, as on the broadcast (time trial: quicker than the board). The purple bar with the
 // title builds in from the right in pixel steps, then folds to a tile with the time under the title while the driver's
@@ -3299,13 +3306,21 @@ $('pLeaderboard').onclick=()=>{document.activeElement.blur();openTTDialog(true);
 let ttFromPause=false;
 // the circuit's top 5 as table rows (lap, gap, the three sectors and the day it was set) into a <tbody>, with the
 // source note next to its heading — used by the lobby and the time trial dialog
-async function fillBoard(body,src){$(body).innerHTML='<tr><td colspan="8" style="color:var(--mute)">Loading…</td></tr>';
+async function fillBoard(body,src,sec){$(body).innerHTML='<tr><td colspan="8" style="color:var(--mute)">Loading…</td></tr>';
   const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;const lead=r.rows.length?r.rows[0].t:null;
   $(src).textContent=r.shared?'· ALL PLAYERS':lbShared?'· SERVER UNREACHABLE — THIS BROWSER ONLY':'· THIS BROWSER';
   const sc=s=>'<td class="num" style="color:var(--mute)">'+(s||'—')+'</td>';
   $(body).innerHTML=r.rows.length?r.rows.map((x,k)=>'<tr class="'+(x.name===ttName?'me':'')+'"><td class="num">'+(k+1)+'</td><td><b>'+esc(x.name)+'</b></td><td class="num">'+x.time+'</td><td class="num">'+(k?'+'+(x.t-lead).toFixed(3):'—')+'</td>'+sc(x.s1)+sc(x.s2)+sc(x.s3)+'<td class="num">'+esc(x.date||'—')+'</td></tr>').join('')
-    :'<tr><td colspan="8" style="color:var(--mute)">No times yet on this circuit — be the first.</td></tr>';}
-const renderBoardTable=()=>fillBoard('ttLb','ttLbSrc');
+    :'<tr><td colspan="8" style="color:var(--mute)">No times yet on this circuit — be the first.</td></tr>';
+  if(sec)fillSecBoard(sec,r.rows);}
+// the sector records: three small tables side by side (S1 / S2 / S3), top 3 each — place, driver, time, gap (the day it
+// was set on hover)
+async function fillSecBoard(id,lapRows){const box=$(id);
+  const s=(await lbSecLoad(TRACK_ID,lapRows)).s;tt.secBoard=s;
+  box.innerHTML=s.map((rows,k)=>'<table><colgroup><col style="width:18px"><col><col style="width:66px"><col style="width:58px"></colgroup><thead><tr><th colspan="4">SECTOR '+(k+1)+'</th></tr></thead><tbody>'+
+    (rows.length?rows.map((x,i)=>'<tr class="'+(x.name===ttName?'me':'')+'" title="'+esc(x.name+' · '+(x.date||''))+'"><td class="num">'+(i+1)+'</td><td><b>'+esc(x.name)+'</b></td><td class="num'+(i?'':' pu')+'">'+x.time+'</td><td class="num" style="color:var(--mute)">'+(i?'+'+(x.t-rows[0].t).toFixed(3):'')+'</td></tr>').join('')
+      :'<tr><td colspan="4" style="color:var(--mute)">No times yet</td></tr>')+'</tbody></table>').join('');}
+const renderBoardTable=()=>fillBoard('ttLb','ttLbSrc','ttSec');
 function openTTDialog(fromPause=false){ttFromPause=fromPause;$('ttTrk').textContent=TR.label;$('ttName').value=checkName(ttName).ok?checkName(ttName).name:'';
   $('ttName').classList.remove('bad');$('ttNameMsg').classList.remove('bad');
   $('ttNameMsg').textContent='리더보드에 표시됩니다. 영어 대문자로 이름과 성을 입력하세요 (예: GILDONG HONG).';
@@ -3485,8 +3500,8 @@ function buildLobby(){
 $('trkSub').textContent=TR.label+' · '+(TR.len/1000).toFixed(3)+' km';
 loadOpts();if(!LAP_CHOICES.includes(optLaps)&&optLaps!==TR.fullLaps)optLaps=5;buildLobby();
 // the lobby shows this circuit's time trial top 5 (reloaded whenever the lobby comes back)
-$('lobbyLbTrk').textContent=TR.label;fillBoard('lobbyLb','lobbyLbSrc');
-new MutationObserver(()=>{if(!$('menu').hidden)fillBoard('lobbyLb','lobbyLbSrc');}).observe($('menu'),{attributes:true,attributeFilter:['hidden']});
+$('lobbyLbTrk').textContent=TR.label;fillBoard('lobbyLb','lobbyLbSrc','lobbySec');
+new MutationObserver(()=>{if(!$('menu').hidden)fillBoard('lobbyLb','lobbyLbSrc','lobbySec');}).observe($('menu'),{attributes:true,attributeFilter:['hidden']});
 
 // every session opens with the circuit intro (skippable); the lobby can replay it on its own
 $('startBtn').onclick=()=>{document.activeElement.blur();audioInit();

@@ -6,6 +6,12 @@
         ".write": "newData.exists() && newData.numChildren() <= 5"
       }
     },
+    "sec3": {
+      "$track": {
+        ".read": true,
+        ".write": "newData.exists() && newData.child('s1').numChildren() <= 3 && newData.child('s2').numChildren() <= 3 && newData.child('s3').numChildren() <= 3"
+      }
+    },
     "ghost": {
       "$track": {
         ".read": true,

@@ -7,7 +7,7 @@
 // Records: {name, time, s1, s2, s3 (lap and sector times as 'm:ss:mmm', e.g. '1:32:456'), team,
 //           date ('YYYY-MM-DD', the day it was set), at (ms, when it was set)}. Rows handed to the game also carry
 //           t (the lap, s) and st ([s1, s2, s3] in s, NaN where missing).
-import {LB_URL} from './config.js?v=20261007t';
+import {LB_URL} from './config.js?v=20261008a';
 
 export const lbShared=!!LB_URL;
 const base=LB_URL.replace(/\/+$/,'');
@@ -77,6 +77,50 @@ export async function lbSubmit(track,lap){
       if(w.status!==412)throw new Error(w.status);} // 412: someone else's lap got in first — read again and merge
     throw new Error('busy');}
   catch(e){return {...result(loc),shared:false,error:String(e.message||e)};}}
+
+/* ---- sector records: the TOP 3 times of each sector per circuit, from every valid lap (a lap outside the top 5
+   can still hold a sector record). Shared at /sec3/<circuit> as {s1:[…], s2:[…], s3:[…]}, each record
+   {name, time ('m:ss:mmm'), team, date, at}, fastest first; a driver can hold several places, as on the lap board.
+   The sector times stored with the top-5 laps are folded in, so the board starts out with them. ---- */
+const SEC_TOP=3,SKEY='hrc-sec3-',SK=['s1','s2','s3'];
+const sUrl=track=>`${base}/sec3/${encodeURIComponent(track)}.json`;
+const secRec=r=>({name:r.name,time:r.time,team:r.team||'',date:r.date||'',at:r.at||0});
+// one sector's records, cleaned, de-duplicated (same driver, same lap) and cut to the top 3, with t (s) added
+const secRows=list=>{const seen=new Set();
+  return (Array.isArray(list)?list:Object.values(list||{})).filter(r=>r&&r.name&&typeof r.time==='string')
+    .map(r=>({...secRec(r),date:typeof r.date==='string'?r.date:r.at?dayOf(r.at):'',t:lbParse(r.time)}))
+    .filter(r=>isFinite(r.t)&&r.t>0).sort((a,b)=>a.t-b.t||a.at-b.at)
+    .filter(r=>{const k=r.name+'|'+r.at+'|'+r.time;if(seen.has(k))return false;seen.add(k);return true;}).slice(0,SEC_TOP);};
+const secMerge=(boards,extra=[])=>SK.map((k,i)=>secRows([].concat(...boards.map(b=>(b&&b[i])||[]),extra[i]||[])));
+// the sectors of the top-5 laps, as sector records
+const fromLaps=rows=>SK.map(k=>rows.filter(r=>r[k]).map(r=>({name:r.name,time:r[k],team:r.team,date:r.date,at:r.at})));
+const secObj=s=>Object.fromEntries(SK.map((k,i)=>[k,s[i].map(secRec)]));
+const secArr=o=>SK.map(k=>(o&&o[k])||[]);
+function secLocal(track){try{return secArr(JSON.parse(localStorage.getItem(SKEY+track)||'{}'));}catch(e){return [[],[],[]];}}
+function secLocalSave(track,s){try{localStorage.setItem(SKEY+track,JSON.stringify(secObj(s)));}catch(e){}}
+async function secGet(track){const r=await fetch(sUrl(track),{cache:'no-store',headers:{'X-Firebase-ETag':'true'}});
+  if(!r.ok)throw new Error(r.status);return {s:secArr(await r.json()),etag:r.headers.get('ETag')};}
+
+// the sector records for a circuit: [[S1 top 3], [S2 top 3], [S3 top 3]], each row {name, time, t, team, date, at}
+export async function lbSecLoad(track,lapRows=[]){const laps=fromLaps(lapRows),loc=secLocal(track);
+  if(!lbShared)return {s:secMerge([loc],laps),shared:false};
+  try{const {s}=await secGet(track);return {s:secMerge([s],laps),shared:true};}
+  catch(e){return {s:secMerge([loc],laps),shared:false,error:String(e.message||e)};}}
+
+// a valid lap's sectors {name, sec ([s1,s2,s3] in s), team}: each kept where it makes that sector's top 3.
+// Resolves to {ranks: [place in S1, S2, S3] (0 = outside the top 3), shared}.
+export async function lbSecSubmit(track,lap,lapRows=[]){const at=Date.now(),sec=lap.sec||[];
+  const add=SK.map((k,i)=>secStr(sec[i])?[{name:lap.name,time:secStr(sec[i]),team:lap.team||'',date:dayOf(at),at}]:[]);
+  const ranks=s=>s.map((rows,i)=>add[i].length?rows.findIndex(r=>r.at===at&&r.name===lap.name)+1:0);
+  const laps=fromLaps(lapRows),loc=secMerge([secLocal(track)],add);secLocalSave(track,loc);
+  if(!lbShared)return {ranks:ranks(loc),shared:false};
+  try{for(let k=0;k<4;k++){const {s,etag}=await secGet(track),next=secMerge([s,laps],add),rk=ranks(next);
+      if(!rk.some(x=>x>0))return {ranks:rk,shared:true}; // nothing to write
+      const w=await fetch(sUrl(track),{method:'PUT',headers:{'Content-Type':'application/json','if-match':etag},body:JSON.stringify(secObj(next))});
+      if(w.ok)return {ranks:rk,shared:true};
+      if(w.status!==412)throw new Error(w.status);} // someone else's lap got in first — read again and merge
+    throw new Error('busy');}
+  catch(e){return {ranks:ranks(loc),shared:false,error:String(e.message||e)};}}
 
 // the driver's real name in English capitals: first and last name, Latin letters (e.g. GILDONG HONG)
 export function checkName(raw){const n=(raw||'').trim().replace(/\s+/g,' ');

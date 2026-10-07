@@ -260,6 +260,15 @@ td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.05);white-space:now
 tr.me td{background:rgba(225,6,0,.18)}
 td .sw{display:inline-block;width:4px;height:12px;margin-right:6px;vertical-align:-1px}
 .pts{font-weight:700;color:var(--yellow)}
+/* the sector records: three small tables side by side (stacked on a narrow screen), the record time in purple */
+.secb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
+.secb table{table-layout:fixed}
+.secb th{color:var(--ink)}
+.secb td,.secb th{padding:5px 4px}
+.secb td:nth-child(4){text-align:right;padding-left:8px}
+.secb td b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.secb td.pu{color:var(--purple);font-weight:700}
+@media (max-width:760px){.secb{grid-template-columns:1fr}}
 @media (max-width:560px){#tower,#minimap,#timing{display:none} #keys{display:none} #info{width:calc(50% - 20px)} #dash{width:min(300px,70vw)} #mfd{width:calc(100% - 32px);bottom:150px}}
 @media (prefers-reduced-motion:reduce){#msg{transition:none}}
 /* loading screen */
