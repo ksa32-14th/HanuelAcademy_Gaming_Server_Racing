@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008c';
-import {perf} from './perf.js?v=20261008c';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261008c';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008c';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008c';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261008c';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008c';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008d';
+import {perf} from './perf.js?v=20261008d';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261008d';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008d';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008d';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261008d';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008d';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008c';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008d';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008c'):import('./data/osm-songdo.js?v=20261008c')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008d'):import('./data/osm-songdo.js?v=20261008d')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -2868,7 +2868,7 @@ function engineVoice(ac,dest,buf,vol,cyc){
   const ns=ac.createBufferSource();ns.buffer=buf;ns.loop=true;const ig=G(0),ibp=F('bandpass',500,1.4);ns.connect(ibp).connect(ig).connect(out);
   s1.start(0,Math.random()*0.3);s2.start(0,Math.random()*0.3);ns.start(0,Math.random()*1.5);
   let cutUntil=0,blipUntil=0;
-  return{out,
+  return{out,vol,
     cut(t){cutUntil=t+0.05;},blip(t){blipUntil=t+0.1;},
     set(rpm,thr,t,v){const ar=1500+clamp((rpm-4000)/8200,0,1.05)*7800+(t<blipUntil?900:0),rate=ar/ENG_R0;
       s1.playbackRate.setTargetAtTime(rate,t,.015);s2.playbackRate.setTargetAtTime(rate*1.003,t,.015);
@@ -2919,7 +2919,7 @@ function workletVoice(ac,dest,nbuf,vol){
   // induction roar above the driver's head, only under load
   const ns=ac.createBufferSource();ns.buffer=nbuf;ns.loop=true;const ig=G(0),ibp=F('bandpass',500,1.4);ns.connect(ibp).connect(ig).connect(out);ns.start(0,Math.random()*1.5);
   const rpmP=node.parameters.get('rpm'),loadP=node.parameters.get('load');let cutUntil=0,blipUntil=0;
-  return{out,node,cut(t){cutUntil=t+.05;},blip(t){blipUntil=t+.1;},
+  return{out,vol,node,cut(t){cutUntil=t+.05;},blip(t){blipUntil=t+.1;},
     set(rpm,thr,t,v){const ar=1500+clamp((rpm-4000)/8200,0,1.05)*7800+(t<blipUntil?900:0),th=t<blipUntil?1:thr;
       rpmP.setTargetAtTime(ar,t,.012);loadP.setTargetAtTime(t<cutUntil?.04:th,t,t<cutUntil?.004:.025);
       lp.frequency.setTargetAtTime(th>.05?1300+ar*.5*(.35+.65*th):600+ar*.05,t,.04);
@@ -2953,8 +2953,8 @@ function rpmOf(c){if(c.clutch)return RPM_IDLE+c.throttle*7500; // clutch in: the
   r=Math.max(r,RPM_IDLE+c.throttle*4000);
   if(c.spin>0)r=Math.min(12200,r+c.spin*800);
   return r;}
-function audioUpdate(rpm,g){if(!au)return;const t=au.ac.currentTime,c=player;
-  au.master.gain.setTargetAtTime(paused||muted||replay?0:.55,t,.05);
+function audioUpdate(rpm,g){if(!au||replay)return;const t=au.ac.currentTime,c=player; // (the replay has its own sound)
+  au.master.gain.setTargetAtTime(paused||muted?0:.55,t,.05);
   if(g>lastGear&&c.throttle>.3)au.me.cut(t);else if(g<lastGear){au.me.blip(t);crackle(t,rpm);}lastGear=g;
   // slamming the throttle shut at high revs: the exhaust crackles on the overrun
   if(lastThr>0.55&&c.throttle<0.12&&rpm>4200)crackle(t,rpm);lastThr=c.throttle;
@@ -3210,13 +3210,14 @@ function renderResults(){
    car has gone past. 0 again (or the end of the clip) returns to the live race exactly where it was. */
 // snapshots are taken on the physics clock (every 2nd 120 Hz step = exactly 60 Hz), NOT on the display
 // clock: frame-timed snapshots were unevenly spaced, and playing them back as if evenly spaced made the cars stutter
-const REC_HZ=60,REC_N=20*REC_HZ,REC_F=8;
+const REC_HZ=60,REC_N=20*REC_HZ,REC_F=10; // x z yaw v steer brake drs pit, rpm throttle (for the replay's sound)
 let recBuf=null,recHead=0,recLen=0,recStep=0,replay=null;
 function recReset(){recBuf=new Float32Array(REC_N*cars.length*REC_F);recHead=0;recLen=0;recStep=0;}
 function recFrame(){if(!recBuf||recBuf.length!==REC_N*cars.length*REC_F)recReset();
   const o=recHead*cars.length*REC_F;
   cars.forEach((c,k)=>{const p=o+k*REC_F;recBuf[p]=c.x;recBuf[p+1]=c.z;recBuf[p+2]=c.yaw;recBuf[p+3]=c.v;
-    recBuf[p+4]=c.delta||0;recBuf[p+5]=c.brake||0;recBuf[p+6]=c.drsOpen?1:0;recBuf[p+7]=c.pitStop>0?1:0;});
+    recBuf[p+4]=c.delta||0;recBuf[p+5]=c.brake||0;recBuf[p+6]=c.drsOpen?1:0;recBuf[p+7]=c.pitStop>0?1:0;
+    recBuf[p+8]=c.parked?0:c.held?4000+c.throttle*7500:rpmOf(c);recBuf[p+9]=c.throttle||0;});
   recHead=(recHead+1)%REC_N;recLen=Math.min(REC_N,recLen+1);}
 // broadcast camera positions: every ~200 m, on the outside of the bend, 2 m behind the fence, 8 m up
 const TVC=[];{const step=Math.round(200/DS);
@@ -3235,11 +3236,22 @@ function startReplay(){
   for(let k=0;k<n;k++){const src=((recHead-n+k)%REC_N+REC_N)%REC_N;clip.set(recBuf.subarray(src*fs,src*fs+fs),k*fs);}
   replay={clip,n,t:0,cam:null,look:null,wasPaused:paused};paused=true;
   rlMesh.visible=false;elSty(pitHud,'display','none');for(const g of crews)g.visible=false;
-  $('mirror').style.visibility='hidden';rpBadge.style.display='block';
-  if(au)au.master.gain.setTargetAtTime(0,au.ac.currentTime,.05);}
+  $('mirror').style.visibility='hidden';rpBadge.style.display='block';}
 function endReplay(){if(!replay)return;paused=replay.wasPaused;replay=null;rpBadge.style.display='none';$('mirror').style.visibility='';
+  if(au)au.me.out.gain.setTargetAtTime(au.me.vol,au.ac.currentTime,.05); // the cockpit engine back at its own level
   for(const c of cars){c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;} // back to the live positions without a smear
   camYaw=null;}
+// the replay's sound, heard from the trackside camera: the player's engine and the nearest other car's, each quieter
+// with distance and pitched by its Doppler shift as it passes (closing in = higher); no tyre / wind / kerb noise
+function replayAudio(C){if(!au)return;const t=au.ac.currentTime;
+  au.master.gain.setTargetAtTime(muted?0:.55,t,.05);
+  const hear=c=>{const r=c._rp;if(!r)return null;const dx=r.x-C.x,dz=r.z-C.z,d=Math.max(1,Math.hypot(dx,dz,C.y));
+    const vr=(Math.cos(r.yaw)*r.v*dx+Math.sin(r.yaw)*r.v*dz)/d; // away from the camera > 0
+    return {rpm:r.rpm*clamp(343/(343+vr),0.7,1.4),thr:r.thr,vol:clamp(14/d,0,1),d};};
+  const me=hear(player);if(me)au.me.set(me.rpm,me.thr,t,me.vol*0.42);
+  let o=null;for(const c of cars){if(c===player||c.parked)continue;const h=hear(c);if(h&&(!o||h.d<o.d))o=h;}
+  if(o)au.opp.set(o.rpm,o.thr,t,o.vol*0.3);else au.opp.set(4000,0,t,0);
+  for(const g of [au.sq.gain,au.wn.gain,au.scrape.g.gain,au.kerb.g.gain])g.setTargetAtTime(0,t,.05);}
 function replayFrame(dt){
   const R=replay;R.t+=dt;const dur=(R.n-1)/REC_HZ;if(R.t>=dur){endReplay();return;}
   const f=R.t*REC_HZ,i0=Math.floor(f),a=f-i0,fs=cars.length*REC_F,A=i0*fs,B=Math.min(R.n-1,i0+1)*fs,cl=R.clip;
@@ -3250,13 +3262,14 @@ function replayFrame(dt){
     m.root.position.set(x,CAR_Y+(cl[A+p+7]?.13:0),z);if(m.contact)m.contact.visible=!cl[A+p+7];m.root.rotation.y=-yaw;m.body.rotation.set(0,0,0);
     for(const w of m.wheels)w.rotation.z-=v*dt/(0.36*WHEEL_S);for(const s of m.steer)s.rotation.y=-cl[A+p+4]*1.4;
     m.flap.rotation.z=cl[A+p+6]?-.04:-.45;m.tail.color.setHex(cl[A+p+5]>.1?0xff1010:0x4a0000);
+    c._rp={x,z,yaw,v,rpm:cl[A+p+8]+(cl[B+p+8]-cl[A+p+8])*a,thr:cl[A+p+9]}; // for the replay's sound
     if(c===player){R.fx=x;R.fz=z;R.fyaw=yaw;R.fv=v;}});
   // which broadcast camera: stay on one until the car is ~60 m past it, then cut to the next one ahead
   const pi=idxNear(R.fx,R.fz,R.pi);R.pi=pi;
   const ahead=c=>((c.i-pi)%N+N)%N;
   if(R.cam==null||ahead(TVC[R.cam])>N/2&&N-ahead(TVC[R.cam])>30){
     let best=0,bd=1e9;TVC.forEach((c,k)=>{const d=ahead(c);if(d>=25&&d<bd){bd=d;best=k;}});R.cam=best;R.look=null;}
-  const C=TVC[R.cam];camera.position.set(C.x,C.y,C.z);
+  const C=TVC[R.cam];camera.position.set(C.x,C.y,C.z);replayAudio(C);
   const tx=R.fx+Math.cos(R.fyaw)*R.fv*0.08,tz=R.fz+Math.sin(R.fyaw)*R.fv*0.08;
   if(!R.look)R.look=new THREE.Vector3(tx,0.8,tz);else R.look.lerp(_v1.set(tx,0.8,tz),1-Math.exp(-dt/0.09));
   camera.up.set(0,1,0);camera.lookAt(R.look);
