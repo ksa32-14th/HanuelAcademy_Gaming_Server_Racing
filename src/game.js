@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008d';
-import {perf} from './perf.js?v=20261008d';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261008d';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008d';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008d';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261008d';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008d';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008h';
+import {perf} from './perf.js?v=20261008h';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261008h';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008h';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008h';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261008h';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008h';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008d';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008h';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008d'):import('./data/osm-songdo.js?v=20261008d')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008h'):import('./data/osm-songdo.js?v=20261008h')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -2403,7 +2403,11 @@ function scCap(c){if(c.pitSide||c.dnf)return 1e9;
   // no delta time: every car runs at a brisk ~80 % of racing pace until it has caught the car in front, then sits
   // ~12 m behind it — so the field closes up into a Safety Car train (the leader ~22 m behind the SC)
   let cap=VP[c.idx]*0.8;
-  if(sc.phase!=='exit'){const g=fwd(c.s,sc.s),gg=g<0?g+L:g;if(scLeader()===c||gg<60)cap=Math.min(cap,sc.v+clamp((gg-22)*0.4,-sc.v,15));}
+  // catching the SC: a braking curve to arrive ~22 m behind it at its speed (5 m/s²) — far back the car is free to
+  // close at the caution pace (a flat "SC speed + 15 m/s" cap held the leader to ~115 km/h for a whole lap behind a
+  // crawling SC); inside 22 m it drops back
+  if(sc.phase!=='exit'){const g=fwd(c.s,sc.s),gg=g<0?g+L:g;
+    if(scLeader()===c||gg<60)cap=Math.min(cap,gg>22?Math.sqrt(sc.v*sc.v+2*5*(gg-22)):sc.v+clamp((gg-22)*0.4,-sc.v,0));}
   const ah=carAhead(c);if(ah)cap=Math.min(cap,ah.o.v+clamp((ah.gap-12)*0.5,-ah.o.v,15));
   return Math.max(cap,0);}
 function updateSafetyCar(dt){
@@ -2432,12 +2436,11 @@ function updateSafetyCar(dt){
     for(let j=0;j<60;j+=2){const k=(i+j)%N;vt=Math.min(vt,Math.sqrt(Math.min(VP[k]*0.62,55)**2+2*6*j*DS));}
     if(sp>PIT_B&&sp<PIT_C)vt=Math.min(vt,sc.phase==='pit'&&sp>PIT_L?PIT_LIMIT:24);
     if(sc.phase==='pit'){const left=SC_PARK-sp;vt=Math.min(vt,left>0.4?Math.max(1.2,Math.sqrt(2*3.2*left)):0);}
-    // race control sends it out so that it joins just ahead of the leader (the field runs to the delta meanwhile; at
-    // most a lap's wait), and the pit-exit light holds it while a car is about to stream past the merge
-    if(sc.phase==='exit'&&sp<PIT_C){const mS=((PIT_D%L)+L)%L,dl=lead?((mS-lead.s)%L+L)%L:0;
-      // released when the leader is a few seconds further from the merge than the SC's own run down the lane
-      const tSC=Math.max(0,PIT_D-sp)/20+4,tL=lead?dl/Math.max(lead.v,20):0;
-      if(!sc.released&&(!lead||(tL>tSC+1.5&&tL<tSC+14)||simTime-sc.t0>150))sc.released=true;
+    // race control sends it out at once — it no longer waits in the lane for the leader to come round (that cost up to a
+    // whole lap under caution before anyone met it): out on track it slows right down until the leader has caught it,
+    // and any car between them is waved by. Only the pit-exit light holds it while a car is about to stream past the merge
+    if(sc.phase==='exit'&&sp<PIT_C){const mS=((PIT_D%L)+L)%L;
+      sc.released=true;
       // the merge is decided once, while it is still parked: wait (max 6 s) for a gap, then go and never stop again —
       // re-checking on the move made it lurch stop-go-stop as each car streamed past the exit
       if(sc.released&&!sc.go){const busy=cars.some(c=>!c.dnf&&!c.parked&&!c.pitSide&&((mS-c.s+L)%L)<160);
@@ -2450,7 +2453,10 @@ function updateSafetyCar(dt){
     // car surge back and forth whenever the gap hovered around the threshold)
     const gl=lead?((fwd(lead.s,sc.s)%L)+L)%L:0;
     sc.wf=(sc.wf??1)+((sc.wave?0.85:1)-(sc.wf??1))*Math.min(1,dt/1.5);
-    vt*=(1-0.25*smooth((gl-120)/200)-0.15*smooth((gl-600)/400))*sc.wf;
+    // (released straight away, it can join far ahead of the leader: until the leader is within ~300 m it crawls at
+    // ~a quarter of its pace, then builds back up as the leader closes in — so the leader is on its tail early in the
+    // very next lap)
+    vt*=(1-0.75*smooth((gl-80)/250))*sc.wf;
     if(sc.phase==='in'&&((PIT_A-sp+L)%L)<200)vt=Math.min(vt,Math.max(22,Math.sqrt(22*22+2*6*((PIT_A-sp+L)%L))));}
   const aT=clamp((vt-sc.v)*0.9,-9,4.5);sc.a+=clamp(aT-sc.a,-10*dt,10*dt);sc.v=Math.max(0,sc.v+sc.a*dt);if(sc.v===0&&sc.a<0)sc.a=0;
   const ps=sc.s;sc.s=((sc.s+sc.v*dt)%L+L)%L;sc.inDist+=sc.v*dt;
