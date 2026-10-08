@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261008i';
-import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261008i';
+import {clamp,wrapA,smooth} from './util.js?v=20261008s';
+import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261008s';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -70,10 +70,15 @@ if(TR.pitEntry){PIT_A=spI(idxOf(...TR.pitEntry));PIT_B=PIT_A+(TR.pitRamp||200);P
   if(TR.pitLimit!=null)PIT_L=PIT_A+TR.pitLimit;}
 // …and the exit (`pitExit`: where the lane starts to bend back, `pitExitLen`: how long the merge is)
 if(TR.pitExit){PIT_C=spI(idxOf(...TR.pitExit));PIT_D=PIT_C+(TR.pitExitLen||80);}
-export function pitOffSp(sp){if(sp<PIT_A||sp>PIT_D)return null;if(sp<PIT_B)return PIT_OFF*smooth((sp-PIT_A)/(PIT_B-PIT_A));if(sp>PIT_C)return PIT_OFF*(1-smooth((sp-PIT_C)/(PIT_D-PIT_C)));return PIT_OFF;}
+// PS: the side of the circuit the pit lane is on, as a sign on the lateral offset (+1 right, the default; -1 left,
+// `pitLeft` — Seoul, where the paddock is Gwanghwamun Square on the left of the clockwise main straight). Every pit
+// offset (pitOffSp, PIT_OFF + BOX_D, the pit wall at PITWALL, …) is a distance from the centre line; PS turns it into
+// a signed lateral position.
+export const PS=TR.pitLeft?-1:1;
+export function pitOffSp(sp){if(sp<PIT_A||sp>PIT_D)return null;if(sp<PIT_B)return PS*PIT_OFF*smooth((sp-PIT_A)/(PIT_B-PIT_A));if(sp>PIT_C)return PS*PIT_OFF*(1-smooth((sp-PIT_C)/(PIT_D-PIT_C)));return PS*PIT_OFF;}
 // the pit wall (between the track and the lane) starts as soon as the peeling-off lane has cleared it, not only where
 // the lane is fully out (PIT_B) — so on a short entry ramp it already stands before the corner the lane takes
-export const PIT_W=(()=>{for(let sp=PIT_A;sp<PIT_B;sp++)if(pitOffSp(sp)-PIT_HW>=PITWALL+0.6)return sp;return PIT_B;})();
+export const PIT_W=(()=>{for(let sp=PIT_A;sp<PIT_B;sp++)if(Math.abs(pitOffSp(sp))-PIT_HW>=PITWALL+0.6)return sp;return PIT_B;})();
 // the start line: `gridAhead` m past the timing line (as on circuits whose start and finish lines differ) — the grid
 // forms up behind it. The timing line, laps, sectors and the leaderboard all stay on the finish line (s = 0).
 export const GRID_S=TR.gridAhead||0;
@@ -85,15 +90,19 @@ for(const [a,b,w] of TR.narrow||[]){const ia=idxOf(...a),ib=idxOf(...b);
   for(let k=0;k<N;k++){const i=(ia+k)%N;HWa[i]=w/2;if(i===ib)break;}}
 for(let p=0;p<26;p++){const c=HWa.slice();for(let i=0;i<N;i++)HWa[i]=(c[(i-1+N)%N]+2*c[i]+c[(i+1)%N])*0.25;}
 export const HWmin=Math.min(...HWa);
-// wall offsets (street circuit: concrete walls close to the track)
+// wall offsets (street circuit: concrete walls close to the track). `wallGap`: run-off between the track edge and the
+// wall (3 m by default; less where the circuit squeezes through narrow city streets)
+export const WALL_GAP=TR.wallGap??3.0;
 export const WL=new Float32Array(N),WR=new Float32Array(N),KB=new Uint8Array(N);
-for(let i=0;i<N;i++){const k=K[i],ak=Math.abs(k),base=HWa[i]+3.0,extra=ak>1/90?3.5:0;
+for(let i=0;i<N;i++){const k=K[i],ak=Math.abs(k),base=HWa[i]+WALL_GAP,extra=ak>1/90?(TR.cornerGap??3.5):0;
   let wl=base+(k>0?extra:0),wr=base+(k<0?extra:0);
   if(ak>1e-4){const cap=0.7/ak;if(k>0)wr=Math.min(wr,cap);else wl=Math.min(wl,cap);}
   WL[i]=Math.max(HWa[i]+1.6,wl);WR[i]=Math.max(HWa[i]+1.6,wr);}
 for(let pass=0;pass<4;pass++){for(const A of [WL,WR]){const c=A.slice();for(let i=0;i<N;i++){let s=0;for(let j=-4;j<=4;j++)s+=c[(i+j+N)%N];A[i]=s/9;}}}
 // outer wall follows the pit lane; a little more room where the entry road is still bending away
-for(let i=0;i<N;i++){const sp=spI(i),p=pitOffSp(sp);if(p!=null)WR[i]=Math.max(WR[i],p+PIT_HW+(sp<PIT_B?3.2:1.8));}
+// (WP / TLP: the wall and the track limit on the pit side)
+export const WP=PS>0?WR:WL;
+for(let i=0;i<N;i++){const sp=spI(i),p=pitOffSp(sp);if(p!=null)WP[i]=Math.max(WP[i],Math.abs(p)+PIT_HW+(sp<PIT_B?3.2:1.8));}
 {const raw=new Uint8Array(N);for(let i=0;i<N;i++)raw[i]=Math.abs(K[i])>1/140?1:0;
  for(let i=0;i<N;i++){for(let j=-6;j<=6;j++)if(raw[(i+j+N)%N]){KB[i]=1;break;}}}
 // the track limits (white line) per side, left TLL / right TLR, as an offset from the centre line. With a kerb it is the
@@ -110,11 +119,12 @@ export const TLL=new Float32Array(N),TLR=new Float32Array(N);
  // samples to the nearest kerb (or short gap), both ways round the lap
  for(let pass=0;pass<2;pass++)for(let k=0;k<2*N;k++){const i=k%N,p=(i-1+N)%N;dist[i]=KX[i]?0:Math.min(dist[i],dist[p]+1);}
  for(let pass=0;pass<2;pass++)for(let k=2*N-1;k>=0;k--){const i=k%N,q=(i+1)%N;dist[i]=KX[i]?0:Math.min(dist[i],dist[q]+1);}
- for(let i=0;i<N;i++){const f=smooth(Math.min(1,dist[i]/R)),hw=HWa[i];
-   TLL[i]=hw+f*Math.max(0,WL[i]-EDGE_GAP-hw);
-   TLR[i]=pitOffSp(spI(i))!=null?hw:hw+f*Math.max(0,WR[i]-EDGE_GAP-hw);}
- // the pit entry / exit ends: ease the right edge back in rather than stepping
- for(let pass=0;pass<6;pass++){const c=TLR.slice();for(let i=0;i<N;i++)TLR[i]=Math.max(HWa[i],Math.min(c[i],(c[(i-1+N)%N]+2*c[i]+c[(i+1)%N])*0.25));}}
+ for(let i=0;i<N;i++){const f=smooth(Math.min(1,dist[i]/R)),hw=HWa[i],pit=pitOffSp(spI(i))!=null;
+   TLL[i]=pit&&PS<0?hw:hw+f*Math.max(0,WL[i]-EDGE_GAP-hw);
+   TLR[i]=pit&&PS>0?hw:hw+f*Math.max(0,WR[i]-EDGE_GAP-hw);}
+ // the pit entry / exit ends: ease the pit-side edge back in rather than stepping
+ const TLP=PS>0?TLR:TLL;
+ for(let pass=0;pass<6;pass++){const c=TLP.slice();for(let i=0;i<N;i++)TLP[i]=Math.max(HWa[i],Math.min(c[i],(c[(i-1+N)%N]+2*c[i]+c[(i+1)%N])*0.25));}}
 
 // DRS zones (detection / activation start / end), sectors, pit boxes
 // auto DRS: the three longest near-straight runs (≥300 m); activation starts 40 m after the

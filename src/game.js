@@ -6,22 +6,24 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008i';
-import {perf} from './perf.js?v=20261008i';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261008i';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008i';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008i';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261008i';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008i';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008s';
+import {perf} from './perf.js?v=20261008s';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261008s';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008s';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008s';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261008s';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008s';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008i';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008s';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick} from './scenery-seoul.js?v=20261008s';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008i'):import('./data/osm-songdo.js?v=20261008i')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008s'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261008s'):import('./data/osm-songdo.js?v=20261008s')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
+const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
 
 /* ================= RENDERER / SCENE / QUALITY ================= */
 const qState={mode:loadMode()};
@@ -223,7 +225,12 @@ async function buildWorld(){
     for(let i=0;i<9000;i++){const v=100+Math.random()*80|0;x.fillStyle=`rgba(${v},${v},${v},.4)`;x.fillRect(Math.random()*512,Math.random()*512,2,2);}
     x.strokeStyle='rgba(60,62,66,.35)';x.lineWidth=2;for(let k=0;k<=512;k+=64){x.beginPath();x.moveTo(k,0);x.lineTo(k,512);x.stroke();x.beginPath();x.moveTo(0,k);x.lineTo(512,k);x.stroke();}},true);
   const GS=DAY?16000:9000;groundTex.repeat.set(GS/64,GS/64);
-  const ground=new THREE.Mesh(new THREE.PlaneGeometry(GS,GS).rotateX(-Math.PI/2),mat({color:DAY?0x7a7c80:DUSK?0x5a5660:0x3c3e46,map:groundTex,roughness:1}));ground.position.y=-0.6;ground.receiveShadow=true;groundLayer(ground);scene.add(ground);
+  // Seoul: the floor has an opening where the Cheonggyecheon channel drops below the street (scenery-seoul.js)
+  let groundGeo=new THREE.PlaneGeometry(GS,GS).rotateX(-Math.PI/2);
+  if(OSM&&OSM.cg&&OSM.cg.length){const s=new THREE.Shape([[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>new THREE.Vector2(a*GS/2,b*GS/2))),h=[];
+    for(let k=0;k<OSM.cg.length;k+=2)h.push(new THREE.Vector2(OSM.cg[k]*SC,OSM.cg[k+1]*SC));s.holes.push(new THREE.Path(h));
+    groundGeo=new THREE.ShapeGeometry(s).rotateX(-Math.PI/2);const uv=groundGeo.attributes.uv;for(let k=0;k<uv.count;k++)uv.setXY(k,uv.getX(k)/64,uv.getY(k)/64);groundTex.repeat.set(1,1);}
+  const ground=new THREE.Mesh(groundGeo,mat({color:DAY?0x7a7c80:DUSK?0x5a5660:0x3c3e46,map:groundTex,roughness:1}));ground.position.y=-0.6;ground.receiveShadow=true;groundLayer(ground);scene.add(ground);
   const matWater=mat({color:DAY?0x2a5d80:0x071226,metalness:DAY?.35:.8,roughness:DAY?.22:.18});
   const addWater=shape=>{const w=new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI/2),matWater);w.position.y=-0.03;scene.add(w);};
   if(TR.water)addWater(new THREE.Shape(TR.water.map(p=>new THREE.Vector2(p[0]*SC,p[1]*SC))));
@@ -238,7 +245,8 @@ async function buildWorld(){
   strip(0,N+1,i=>RL[i]-1.3,i=>RL[i]+1.3,0.025,0.025,matRubber,20,false); // rubbered-in racing line
   strip(0,N+1,i=>-elI(i)-0.05,i=>-elI(i)+0.15,0.03,0.03,matLine);
   strip(0,N+1,i=>erI(i)-0.15,i=>erI(i)+0.05,0.03,0.03,matLine);
-  const pl=idxSp(PIT_B-30);strip(pl,rangeN(PIT_B-30,PIT_C+35),i=>pitOffSp(spI(i))-PIT_HW,i=>pitOffSp(spI(i))-PIT_HW+0.15,0.03,0.03,matLine);
+  {const pin=sp=>pitOffSp(sp)-PS*PIT_HW,pl=idxSp(PIT_B-30); // the lane's edge line on the pit-wall side
+   strip(pl,rangeN(PIT_B-30,PIT_C+35),i=>Math.min(pin(spI(i)),pin(spI(i))+PS*0.15),i=>Math.max(pin(spI(i)),pin(spI(i))+PS*0.15),0.03,0.03,matLine);}
   await stage("Kerbs & barriers…",.1);
   // kerbs: raised, sloped profile with a vertical outer lip
   const runs=[];let on=false,st=0;for(let k=0;k<N;k++){if(KB[k]&&!on){on=true;st=k;}else if(!KB[k]&&on){on=false;runs.push([st,k-st+1]);}}if(on)runs.push([st,N-st+1]);
@@ -253,8 +261,8 @@ async function buildWorld(){
     const fo=i=>off(i)+side*0.22;
     strip(i0,n,fo,fo,1.05,4.4,matFence,3,false);strip(i0,n,fo,fo,4.3,4.4,matRail,8,false);strip(i0,n,fo,fo,2.7,2.76,matRail,8,false);};
   barrier(0,N+1,i=>-WL[i],-1,false);barrier(0,N+1,i=>WR[i],1,true);
-  const pw=idxSp(PIT_W);barrier(pw,rangeN(PIT_W,PIT_C),()=>PITWALL,1,true); // the pit wall, from where the lane has cleared it
-  {const ps=[];for(let i=0;i<N;i+=2){ps.push([i,-WL[i]-.22],[i,WR[i]+.22]);}for(let k=0;k<rangeN(PIT_W,PIT_C);k+=2)ps.push([(pw+k)%N,PITWALL+.22]);
+  const pw=idxSp(PIT_W);barrier(pw,rangeN(PIT_W,PIT_C),()=>PS*PITWALL,PS,PS>0); // the pit wall, from where the lane has cleared it
+  {const ps=[];for(let i=0;i<N;i+=2){ps.push([i,-WL[i]-.22],[i,WR[i]+.22]);}for(let k=0;k<rangeN(PIT_W,PIT_C);k+=2)ps.push([(pw+k)%N,PS*(PITWALL+.22)]);
    const posts=new THREE.InstancedMesh(new THREE.CylinderGeometry(.045,.045,3.35,6),matRail,ps.length);const m4=new THREE.Matrix4();
    ps.forEach(([i,o],k)=>{m4.makeTranslation(X[i]-TZ[i]*o,2.72,Z[i]+TX[i]*o);posts.setMatrixAt(k,m4);});addTiledT(520,450,posts);}
   // start/finish, grid slots, DRS lines
@@ -267,32 +275,32 @@ async function buildWorld(){
   // ---- pit entry: marked only in paint — the entry road itself is red. It starts as a thin red line
   // at the right-hand edge of the circuit and widens to fill the whole lane as it peels away ----
   {const red=mat({color:0xc8102e,roughness:.6,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-8});
-   const A0=PIT_A-30,E=PIT_B+20,lIn=sp=>{const p=pitOffSp(sp);return p!=null?Math.max(p-PIT_HW,HW-2.4):HW-2.4;};
-   const lOut=sp=>{const p=pitOffSp(sp);return Math.max(p!=null?p+PIT_HW:0,lIn(sp)+0.45);};
-   strip(idxSp(A0),rangeN(A0,E),i=>lIn(spI(i)),i=>lOut(spI(i)),0.035,0.035,red,1,false);
+   const A0=PIT_A-30,E=PIT_B+20,lIn=sp=>{const p=pitOffSp(sp);return p!=null?Math.max(Math.abs(p)-PIT_HW,HW-2.4):HW-2.4;};
+   const lOut=sp=>{const p=pitOffSp(sp);return Math.max(p!=null?Math.abs(p)+PIT_HW:0,lIn(sp)+0.45);};
+   strip(idxSp(A0),rangeN(A0,E),i=>PS>0?lIn(spI(i)):-lOut(spI(i)),i=>PS>0?lOut(spI(i)):-lIn(spI(i)),0.035,0.035,red,1,false);
    // the speed-limit line across the lane, where the limiter actually cuts in
    const chev=mat({color:0xffffff,roughness:.55,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-8});
-   flatAt(idxSp(PIT_L),pitOffSp(PIT_L)??PIT_OFF,0.7,PIT_HW*2,0.04,chev);
+   flatAt(idxSp(PIT_L),pitOffSp(PIT_L)??PS*PIT_OFF,0.7,PIT_HW*2,0.04,chev);
   }
   await stage("Pit lane & stands…",.15);
   // pit boxes, garages
   // the garage block spans the boxes (with the standard 40 m boxes that is the usual 440 m building centred 25 m before the line)
   const std=BOX_GAP===40,gLen=std?440:BOX_GAP*TEAMS.length+4,gMid=std?-25:(BOX_S[0]+BOX_S[TEAMS.length-1])/2;
-  const garage=new THREE.Group();const gi=idxSp(gMid);garage.position.set(X[gi]-TZ[gi]*(PIT_OFF+PIT_HW+7),0,Z[gi]+TX[gi]*(PIT_OFF+PIT_HW+7));garage.rotation.y=-ANG[gi];scene.add(garage);
+  const garage=new THREE.Group();const gi=idxSp(gMid);garage.position.set(X[gi]-TZ[gi]*PS*(PIT_OFF+PIT_HW+7),0,Z[gi]+TX[gi]*PS*(PIT_OFF+PIT_HW+7));garage.rotation.y=-ANG[gi];scene.add(garage);
   const gb=new THREE.Mesh(new THREE.BoxGeometry(gLen,9,8),mat({color:DAY?0x3a404c:0x2b2f3a,roughness:.8}));gb.position.y=4.5;garage.add(gb);
   const roof=new THREE.Mesh(new THREE.BoxGeometry(gLen+4,.5,10),new THREE.MeshBasicMaterial({color:0xeaf2ff}));roof.position.y=9.2;garage.add(roof);
   // team garage doors and box markings: team colours live in the vertices, so all ten share one material each
   {const doorMat=new THREE.MeshBasicMaterial({vertexColors:true}),boxMat=mat({vertexColors:true,roughness:.6,...po(-6)}),tc=new THREE.Color();
    TEAMS.forEach((t,j)=>{const i=idxSp(BOX_S[j]);tc.setHex(t.c);
-     const door=new THREE.BoxGeometry(Math.min(14,BOX_GAP-3),5,.3).applyMatrix4(_fm.makeRotationY(-ANG[i]).setPosition(X[i]-TZ[i]*(PIT_OFF+PIT_HW+2.85),2.6,Z[i]+TX[i]*(PIT_OFF+PIT_HW+2.85)));
+     const door=new THREE.BoxGeometry(Math.min(14,BOX_GAP-3),5,.3).applyMatrix4(_fm.makeRotationY(-ANG[i]).setPosition(X[i]-TZ[i]*PS*(PIT_OFF+PIT_HW+2.85),2.6,Z[i]+TX[i]*PS*(PIT_OFF+PIT_HW+2.85)));
      batchAdd(vColor(door,tc),doorMat,false);
      // the box: a team-coloured 7.5 × 3.6 m rectangle in the working lane, outlined in white with a stop bar at the
      // front — the car has to be brought to rest inside it
-     flatAt(i,PIT_OFF+BOX_D,7.5,3.6,0.045,boxMat,tc);
-     for(const e of [-1,1])flatAt(i,PIT_OFF+BOX_D+e*1.8,7.5,0.14,0.05,matMark);
-     flatAt(idxSp(BOX_S[j]+3.75),PIT_OFF+BOX_D,0.3,3.6,0.05,matMark);flatAt(idxSp(BOX_S[j]-3.75),PIT_OFF+BOX_D,0.14,3.6,0.05,matMark);});
+     flatAt(i,PS*(PIT_OFF+BOX_D),7.5,3.6,0.045,boxMat,tc);
+     for(const e of [-1,1])flatAt(i,PS*(PIT_OFF+BOX_D)+e*1.8,7.5,0.14,0.05,matMark);
+     flatAt(idxSp(BOX_S[j]+3.75),PS*(PIT_OFF+BOX_D),0.3,3.6,0.05,matMark);flatAt(idxSp(BOX_S[j]-3.75),PS*(PIT_OFF+BOX_D),0.14,3.6,0.05,matMark);});
    // the line between the fast lane and the working lane
-   strip(idxSp(PIT_B),rangeN(PIT_B,PIT_C),()=>PIT_OFF+0.2,()=>PIT_OFF+0.32,0.03,0.03,matLine);}
+   strip(idxSp(PIT_B),rangeN(PIT_B,PIT_C),()=>PS>0?PIT_OFF+0.2:-PIT_OFF-0.32,()=>PS>0?PIT_OFF+0.32:-PIT_OFF-0.2,0.03,0.03,matLine);}
   // start gantry over the start line (the grid front, GRID_S — the timing line itself when they are the same)
   const g0=idxSp(GRID_S),gg=new THREE.Group();gg.position.set(X[g0],0,Z[g0]);gg.rotation.y=-ANG[g0];scene.add(gg);
   const mG=mat({color:0x1c2030,metalness:.5,roughness:.4});
@@ -308,7 +316,8 @@ async function buildWorld(){
     const p=new THREE.Mesh(pg,crowdMat);p.rotation.x=-0.62;inner.add(p);
     const r=new THREE.Mesh(new THREE.BoxGeometry(len,.6,16),standRoofMat);r.position.set(0,10,-6);inner.add(r);
     g.updateMatrixWorld(true);for(const m of [p,r])batchAdd(m.geometry.clone().applyMatrix4(m.matrixWorld),m.material,false);};
-  stand(-40,-1,300,14);for(const [rx,ry,side,len] of TR.stands)stand(spOf(idxOf(rx,ry)*DS),side,len,12);
+  if(TR.mainStand!==false)stand(-40,-PS,300,14); // opposite the pits
+  for(const [rx,ry,side,len] of TR.stands)stand(spOf(idxOf(rx,ry)*DS),side,len,12);
   // floodlight poles
   const cnt=Math.floor(N/20);const poles=new THREE.InstancedMesh(new THREE.BoxGeometry(.3,12,.3),mat({color:0x3a3f4c,roughness:.6}),cnt);
   const heads=new THREE.InstancedMesh(new THREE.BoxGeometry(1,.3,3.4),new THREE.MeshBasicMaterial({color:0xfff4dc}),cnt);
@@ -349,7 +358,7 @@ function buildBrakingBoards(){
   const BW=2.6,BH=2.3,BY=1.25; // a board 2.6 × 2.3 m standing on the 1.05 m barrier
   for(const z of brakingZones()){const dists=z.brake>220?[200,150,100,50]:[150,100,50];
     for(const d of dists){const i=(z.turn-Math.round(d/DS)+N)%N,cell=d===200?0:d===150?1:d===100?2:3;
-      if(spOf(i*DS)>PIT_A-20&&spOf(i*DS)<PIT_D+20&&z.side>0)continue; // never in the pit lane
+      if(spOf(i*DS)>PIT_A-20&&spOf(i*DS)<PIT_D+20&&z.side===PS)continue; // never in the pit lane
       const off=z.side<0?-(WL[i]-0.25):WR[i]-0.25,px=X[i]-TZ[i]*off,pz=Z[i]+TX[i]*off,ry=Math.atan2(-TX[i],-TZ[i]);
       const m=_fm.makeRotationY(ry).setPosition(px,0,pz);
       const pl=new THREE.PlaneGeometry(BW,BH).translate(0,BY+BH/2,0.08),uv=pl.attributes.uv;
@@ -369,11 +378,13 @@ async function buildOSM(){
       // room on its own (right-hand) side — the far side of the road keeps its buildings (BEXCO hall 1)
       // (Busan, where the paddock is squeezed between the BEXCO corner and the auditorium: the full allowance
       // only alongside the garages, elsewhere just the pit lane itself plus a margin)
-      const sp=spI(i),pit=sp>PIT_A-60&&sp<PIT_D+60,lat=(x-X[i])*-TZ[i]+(z-Z[i])*TX[i],right=lat>0;
-      const busan=TRACK_ID==='busan',gar=sp>=BOX_S[0]-12&&sp<=BOX_S[BOX_S.length-1]+12,po=pitOffSp(sp);
+      // (`tightPaddock`: Busan, and Seoul's Gwanghwamun Square; `clear`: the margin past the barrier, smaller where the
+      // circuit runs down narrow streets lined with buildings)
+      const sp=spI(i),pit=sp>PIT_A-60&&sp<PIT_D+60,lat=PS*((x-X[i])*-TZ[i]+(z-Z[i])*TX[i]),right=lat>0; // right: the pit side
+      const tight=TR.tightPaddock,gar=sp>=BOX_S[0]-12&&sp<=BOX_S[BOX_S.length-1]+12,po=pitOffSp(sp),clr=TR.clear??3;
       // the garage block itself is a strip beside the lane: test it square to the track, not as a circle
-      if(busan&&gar&&right){if(Math.abs((x-X[i])*TX[i]+(z-Z[i])*TZ[i])<1.5&&lat<PIT_OFF+PIT_HW+12.5+extra)return true;continue;}
-      const r=(!pit||(busan&&!right)?Math.max(WL[i],WR[i])+3:busan?Math.max(WR[i],(po??0)+PIT_HW)+2.5:PIT_OFF+22)+extra;
+      if(tight&&gar&&right){if(Math.abs((x-X[i])*TX[i]+(z-Z[i])*TZ[i])<1.5&&lat<PIT_OFF+PIT_HW+12.5+extra)return true;continue;}
+      const r=(!pit||(tight&&!right)?Math.max(WL[i],WR[i])+clr:tight?Math.max(WP[i],Math.abs(po??0)+PIT_HW)+2.5:PIT_OFF+22)+extra;
       if(Math.hypot(X[i]-x,Z[i]-z)<r)return true;}}return false;};
   const W2=(x,y)=>[x*SC,-y*SC];
   // A building is kept only if NO part of it reaches the circuit. Testing its corners alone missed
@@ -399,7 +410,9 @@ async function buildOSM(){
   flatPoly(D.g,mat({color:DAY?0x48703a:DUSK?0x2c4a2e:0x1b3a22,roughness:1,...po(1)}),LY.green);
   // at dusk the water picks up the violet sky; at night it stays dark but still reads against the lawns
   const waterMat=DAY?mat({color:0x2a5d80,metalness:.35,roughness:.22,...po(0.5)}):mat({color:DUSK?0x3a4f86:0x10284a,metalness:.7,roughness:.14,envMap:envTex,envMapIntensity:DUSK?.9:.6,...po(0.5)});
-  flatPoly(D.w,waterMat,LY.water);
+  // (Seoul: the Cheonggyecheon runs 5 m below the street — its water is drawn in the channel by scenery-seoul.js)
+  const inCgRaw=(x,y)=>{const c=D.cg;let r=false;if(!c)return r;for(let i=0,j=c.length-2;i<c.length;j=i,i+=2){const xi=c[i],yi=c[i+1],xj=c[j],yj=c[j+1];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)r=!r;}return r;};
+  flatPoly(D.cg?D.w.filter(p=>!inCgRaw(p[0],p[1])&&!inCgRaw(p[p.length>>2&~1],p[(p.length>>2&~1)+1])):D.w,waterMat,LY.water);
   // Central Park's seawater lake: one outer shore with its islands cut out (the park lawn shows through them)
   if(D.lk){const V=a=>{const v=[];for(let k=0;k<a.length;k+=2)v.push(new THREE.Vector2(a[k]*SC,a[k+1]*SC));return v;};
     const sh=new THREE.Shape(V(D.lk[0]));for(const h of D.lk.slice(1))sh.holes.push(new THREE.Path(V(h)));
@@ -626,19 +639,20 @@ async function buildOSM(){
   const WB_=[0,1,2,3,4,5].map(()=>({p:[],u:[],c:[]})),ROOF={p:[],c:[]},beacons=[],extra=[],overhead=[];
   const col=new THREE.Color();
   // walls between successive footprint rings [y, scale-toward-centroid, twist (rad, optional)]
+  // rings: [y, scale toward the centroid, twist (rad), x / z offset] — the offsets lean a facade (Seoul City Hall's wave)
   const ringWalls=(pts,rings,s,tint)=>{const B=WB_[s],n=pts.length;let cx=0,cz=0;for(const [x,z] of pts){cx+=x;cz+=z;}cx/=n;cz/=n;col.setHex(tint);
-    for(let r=0;r<rings.length-1;r++){const [y0,s0,t0=0]=rings[r],[y1,s1,t1=0]=rings[r+1];let u=0;
+    for(let r=0;r<rings.length-1;r++){const [y0,s0,t0=0,ox0=0,oz0=0]=rings[r],[y1,s1,t1=0,ox1=0,oz1=0]=rings[r+1];let u=0;
       for(let i=0;i<n;i++){const a=pts[i],b=pts[(i+1)%n],l=Math.hypot(b[0]-a[0],b[1]-a[1]);
-        const P=(p,sc,y,t=0)=>{const dx=(p[0]-cx)*sc,dz=(p[1]-cz)*sc,c=Math.cos(t),sn=Math.sin(t);return [cx+dx*c-dz*sn,y,cz+dx*sn+dz*c];};
-        const A0=P(a,s0,y0,t0),B0=P(b,s0,y0,t0),B1=P(b,s1,y1,t1),A1=P(a,s1,y1,t1);
+        const P=(p,sc,y,t=0,ox=0,oz=0)=>{const dx=(p[0]-cx)*sc,dz=(p[1]-cz)*sc,c=Math.cos(t),sn=Math.sin(t);return [cx+ox+dx*c-dz*sn,y,cz+oz+dx*sn+dz*c];};
+        const A0=P(a,s0,y0,t0,ox0,oz0),B0=P(b,s0,y0,t0,ox0,oz0),B1=P(b,s1,y1,t1,ox1,oz1),A1=P(a,s1,y1,t1,ox1,oz1);
         B.p.push(...A0,...B0,...B1,...A0,...B1,...A1);
         const u0=u/ST[s].tw,u1=(u+l)/ST[s].tw,v0=y0/ST[s].th,v1=y1/ST[s].th;B.u.push(u0,v0,u1,v0,u1,v1,u0,v0,u1,v1,u0,v1);u+=l;
         // slight ambient darkening near the ground, brighter higher up
         const sh=y=>0.72+0.28*Math.min(1,y/28),g0=sh(y0),g1=sh(y1);
         B.c.push(col.r*g0,col.g*g0,col.b*g0, col.r*g0,col.g*g0,col.b*g0, col.r*g1,col.g*g1,col.b*g1,
                  col.r*g0,col.g*g0,col.b*g0, col.r*g1,col.g*g1,col.b*g1, col.r*g1,col.g*g1,col.b*g1);}}
-    const [yt,st,tt=0]=rings[rings.length-1],c=Math.cos(tt),sn=Math.sin(tt);
-    return {cx,cz,top:pts.map(p=>{const dx=(p[0]-cx)*st,dz=(p[1]-cz)*st;return [cx+dx*c-dz*sn,cz+dx*sn+dz*c];}),yt};};
+    const [yt,st,tt=0,oxt=0,ozt=0]=rings[rings.length-1],c=Math.cos(tt),sn=Math.sin(tt);
+    return {cx,cz,top:pts.map(p=>{const dx=(p[0]-cx)*st,dz=(p[1]-cz)*st;return [cx+oxt+dx*c-dz*sn,cz+ozt+dx*sn+dz*c];}),yt};};
   // (`top` is a footprint ring, or a THREE.Shape already in (x,-z) — e.g. a roof with a courtyard hole)
   const roofCap=(top,y,tint)=>{const sh=new THREE.ShapeGeometry(top instanceof THREE.Shape?top:new THREE.Shape(top.map(([x,z])=>new THREE.Vector2(x,-z)))).rotateX(-Math.PI/2).toNonIndexed();
     const p=sh.attributes.position.array;col.setHex(tint);for(let k=0;k<p.length;k+=3){ROOF.p.push(p[k],y,p[k+2]);ROOF.c.push(col.r,col.g,col.b);}};
@@ -672,12 +686,16 @@ async function buildOSM(){
   D.b.forEach((b,bi)=>{if(b[2]!==6)return;const p=[];for(let k=3;k<b.length;k+=2)p.push(W2(b[k],b[k+1]));
     if(p.length<3)return;const o=oba(p);tsC.push([o.mx,o.mz,bi]);});
   let skipped=0,kept=0;
+  // Seoul's landmark buildings and Joseon halls are drawn by scenery-seoul.js with the same helpers
+  const SCX=SEOUL?{scene,mat,canvasTex,po,groundLayer,DAY,envTex,skyEnv,W2,ringWalls,roofCap,oba,edgeFacing,signAt,extra,overhead,blocked,footprintHitsTrack,
+    mergeGeometries,rand,SC,beacons,D,rw,X,Z,TX,TZ,WL,WR,N,TR}:null;
   D.b.forEach((b,bi)=>{let h=b[0];const kind=b[1],lm=b[2],pts=[];for(let k=3;k<b.length;k+=2)pts.push(W2(b[k],b[k+1]));if(pts.length<3)return;
     if(footprintHitsTrack(pts)){skipped++;return;}kept++;
     let ar=0;for(let i=0;i<pts.length;i++){const j=(i+1)%pts.length;ar+=pts[i][0]*pts[j][1]-pts[j][0]*pts[i][1];}ar=Math.abs(ar/2);
     if(h<=0)h=kind===1?(ar>250?rand(60,100):rand(9,15)):kind===2?rand(40,70):ar>1500?rand(16,26):ar>300?rand(9,18):rand(4,8);
     const s=lm===6?4:lm===7?2:lm===1||lm===2||lm===8?1:lm===3?3:kind===1?0:kind===2?1:kind===3?2:3;
     let tint=TINT[s][(bi*7)%TINT[s].length];
+    if(SEOUL&&(lm>=41||kind===5)&&seoulBuilding(SCX,pts,kind===5?b[0]:h,ar,kind,lm,bi))return;
     /* ---------------- Busan landmarks (codes 21–34, from the aerial photos and Kakao roadview) ---------------- */
     if(lm===21){ // BEXCO exhibition hall 1: a 26 m glass-and-metal box under three broad pale roof plates, the
       // green-glazed front onto the plaza carrying the BEXCO letters
@@ -850,7 +868,9 @@ async function buildOSM(){
     if(lm===6)tint=[0xf2f0ec,0xfbfaf8,0xe6e3dd,0xf6f4f0][bi%4];
     if(lm===7)tint=0xe6d9bf;
     // ordinary buildings get individual massing: a podium, a setback tower, or a plain block
-    const style=(bi*13+Math.round(h))%5,rc=new THREE.Color(tint).multiplyScalar(0.5).getHex();
+    const style=(bi*13+Math.round(h))%5;let rc=new THREE.Color(tint).multiplyScalar(0.5).getHex();
+    // Seoul's flat roofs: most low and mid-rise blocks wear the green waterproofing paint seen all over the skyview
+    if(SEOUL&&h<50&&bi%4)rc=[0x5c9a6a,0x4d8a63,0x6aa37a,0x7a9e86][bi%4];
     let r;
     const podPts=pts.map(p=>r_c(p,pts,1.16));
     if(h>70&&style<2&&!footprintHitsTrack(podPts)){ // tower on a wider podium (common in Songdo) — only where the wider base stays clear of the circuit
@@ -931,6 +951,7 @@ async function buildOSM(){
     if(h<45&&ar>600){for(let q=0;q<2;q++){const bx=new THREE.Mesh(new THREE.BoxGeometry(rand(3,7),rand(1.5,3),rand(3,6)),mat({color:0x4a4e57,roughness:.9}));
       bx.position.set(r.cx+rand(-6,6),h+1.2,r.cz+rand(-6,6));bx.rotation.y=rand(0,3);extra.push(bx);}} // rooftop plant
   });
+  if(SEOUL)seoulScenery(SCX);
   // ---- what passes OVER the circuit (it only ever runs on the street below) ----
   // Elevated expressways — Gwangan-daero and the Jangsan-ro / Haeundae-ro viaducts, which cross the lap four times
   // (twice at BEXCO, twice by the Suyeong river mouth): a deck with concrete parapets, the green-and-yellow noise
@@ -1041,7 +1062,9 @@ async function buildCity(){
     if(osmBox&&px>osmBox[0]-30&&px<osmBox[1]+30&&pz>osmBox[2]-30&&pz<osmBox[3]+30)continue;
     if(near(px,pz,52)||inPoly(px,pz)||land.some(([p,r])=>Math.hypot(px-p[0],pz-p[1])<r))continue;
     // Busan's outer districts: rows of 25–45 storey apartment towers, lower blocks in between
+    // (Seoul beyond the old city: mid-rise blocks and 15–25 storey offices and flats, few true towers)
     const tall=TR.tall(px/SC,-pz/SC);const h=TRACK_ID==='busan'?(Math.random()<.55?rand(60,135):rand(12,40))
+      :SEOUL?(Math.random()<.25?rand(50,95):rand(12,40))
       :tall?rand(TRACK_ID==='songdo'?35:60,TRACK_ID==='songdo'?190:240):rand(14,110);list.push([px,pz,rand(20,42),h,rand(20,42)]);}
   // by day the filler blocks are pale concrete with dark glazing instead of lit windows on black
   const dayTex=warm=>{const t=canvasTex(64,128,(x)=>{x.fillStyle=warm?'#d9d4c9':'#c9cfd5';x.fillRect(0,0,64,128);
@@ -1053,6 +1076,7 @@ async function buildCity(){
     part.forEach((b,k)=>{m4.makeScale(b[2],b[3],b[4]);m4.setPosition(b[0],0,b[1]);im.setMatrixAt(k,m4);});addTiledT(1600,0,im);});
   if(TRACK_ID==='songdo')return; // Central Park's towers come from the OSM footprints, not a stand-in
   if(TRACK_ID==='busan'){buildBusanLandmarks();return;}
+  if(SEOUL){buildBusanLandmarks();seoulSky({scene,mat,DAY,rw,TR});return;} // the mountains (TR.hills) and N Seoul Tower
   // Marina Bay Sands
   const [mx,mz]=rw(-640,-340);const mbs=new THREE.Group();mbs.position.set(mx,0,mz);mbs.rotation.y=0.25;scene.add(mbs);
   const tm=mat({color:0x151a26,roughness:.5,metalness:.3,emissive:0xffffff,emissiveMap:winTex(true),emissiveIntensity:.9});
@@ -1370,7 +1394,7 @@ let boxMarker=null;
 function buildBoxMarker(team){
   if(boxMarker){scene.remove(boxMarker);boxMarker.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose();}});}
   const t=TEAMS[team],i=idxSp(BOX_S[team]),g=new THREE.Group();
-  g.position.set(X[i]-TZ[i]*(PIT_OFF+BOX_D),0,Z[i]+TX[i]*(PIT_OFF+BOX_D));g.rotation.y=-ANG[i];
+  g.position.set(X[i]-TZ[i]*PS*(PIT_OFF+BOX_D),0,Z[i]+TX[i]*PS*(PIT_OFF+BOX_D));g.rotation.y=-ANG[i];
   const add={transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false};
   const lineM=new THREE.MeshBasicMaterial({color:0xffffff,...add,...po(-8)}),fillM=new THREE.MeshBasicMaterial({color:t.c,opacity:.35,...add,...po(-7)});
   const fill=new THREE.Mesh(new THREE.PlaneGeometry(7.5,3.6).rotateX(-Math.PI/2),fillM);fill.position.y=0.035;g.add(fill);
@@ -1429,7 +1453,7 @@ let session='quali',qStage='',qAttempt=0,qTimes=new Map(),qGrid=null,boxMode='qu
 
 function parkInGarage(c){c.parked=true;c.mesh.root.visible=false;c.held=true;c.v=0;c.throttle=0;c.brake=0;}
 function placeInBox(c){const i=idxSp(BOX_S[c.team]);c.idx=i;
-  c.x=X[i]-TZ[i]*(PIT_OFF+BOX_D);c.z=Z[i]+TX[i]*(PIT_OFF+BOX_D);c.yaw=c.chi=ANG[i];
+  c.x=X[i]-TZ[i]*PS*(PIT_OFF+BOX_D);c.z=Z[i]+TX[i]*PS*(PIT_OFF+BOX_D);c.yaw=c.chi=ANG[i];
   c.v=0;c.delta=0;c.r=0;c.slip=0;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;
   locate(c);c.prevS=c.s;c.lapCount=-1;c.shortLap=false;c.laneOff=0;c.laneOffT=0;c.boxDone=true;c.pitStop=0;
   // the box sits between PIT_B and PIT_C, where post() freezes the pit-side flag instead of deriving
@@ -1728,7 +1752,7 @@ function physics(c,dt){
   if(c.held){c.v=0;c.aLong=0;c.aLat=0;return;}
   // the player's car has driven into its box: it is brought to rest on its marks by itself (a smooth stop onto the
   // stop line, eased onto the box centre line and square to the lane), and the stop starts
-  if(c.autoBox){const i=c.idx,along=BOX_S[c.team]-spOf(c.s),lat=PIT_OFF+BOX_D-c.d;
+  if(c.autoBox){const i=c.idx,along=BOX_S[c.team]-spOf(c.s),lat=PS*(PIT_OFF+BOX_D)-c.d;
     const dec=Math.min(c.v*c.v/(2*Math.max(0.05,along)),28);c.v=along<0.03?0:Math.max(0,c.v-dec*dt);
     c.yaw+=wrapA(ANG[i]-c.yaw)*Math.min(1,4*dt);c.chi=c.yaw;c.r=0;c.delta-=c.delta*Math.min(1,6*dt);
     const k=Math.min(1,2.5*dt);c.x+=Math.cos(c.yaw)*c.v*dt-TZ[i]*lat*k;c.z+=Math.sin(c.yaw)*c.v*dt+TX[i]*lat*k;
@@ -1908,7 +1932,7 @@ function walls(c){
   const dt=1/120,i=c.idx,rx=-TZ[i],rz=TX[i],sp=spOf(c.s),pitZone=sp>PIT_W&&sp<PIT_C;let w=null;
   for(const [px,pz] of corners(c)){const d=(px-X[i])*rx+(pz-Z[i])*rz;let pen=0,s=0;
     if(d<-WL[i]){pen=-WL[i]-d;s=1;}else if(d>WR[i]){pen=d-WR[i];s=-1;}
-    if(pitZone){if(c.pitSide&&d<PITWALL+.3&&PITWALL+.3-d>pen){pen=PITWALL+.3-d;s=1;}else if(!c.pitSide&&d>PITWALL-.3&&d-PITWALL+.3>pen){pen=d-PITWALL+.3;s=-1;}}
+    if(pitZone){const dp=PS*d;if(c.pitSide&&dp<PITWALL+.3&&PITWALL+.3-dp>pen){pen=PITWALL+.3-dp;s=PS;}else if(!c.pitSide&&dp>PITWALL-.3&&dp-PITWALL+.3>pen){pen=dp-PITWALL+.3;s=-PS;}}
     if(pen>0&&(!w||pen>w.pen))w={pen,nx:rx*s,nz:rz*s,px,pz};}
   if(!w){c.onWall=false;c.wallT=0;return;}
   c.x+=w.nx*w.pen;c.z+=w.nz*w.pen;
@@ -1994,7 +2018,7 @@ function obbHit(A,B){
 
 /* ================= RACE CONTROL ================= */
 function startPit(c){
-  if(!c.isPlayer){const i=idxSp(BOX_S[c.team]);c.idx=i;c.x=X[i]-TZ[i]*(PIT_OFF+BOX_D);c.z=Z[i]+TX[i]*(PIT_OFF+BOX_D);c.yaw=c.chi=ANG[i];c.r=0;c.delta=0;}
+  if(!c.isPlayer){const i=idxSp(BOX_S[c.team]);c.idx=i;c.x=X[i]-TZ[i]*PS*(PIT_OFF+BOX_D);c.z=Z[i]+TX[i]*PS*(PIT_OFF+BOX_D);c.yaw=c.chi=ANG[i];c.r=0;c.delta=0;}
   // a new front wing: the player's MFD setting (AUTO = only if it is damaged), the AI whenever it is damaged
   c.wingChange=wingNeeded(c);
   c.pitStop=2.2+rand(0,.7)+(c.wingChange?5+rand(0,1.5):0);c.v=0;c.boxDone=true;c.pitCount++;c.drsOpen=false;c.autoBox=false;
@@ -2052,11 +2076,11 @@ function post(c){
   const ps=c.s;locate(c);
   const sp=spOf(c.s);
   const wasPit=c.pitSide;
-  if(!(sp>PIT_W&&sp<PIT_C))c.pitSide=c.d>PITWALL; // frozen alongside the pit wall
-  if(wasPit&&!c.pitSide&&sp>PIT_C-20)c.exitUntil=(c.s+240)%L; // just rejoined: stay right, off the racing line
+  if(!(sp>PIT_W&&sp<PIT_C))c.pitSide=PS*c.d>PITWALL; // frozen alongside the pit wall
+  if(wasPit&&!c.pitSide&&sp>PIT_C-20)c.exitUntil=(c.s+240)%L; // just rejoined: stay on the pit side, off the racing line
   walls(c);
   const hw=HWa[c.idx];
-  const s=c.s,ad=Math.abs(c.d),inPit=sp>(c.pitPlan?PIT_A-70:PIT_A)&&sp<PIT_D&&c.d>hw;
+  const s=c.s,ad=Math.abs(c.d),inPit=sp>(c.pitPlan?PIT_A-70:PIT_A)&&sp<PIT_D&&PS*c.d>hw;
   const edge=c.d<0?TLL[c.idx]:TLR[c.idx]; // the track limit on this side (see track.js)
   c.surf=(ad<=edge||inPit)?1:(ad<=edge+KERB_W&&KB[c.idx])?0.95:0.8;
   c.limiter=c.pitSide&&sp>PIT_L&&sp<PIT_C;
@@ -2065,7 +2089,7 @@ function post(c){
   if(phase==='race'&&c.pitSide&&!c.boxDone&&!c.dnf){
     // the player only has to drive INTO the painted box (7.5 × 3.6 m): from there the car stops on its marks by
     // itself and the stop runs (physics → autoBox). Backing into it after an overshoot works as well. The AI drives to it.
-    if(c.isPlayer){const along=box-sp,lat=PIT_OFF+BOX_D-c.d;
+    if(c.isPlayer){const along=box-sp,lat=PS*(PIT_OFF+BOX_D)-c.d;
       if(!c.autoBox&&!c.revIn&&along>-1.2&&along<6.6&&Math.abs(lat)<1.8&&c.v<PIT_LIMIT+2){c.autoBox=true;c.steerIn=0;msg('BOX','CAR STOPPING ON ITS MARKS');}
       else if(!c.autoBox&&c.v<0.4&&Math.abs(along)<3.7&&Math.abs(lat)<1.8&&!c.revIn)startPit(c);}
     else if(c.pitPlan&&psp<box&&sp>=box)startPit(c);}
@@ -2154,7 +2178,7 @@ function aiDrive(c,dt){
   // rejoining from the pit exit at low speed: keep to the right-hand edge until up to speed, never swing across the
   // racing line in front of cars arriving at full speed
   if(c.exitUntil!=null&&(fwd(c.s,c.exitUntil)<0||c.pitSide))c.exitUntil=null;
-  if(c.exitUntil!=null&&!yielding)passT=(hwc-2.0)-RL[c.idx];
+  if(c.exitUntil!=null&&!yielding)passT=PS*(hwc-2.0)-RL[c.idx];
   // waved past the safety car: go by on the side it has left open
   if((c.waveBy||c.unlap)&&scOn()&&sc.wave){const g=fwd(c.s,sc.s);if(g>-12&&g<90)passT=-sc.waveSide*(hwc-2.4)-RL[c.idx];}
   // the start: hold your grid column (left or right) down to the first braking zone instead of all funnelling onto the
@@ -2181,13 +2205,13 @@ function aiDrive(c,dt){
   // pitting: keep the normal line into the entry and simply follow the lane as it peels away — never
   // snap across the track (the entry now sits in a corner complex, where that meant the wall)
   if(c.pitPlan){
-    if(spa>=PIT_A&&spa<PIT_B)off=Math.max(off,pitOffSp(spa));
+    if(spa>=PIT_A&&spa<PIT_B)off=PS*Math.max(PS*off,PS*pitOffSp(spa));
     else if(spa>=PIT_B&&spa<=PIT_D){
       // drive down the fast lane, swing into the working lane for the box and back out after the stop
-      off=pitOffSp(spa)+FAST_D*clamp(Math.min((spa-PIT_B)/40,(PIT_C-spa)/40),0,1);
+      off=pitOffSp(spa)+PS*FAST_D*clamp(Math.min((spa-PIT_B)/40,(PIT_C-spa)/40),0,1);
       const bs=BOX_S[c.team],u=!c.boxDone?smooth(clamp((sp-(bs-48))/34,0,1)):1-smooth(clamp((sp-bs)/30,0,1));
-      if(u>0&&sp>bs-60&&sp<bs+40)off=off*(1-u)+(PIT_OFF+BOX_D)*u;}
-    else if(spa>PIT_A-120&&spa<PIT_A)off=Math.max(off,-HWa[ia]+(2*HWa[ia]-3)*(spa-PIT_A+120)/120);}
+      if(u>0&&sp>bs-60&&sp<bs+40)off=off*(1-u)+PS*(PIT_OFF+BOX_D)*u;}
+    else if(spa>PIT_A-120&&spa<PIT_A)off=PS*Math.max(PS*off,-HWa[ia]+(2*HWa[ia]-3)*(spa-PIT_A+120)/120);}
   else{ // never steer into a car that is overlapping us lengthwise: keep ~3.4 m apart (eased in, no jerk)
     let offC=off;for(const o of cars){
       if(o===c||o.pitSide!==c.pitSide)continue;let a=o.s-c.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L;
@@ -2368,7 +2392,7 @@ let sc=null,scMesh=null,scRestart=false,restartGo=false,goSp=-250;
 const SC_PARK=Math.min(Math.max(...BOX_S)+28,PIT_C-12),SC_WB=2.63;
 // it parks in the working lane past the last garage; where the lane is too short for that (Busan) it waits in the
 // fast lane instead, so it never sits on a team's box
-const SC_LANE=SC_PARK>Math.max(...BOX_S)+15?PIT_OFF+BOX_D:PIT_OFF+FAST_D;
+const SC_LANE=PS*(SC_PARK>Math.max(...BOX_S)+15?PIT_OFF+BOX_D:PIT_OFF+FAST_D);
 const _tp={x:0,z:0},_tp2={x:0,z:0};
 function trackPt(s,d,out){const f=((s%L)+L)%L/DS,i=Math.floor(f),u=f-i,i0=(i-1+N)%N,i1=i%N,i2=(i+1)%N,i3=(i+2)%N;
   const cr=(a,b,c,e)=>0.5*(2*b+(c-a)*u+(2*a-5*b+4*c-e)*u*u+(3*b-a-3*c+e)*u*u*u);
@@ -2379,7 +2403,7 @@ function deploySC(cause){
   if(vsc)vsc=null; // the VSC is upgraded
   if(!scMesh)scMesh=buildSCMesh();
   if(sc&&sc.phase==='pit'){sc.phase='exit';} // it was on its way in: it simply carries on down the lane and out again
-  else{const s=((SC_PARK%L)+L)%L;sc={phase:'exit',s,v:0,a:0,d:pitOffSp(SC_PARK)-PIT_OFF+SC_LANE,dv:0,yaw:ANG[idxSp(SC_PARK)],x:0,z:0,hold:0,
+  else{const s=((SC_PARK%L)+L)%L;sc={phase:'exit',s,v:0,a:0,d:pitOffSp(SC_PARK)-PS*PIT_OFF+SC_LANE,dv:0,yaw:ANG[idxSp(SC_PARK)],x:0,z:0,hold:0,
     rollV:0,roll:0,pitchV:0,pitch:0,steer:0,yawR:0};
     trackPt(sc.s,sc.d,_tp);sc.x=sc.px=_tp.x;sc.z=sc.pz=_tp.z;sc.pyaw=sc.yaw;}
   cautionT0=simTime;
@@ -2471,11 +2495,11 @@ function updateSafetyCar(dt){
   let dT=sc.wave?sc.waveSide*(hw-2.3):RL[i]*0.55;
   const po=pitOffSp(sps);
   if(sc.phase==='exit'||sc.phase==='pit'){
-    if(po!=null){const lane=FAST_D*clamp(Math.min((sps-PIT_B)/30,(PIT_C-sps)/30),0,1),park=smooth(1-Math.abs(sps-SC_PARK)/35);
-      dT=po+lane+(SC_LANE-PIT_OFF-lane)*park;}}
+    if(po!=null){const lane=PS*FAST_D*clamp(Math.min((sps-PIT_B)/30,(PIT_C-sps)/30),0,1),park=smooth(1-Math.abs(sps-SC_PARK)/35);
+      dT=po+lane+(SC_LANE-PS*PIT_OFF-lane)*park;}}
   else if(sc.phase==='in'){const toA=fwd(sc.s,(PIT_A+L)%L);
-    if(toA>0&&toA<160)dT=dT+(hw-2-dT)*smooth(1-toA/160);
-    if(toA<=0&&po!=null){dT=Math.max(hw-2,po);if(sps>=PIT_A&&ps!=null&&spOf(ps)<PIT_A&&sc.inDist>300){sc.phase='pit';scRestart=true;restartGo=false;
+    if(toA>0&&toA<160)dT=dT+(PS*(hw-2)-dT)*smooth(1-toA/160);
+    if(toA<=0&&po!=null){dT=PS*Math.max(hw-2,PS*po);if(sps>=PIT_A&&ps!=null&&spOf(ps)<PIT_A&&sc.inDist>300){sc.phase='pit';scRestart=true;restartGo=false;
         goSp=Math.min(-120,Math.max(PIT_A+60,rand(-460,-160)));for(const c of cars){c.waveBy=false;c.unlap=false;}}}}
   const w=1.25;sc.dv+=(w*w*(dT-sc.d)-2*w*sc.dv)*dt;sc.dv=clamp(sc.dv,-3,3);sc.d+=sc.dv*dt;
   // ---- position and heading: heading = direction of travel (look 2.5 m ahead along the same lateral motion)
@@ -2558,7 +2582,7 @@ let mPanels=null;
 function buildMarshalPanels(){
   const n=MS_N,im=new THREE.InstancedMesh(new THREE.BoxGeometry(.1,.7,1.15),new THREE.MeshBasicMaterial({color:0xffffff}),n),geos=[],m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();
   for(let k=0;k<n;k++){const s=k*MS_L+2,i=Math.round(s/DS)%N,sp=spI(i);
-    let side=WL[i]>WR[i]?-1:1;if(sp>PIT_A-40&&sp<PIT_D+40)side=-1; // never on the pit wall side
+    let side=WL[i]>WR[i]?-1:1;if(sp>PIT_A-40&&sp<PIT_D+40)side=-PS; // never on the pit wall side
     const off=side>0?WR[i]+0.5:-(WL[i]+0.5),x=X[i]-TZ[i]*off,z=Z[i]+TX[i]*off,yaw=-ANG[i];
     e.set(0,yaw+side*0.25,0);q.setFromEuler(e);m4.compose(new THREE.Vector3(x,2.75,z),q,new THREE.Vector3(1,1,1));im.setMatrixAt(k,m4);im.setColorAt(k,new THREE.Color(0x101010));
     geos.push(new THREE.BoxGeometry(.14,.86,1.3).applyQuaternion(q).translate(x+TX[i]*.07,2.75,z+TZ[i]*.07)); // housing behind the LED face
@@ -3115,7 +3139,7 @@ function updatePitHud(){
       '<br><span style="font-weight:400;opacity:.8;font-size:12px">Follow the red lane · next tyre '+COMP[c.nextComp].name+
       (wingNeeded(c)?' · new front wing':'')+'</span>');return;}
   // in the lane: steer into the working lane and stop the car inside your painted box
-  if(c.pitSide&&!c.boxDone&&!c.dnf){const along=BOX_S[c.team]-sp,lat=PIT_OFF+BOX_D-c.d;
+  if(c.pitSide&&!c.boxDone&&!c.dnf){const along=BOX_S[c.team]-sp,lat=PS*(PIT_OFF+BOX_D)-c.d;
     const inBox=Math.abs(along)<1.0&&Math.abs(lat)<0.8;
     const side=Math.abs(lat)<0.8?'<span style="color:#3ddc6a">LINED UP</span>':lat>0?'MOVE RIGHT '+lat.toFixed(1)+' m ▸':'◂ MOVE LEFT '+(-lat).toFixed(1)+' m';
     let head;
@@ -3176,7 +3200,8 @@ function updateProximity(){
   if(_hc.cl!==cl){_hc.cl=cl;$('proxL').style.color=cl;}if(_hc.cr!==cr){_hc.cr=cr;$('proxR').style.color=cr;}}
 let orbit=0;const CX=X.reduce((a,b)=>a+b,0)/N,CZ=Z.reduce((a,b)=>a+b,0)/N;
 const ORB=Math.max(...Array.from(X,(x,i)=>Math.hypot(x-CX,Z[i]-CZ)))*0.85+250;
-function menuCamera(dt){orbit+=dt*0.05;camera.position.set(CX+Math.cos(orbit)*ORB,ORB*0.45,CZ+Math.sin(orbit)*ORB);camera.lookAt(CX,0,CZ);camera.fov=55;camera.far=FAR_MENU;camera.updateProjectionMatrix();
+function menuCamera(dt){if(window.__freeCam){camera.far=FAR_MENU;camera.updateProjectionMatrix();return;} // dev: hrc.camera posed by hand from the console
+  orbit+=dt*0.05;camera.position.set(CX+Math.cos(orbit)*ORB,ORB*0.45,CZ+Math.sin(orbit)*ORB);camera.lookAt(CX,0,CZ);camera.fov=55;camera.far=FAR_MENU;camera.updateProjectionMatrix();
 sun.position.set(CX+200,600,CZ+100);sun.target.position.set(CX,0,CZ);}
 
 /* ================= DYNAMIC RACING LINE (assist) =================
@@ -3240,7 +3265,7 @@ function recFrame(){if(!recBuf||recBuf.length!==REC_N*cars.length*REC_F)recReset
 // broadcast camera positions: every ~200 m, on the outside of the bend, 2 m behind the fence, 8 m up
 const TVC=[];{const step=Math.round(200/DS);
   for(let i=0;i<N;i+=step){const sp=spI(i);let side=K[i]>0?-1:1; // K>0 bends right-side-inside, so the outside is the leftif(Math.abs(K[i])<1/400)side=(i/step)%2?1:-1;
-    if(sp>PIT_A-60&&sp<PIT_D+60)side=-1; // never stand in the pit lane
+    if(sp>PIT_A-60&&sp<PIT_D+60)side=-PS; // never stand in the pit lane
     const off=side>0?WR[i]+2.2:-(WL[i]+2.2);TVC.push({i,x:X[i]-TZ[i]*off,z:Z[i]+TX[i]*off,y:8});}}
 const rpBadge=document.createElement('div');
 rpBadge.style.cssText='position:fixed;left:18px;top:16px;z-index:40;display:none;font:800 15px/1.4 "HRC F1",Titillium Web,sans-serif;color:#fff;'+
@@ -3316,7 +3341,7 @@ addEventListener('keydown',e=>{
   if(e.code==='Digit0'||e.code==='Numpad0'){if(replay)endReplay();else startReplay();return;}
   if(e.code==='KeyP'||e.code==='Escape'){if(replay){endReplay();return;}togglePause();}
   if(['Digit1','Digit2','Digit3'].includes(e.code)&&player){const n={Digit1:'S',Digit2:'M',Digit3:'H'}[e.code];player.nextComp=n;msg('NEXT TYRE · '+COMP[n].name);}
-  if(e.code==='KeyR'&&player&&(phase==='race'||session==='tt')&&player.pitStop<=0&&!player.dnf){if(session==='tt')ttInvalidate('RECOVERED');const c=player,i=c.idx;const d=c.pitSide?PIT_OFF+FAST_D:clamp(c.d,-HWa[i]+1.5,HWa[i]-1.5);c.x=X[i]-TZ[i]*d;c.z=Z[i]+TX[i]*d;c.yaw=c.chi=ANG[i];c.v=0;c.delta=0;c.r=0;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;msg('BACK ON TRACK');}
+  if(e.code==='KeyR'&&player&&(phase==='race'||session==='tt')&&player.pitStop<=0&&!player.dnf){if(session==='tt')ttInvalidate('RECOVERED');const c=player,i=c.idx;const d=c.pitSide?PS*(PIT_OFF+FAST_D):clamp(c.d,-HWa[i]+1.5,HWa[i]-1.5);c.x=X[i]-TZ[i]*d;c.z=Z[i]+TX[i]*d;c.yaw=c.chi=ANG[i];c.v=0;c.delta=0;c.r=0;c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;msg('BACK ON TRACK');}
 });
 addEventListener('keyup',e=>{keys[e.code]=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
@@ -3490,8 +3515,8 @@ function introFrame(){intro.t=(performance.now()-intro.t0)/1000; // wall clock: 
     const a=sh.n?SEC[sh.n-1]:0,b=sh.n<2?SEC[sh.n]:L,s=a+(b-a)*easeIO(u),k=clamp((b-a)/1600,1,1.8);
     const [cx,cz]=smoothAt(s-60*k),[lx,lz]=smoothAt(s+170*k);px=cx;pz=cz;py=72*k;tx=lx;ty=0;tz=lz;}
   else{ // the pit lane and grid: a slow crane move above the far side of the straight, looking across the grid to the garages
-    const gi=idxSp((BOX_S[0]+BOX_S[BOX_S.length-1])/2),off=-46,along=-60+110*u;
-    px=X[gi]-TZ[gi]*off+TX[gi]*along;pz=Z[gi]+TX[gi]*off+TZ[gi]*along;py=46-8*u;tx=X[gi]-TZ[gi]*PIT_OFF*1.1+TX[gi]*along*0.6;ty=0;tz=Z[gi]+TX[gi]*PIT_OFF*1.1+TZ[gi]*along*0.6;}
+    const gi=idxSp((BOX_S[0]+BOX_S[BOX_S.length-1])/2),off=-46*PS,along=-60+110*u;
+    px=X[gi]-TZ[gi]*off+TX[gi]*along;pz=Z[gi]+TX[gi]*off+TZ[gi]*along;py=46-8*u;tx=X[gi]-TZ[gi]*PS*PIT_OFF*1.1+TX[gi]*along*0.6;ty=0;tz=Z[gi]+TX[gi]*PS*PIT_OFF*1.1+TZ[gi]*along*0.6;}
   showIntroLines(sh.k==='lap'?u:null);
   // and on top of that a short time lag (~0.3 s) within a shot; cuts between shots stay cuts
   const now=performance.now(),dt=Math.min(0.1,(now-(intro.lastF||now))/1000);intro.lastF=now;
@@ -3545,6 +3570,7 @@ const loadEl=$('loading'),loadBar=$('loadBar'),loadTxt=$('loadTxt');
 const stage=(t,p)=>{loadTxt.textContent=t;loadBar.style.width=Math.round(p*100)+'%';return new Promise(r=>{requestAnimationFrame(()=>setTimeout(r,0));setTimeout(r,60);});};
 let last=performance.now(),acc=0,hudT=0,shadowTick=0;const H=1/120;
 function frame(now){const ms=now-last,dt=Math.min(0.05,ms/1000);last=now;let n=0;
+  if(SEOUL)seoulTick(now/1000);
   if(scaler.tick(ms)){perf.scaler(scaler.scale,'tick');resizeAll();}
   if(intro)introFrame();else if(phase==='menu'){menuCamera(dt);}
   else if(replay){replayFrame(dt);if(!replay)updateVisuals(dt);drawMinimap(dt);}
@@ -3618,4 +3644,4 @@ function detHash(seed=1,n=6000){
   reseed(null);
   return {hash:(h>>>0).toString(16).padStart(8,'0'),seed,steps:n,simTime:+simTime.toFixed(4),laps:cars.map(c=>c.lapCount),best:cars.map(c=>c.bestLap&&+c.bestLap.toFixed(3))};}
 boot();
-window.hrc={updateHud,updateInfo,restartRace,restartQuali,restartTT,setupSession,incident,get tt(){return tt;},get session(){return session;},quickRace,detHash,deploySC,deployVSC,hazard,retire,get sc(){return sc;},get vsc(){return vsc;},get msFlag(){return msFlag;},reseed,rtEstimate,get player(){return player;},get simTime(){return simTime;},gpuTimer,cullByDistance,finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene};
+window.hrc={updateHud,updateInfo,restartRace,restartQuali,restartTT,setupSession,incident,get tt(){return tt;},get session(){return session;},quickRace,detHash,deploySC,deployVSC,hazard,retire,get sc(){return sc;},get vsc(){return vsc;},get msFlag(){return msFlag;},reseed,rtEstimate,get player(){return player;},get simTime(){return simTime;},gpuTimer,cullByDistance,finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene,camera,sun};

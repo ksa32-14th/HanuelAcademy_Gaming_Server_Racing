@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261008i';
-import {clamp} from './util.js?v=20261008i';
+import {TRACKS} from './data/tracks.js?v=20261008s';
+import {clamp} from './util.js?v=20261008s';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -34,7 +34,8 @@ export const BRK=0.90;
 export const TC_P=0.72, SLIDE=0.5;
 // mechanical grip is lower at low speed (no downforce to lean on, tyres slide more easily)
 export const gripV=v=>0.84+0.16*Math.min(1,v/55);
-export const PITWALL=HW+3.5, PIT_HW=6, PIT_OFF=PITWALL+1+PIT_HW+1, PIT_LIMIT=60/3.6;
+// `pitWallGap`: track edge to pit wall (3.5 m; Seoul squeezes the lane onto Sejong-daero's other carriageway)
+export const PITWALL=HW+(TR.pitWallGap??3.5), PIT_HW=6, PIT_OFF=PITWALL+1+PIT_HW+1, PIT_LIMIT=60/3.6;
 // the 12 m lane is split in two: the fast lane by the pit wall and the working lane in front of the garages, where
 // each team's box is painted (BOX_D = lateral offset of the box centre from the lane centre)
 export const BOX_D=3.0, FAST_D=-2.6;
