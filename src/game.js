@@ -6,20 +6,20 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008h';
-import {perf} from './perf.js?v=20261008h';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261008h';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008h';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008h';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261008h';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008h';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008i';
+import {perf} from './perf.js?v=20261008i';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261008i';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008i';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008i';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261008i';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008i';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008h';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008i';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008h'):import('./data/osm-songdo.js?v=20261008h')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008i'):import('./data/osm-songdo.js?v=20261008i')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 
@@ -1737,6 +1737,7 @@ function physics(c,dt){
   // reverse (S): a crawl — in the pit lane on S alone (to back into the box after overshooting it), anywhere else with
   // the brake held too (SPACE + S), e.g. to back out of a run-off after a spin
   if(c.isPlayer&&c.revIn&&(c.pitSide||c.brakeIn)&&c.v<0.3&&c.throttle<0.05){const vr=c.pitSide?2.2:4;c.v=0;c.aLong=0;c.aLat=0;c.r=0;
+    c.revT=simTime;c.revV=vr; // reversing right now (the dash and the sound read it)
     c.delta+=clamp(c.steerIn*0.26-c.delta,-4*dt,4*dt);c.yaw-=vr*Math.tan(c.delta)/WB*dt;c.chi=c.yaw;
     c.x-=Math.cos(c.yaw)*vr*dt;c.z-=Math.sin(c.yaw)*vr*dt;return;}
   if(c.dnf){c.throttle=0;c.brake=1;c.deltaCmd=0;c.steerIn=0;}
@@ -2706,8 +2707,8 @@ function setTxt(id,v){if(_hc[id]!==v){_hc[id]=v;$(id).textContent=v;}}
 function setW(id,p){const v=Math.round(p);if(_hc['w'+id]!==v){_hc['w'+id]=v;$(id).style.width=v+'%';}}
 function updateHud(){
   const c=player,kmh=c.v*3.6,g=gearOf(c);
-  const rpm=c.held?4000+c.throttle*7500:rpmOf(c);
-  setTxt('spd',Math.round(kmh));setTxt('gear',c.v<0.3&&c.held?'N':(g+1));setTxt('rpmTxt',Math.round(rpm/10)*10);
+  const rev=reversing(c),rpm=rev?REV_RPM:c.held?4000+c.throttle*7500:rpmOf(c);
+  setTxt('spd',rev?Math.round(c.revV*3.6):Math.round(kmh));setTxt('gear',rev?'R':c.v<0.3&&c.held?'N':(g+1));setTxt('rpmTxt',Math.round(rpm/10)*10);
   // the arcs are pathLength=100, so the dash length is a percentage; bars are 60 px wide
   const rp=Math.round(clamp((rpm-4000)/8200,0,1)*100);if(_hc.rp!==rp){_hc.rp=rp;$('rpmArc').style.strokeDasharray=rp+' 100';}
   // pedal bars beside the gear (brake left, throttle right), 76 px tall, filling up from y=112
@@ -2937,7 +2938,7 @@ function audioInit(){try{const ac=new (window.AudioContext||window.webkitAudioCo
   const mk=(type,fr,q)=>{const n=ac.createBufferSource();n.buffer=buf;n.loop=true;const bf=ac.createBiquadFilter();bf.type=type;bf.frequency.value=fr;bf.Q.value=q;const g=ac.createGain();g.gain.value=0;n.connect(bf).connect(g).connect(master);n.start();return g;};
   const cyc=engineCycle(ac);
   au={ac,master,buf,me:engineVoice(ac,master,buf,.34,cyc),opp:engineVoice(ac,master,buf,0,cyc),sq:mk('bandpass',1250,4),wn:mk('lowpass',500,.7),
-    scrape:scrapeVoice(ac,master,buf),kerb:kerbVoice(ac,master,buf)};
+    scrape:scrapeVoice(ac,master,buf),kerb:kerbVoice(ac,master,buf),rev:revVoice(ac,master)};
   // swap in the real-time exhaust as soon as its worklet has loaded (the looped voice plays until then, or for good)
   if(ac.audioWorklet&&window.AudioWorkletNode){const url=URL.createObjectURL(new Blob([ENGINE_WORKLET],{type:'text/javascript'}));
     ac.audioWorklet.addModule(url).then(()=>{if(!au)return;const me=workletVoice(ac,master,buf,.36),opp=workletVoice(ac,master,buf,0);
@@ -2964,7 +2965,10 @@ function audioUpdate(rpm,g){if(!au||replay)return;const t=au.ac.currentTime,c=pl
   if(g>lastGear&&c.throttle>.3)au.me.cut(t);else if(g<lastGear){au.me.blip(t);crackle(t,rpm);}lastGear=g;
   // slamming the throttle shut at high revs: the exhaust crackles on the overrun
   if(lastThr>0.55&&c.throttle<0.12&&rpm>4200)crackle(t,rpm);lastThr=c.throttle;
-  au.me.set(rpm,c.throttle,t);
+  // reversing: the engine pulls at reverse-gear revs on a light throttle (the player's throttle is off meanwhile)
+  const rev=reversing(c);au.me.set(rpm,rev?0.35:c.throttle,t);
+  au.rev.g.gain.setTargetAtTime(rev?.07:0,t,rev?.04:.08);
+  if(rev){const f=560+c.revV*70;au.rev.a.frequency.setTargetAtTime(f,t,.1);au.rev.b.frequency.setTargetAtTime(f*1.5,t,.1);au.rev.bp.frequency.setTargetAtTime(f*1.3,t,.1);}
   if(c.throttle<.05&&rpm>5200&&c.v>15&&Math.random()<.05)pop(t);
   // nearest rival: distance attenuation + doppler
   let o=null,bd=150;for(const x of cars){if(x===c||x.parked)continue;const d=Math.hypot(x.x-c.x,x.z-c.z);if(d<bd){bd=d;o=x;}}
@@ -2993,6 +2997,14 @@ function scrapeVoice(ac,master,buf){
   const rum=ac.createBiquadFilter();rum.type='lowpass';rum.frequency.value=150;const rg=ac.createGain();rg.gain.value=0.9;
   const g=ac.createGain();g.gain.value=0;src.connect(rum).connect(rg).connect(g);am.connect(g);g.connect(master);
   src.start(0,Math.random()*1.5);fl.start(0,Math.random()*1.5);return {g,body,grit};}
+// reversing (SPACE + S, or S in the pit lane): the engine held at reverse-gear revs under a light load, and the high
+// straight-cut whine of the reverse gear — two tones a fifth apart through a resonant band, pitched by the crawl speed
+const REV_RPM=6200,reversing=c=>c.revT!=null&&simTime-c.revT<0.1;
+function revVoice(ac,master){const a=ac.createOscillator(),b=ac.createOscillator(),bp=ac.createBiquadFilter(),g=ac.createGain();
+  a.type='sawtooth';b.type='triangle';a.frequency.value=700;b.frequency.value=1050;
+  bp.type='bandpass';bp.frequency.value=900;bp.Q.value=2.5;g.gain.value=0;
+  const bg=ac.createGain();bg.gain.value=0.6;a.connect(bp);b.connect(bg).connect(bp);bp.connect(g).connect(master);a.start();b.start();
+  return {a,b,bp,g};}
 // riding a kerb: the "드르르르르" of the tyres hammering over its ridges — not a tone but a fast train of separate hits.
 // Each hit is a burst of noise (the rattle) over a low thump (the body), switched on and off by a square wave at the
 // ridge rate: speed / ridge spacing, kept in the 12–38 hits a second the ear hears as a rattle rather than a buzz.
@@ -3257,7 +3269,7 @@ function replayAudio(C){if(!au)return;const t=au.ac.currentTime;
   const me=hear(player);if(me)au.me.set(me.rpm,me.thr,t,me.vol*0.42);
   let o=null;for(const c of cars){if(c===player||c.parked)continue;const h=hear(c);if(h&&(!o||h.d<o.d))o=h;}
   if(o)au.opp.set(o.rpm,o.thr,t,o.vol*0.3);else au.opp.set(4000,0,t,0);
-  for(const g of [au.sq.gain,au.wn.gain,au.scrape.g.gain,au.kerb.g.gain])g.setTargetAtTime(0,t,.05);}
+  for(const g of [au.sq.gain,au.wn.gain,au.scrape.g.gain,au.kerb.g.gain,au.rev.g.gain])g.setTargetAtTime(0,t,.05);}
 function replayFrame(dt){
   const R=replay;R.t+=dt;const dur=(R.n-1)/REC_HZ;if(R.t>=dur){endReplay();return;}
   const f=R.t*REC_HZ,i0=Math.floor(f),a=f-i0,fs=cars.length*REC_F,A=i0*fs,B=Math.min(R.n-1,i0+1)*fs,cl=R.clip;
