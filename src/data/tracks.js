@@ -98,19 +98,26 @@ export const TRACKS={
   hills:[[3695,2974,634,1700],[-3276,-995,415,1300],[-5170,-1040,427,1400],[-3040,1725,256,1000],[3367,-830,140,520]],
   tall:()=>true},
  seoul:{title:'Seoul <em>Gwanghwamun</em> GP',label:'Seoul · Gwanghwamun',
-  sub:'Gwanghwamun Street Circuit · clockwise · Gwanghwamun Square pit lane · GPS-traced',len:3393,fullLaps:78,start:[-63.5,-110],
+  sub:'Gwanghwamun Street Circuit · clockwise · Gwanghwamun Square pit lane · GPS-traced',len:3552,fullLaps:75,start:[-63.5,-110],
   simp:2.5,fillet:42,minR:24,
+  // the Dongsipjagak rotary (T2) is the real ~16 m radius round the island, and the left turn into it off Yulgok-ro ~20 m
+  tight:[[125.5,233.5,13.5,30],[104,197,18,22]],
+  board:'seoul-r2', // T2 became the rotary (2026-10-09): a fresh Time Trial board; the hairpin layout's laps stay under 'seoul'
   times:['day','night'], // a clear autumn afternoon under Bugaksan; at night the LED boards of the Gwanghwamun junction light up
   // traced from the "Seoul_GrandPrix" GPX route (metres from 37.5740 N, 126.9780 E), clockwise: north up Sejong-daero
-  // past Gwanghwamun Square, right along Sajik-ro / Yulgok-ro to the Dongsipjagak hairpin, back down Jong-ro 1-gil,
+  // past Gwanghwamun Square, right along Sajik-ro / Yulgok-ro, round the Dongsipjagak rotary, back down Jong-ro 1-gil,
   // Sambong-ro and Jong-ro 5-gil to Jongno, across the Cheonggyecheon on Mojeongyo, east along Cheonggyecheon-ro to
   // Gwanggyo, down Namdaemun-ro, west along Eulji-ro, round Seoul Plaza onto Sogong-ro and north up Sejong-daero past
-  // City Hall and Deoksugung. (The trace's little loops round traffic islands — Draw My Loop routing — are dropped.)
+  // City Hall and Deoksugung. (The trace's other little loops round traffic islands — Draw My Loop routing — are dropped.)
   raw:[[-63.7,-152.5],[-65.5,-97.2],[-69,13.4],[-70.1,52.7],[-70.9,76.1],[-71.9,103.8],[-72.3,118.2],[-72.6,132.2],
    // T1: right onto Sajik-ro in front of the Gwanghwamun Woldae, along Yulgok-ro past the Twin Tree Towers
    [-65.6,135],[-62.4,136.8],[-42.9,149.9],[-30.8,159.7],[-22.3,165.6],[-14.4,169.4],[-4.2,173.4],[4.3,175.7],[31.4,180.9],
-   [49.4,183.7],[106.9,189.9],[123.5,193],[134.6,195.3],
-   // T2: the Dongsipjagak hairpin, back down Jong-ro 1-gil past the Museum of Korean Contemporary History
+   [49.4,183.7],
+   // T2: the Dongsipjagak rotary (checked against the Kakao skyview): left off Yulgok-ro up the lanes west of the
+   // watchtower's island, clockwise round its north side (~200°, the island on the right), down the east lanes and
+   // straight across the junction into Jong-ro 1-gil past the Museum of Korean Contemporary History. The ring's corners
+   // sit on a 17.5 m circle round the island (125.5, 233.5); the fillet turns them into a ~16.5 m radius path.
+   [108,191],[109,227.5],[109,239.5],[116.8,248.7],[128.5,250.7],[138.9,244.8],[143,233.5],[138.9,222.3],
    [130,183.7],[122.5,172.8],[108.1,158.7],[102,150.8],[88.2,133],[74.8,115.1],[60,92.2],[46.1,56.3],[44.4,25.2],[48.5,-41],[50.4,-114.4],
    // Sambong-ro, then Jong-ro 5-gil through Cheongjin-dong (KT East, D Tower, Gran Seoul)
    [49,-135],[80.6,-166.6],[110,-171.3],[131,-169.4],[171.3,-165.8],[180.4,-173.1],[192.6,-183.8],[217.9,-238.7],[225.2,-256],
@@ -133,14 +140,16 @@ export const TRACKS={
        [[409,-790],[350,-881],[110,-883]]],
   stands:[[-68,-935,1,70]], // on the south half of Seoul Plaza, facing Sejong-daero (City Hall stays in view)
   mainStand:false, // the main straight is lined with buildings on the right
-  // the back streets between Yulgok-ro and Jongno, Mugyo-ro and Cheonggyecheon-ro are far narrower than Sejong-daero
-  narrow:[[[122,173],[262,-395],11],[[118,-436],[398,-585],11]],
+  // the rotary lanes, the back streets between Yulgok-ro and Jongno, Mugyo-ro and Cheonggyecheon-ro are far narrower
+  // than Sejong-daero
+  narrow:[[[104,197],[262,-395],11],[[118,-436],[398,-585],11]],
   wallGap:1.2,clear:1.0,pitWallGap:2.0,
   // pits: the southbound carriageway of Sejong-daero is the pit lane, Gwanghwamun Square the paddock — the garages
   // stand between the statue of Admiral Yi Sun-sin and the statue of King Sejong. Entry after Cheonggye Plaza, exit
   // before the Woldae.
   pitLeft:true,pitEntry:[-69.2,-520],pitRamp:150,pitExit:[-65,-40],pitExitLen:75,boxStart:-202,boxGap:16,tightPaddock:true,
   osm:true,
+  bare:[[-175,135,-30,212]], // the open lawns either side of the Woldae in front of Gwanghwamun (roadview): no park trees
   // the mountains round the old city: Bugaksan behind Gyeongbokgung, Inwangsan to the west, Namsan (N Seoul Tower)
   // to the south, Naksan's low ridge to the east, and the saddle between Bugaksan and Inwangsan (Changuimun)
   // [x, y, height above the square, radius] — summits from the survey heights (Bugaksan 342 m, Inwangsan 338 m,
@@ -178,8 +187,8 @@ export const INTROS={
 ,
  seoul:{place:'Gwanghwamun · Jongno-gu · Seoul',placeEn:'SEOUL · REPUBLIC OF KOREA',
   about:'Seoul has been Korea\'s capital for more than six hundred years. The race runs through its oldest heart: from Gwanghwamun, the main gate of Gyeongbokgung Palace with Bugaksan behind it, through the office towers of Jongno and across the Cheonggyecheon stream to City Hall and Deoksugung.',
-  layout:'A 3.39 km clockwise street circuit on the real roads, GPS-traced. The broad Sejong-daero straight is the fastest part of the lap; the back streets of Jongno and the Cheonggyecheon bank are narrow, walled and unforgiving.',
-  sectors:[['Gwanghwamun · Dongsipjagak','Up Sejong-daero past King Sejong, right in front of the Woldae terrace of Gwanghwamun and along Yulgok-ro to the tightest corner of the lap: the hairpin at the Dongsipjagak watchtower. Then back down Jong-ro 1-gil and through the narrow streets of Cheongjin-dong.'],
+  layout:'A 3.55 km clockwise street circuit on the real roads, GPS-traced. The broad Sejong-daero straight is the fastest part of the lap; the back streets of Jongno and the Cheonggyecheon bank are narrow, walled and unforgiving.',
+  sectors:[['Gwanghwamun · Dongsipjagak','Up Sejong-daero past King Sejong, right in front of the Woldae terrace of Gwanghwamun and along Yulgok-ro to the tightest corner of the lap: left into the rotary and right round the island of the Dongsipjagak watchtower. Then back down Jong-ro 1-gil and through the narrow streets of Cheongjin-dong.'],
            ['Jongno · Cheonggyecheon','Right onto Jongno, left down Mugyo-ro and over the Cheonggyecheon on Mojeongyo, then east along the stream between the railing and the office towers to Gwanggyo, and down Namdaemun-ro.'],
            ['Eulji-ro · City Hall · Sejong-daero','West along Eulji-ro with DRS, round Seoul Plaza past the Plaza Hotel, and right at Daehanmun onto Sejong-daero: past City Hall, Cheonggye Plaza and the LED boards of the Gwanghwamun junction, flat out with DRS to the line.']],
   pitTitle:'Pits · Gwanghwamun Square',pit:'Gwanghwamun Square is the paddock. The pit lane leaves the circuit after Cheonggye Plaza and runs up the southbound carriageway of Sejong-daero; the ten garages stand in the square between the statue of Admiral Yi Sun-sin and the statue of King Sejong, and the lane rejoins before the Woldae.'}

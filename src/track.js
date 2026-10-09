@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261008s';
-import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261008s';
+import {clamp,wrapA,smooth} from './util.js?v=20261009a';
+import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009a';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -28,14 +28,16 @@ export function filletPath(pts,Rmax){const out=[],n=pts.length;
 // resample a closed polyline every `step` m, then relax any stretch tighter than Rmin (a 20 m wide
 // track needs a centre-line radius well above its half width, or the inside of a hairpin folds over)
 // `wide`: [[x,y,R,reach], …] — around (x,y) the minimum radius is raised to R (within `reach` m),
-// so a single corner can be opened out without touching its neighbours
-export function enforceMinRadius(pts,Rmin,step=3,wide=[]){
+// so a single corner can be opened out without touching its neighbours; `tight`: [[x,y,R,reach], …] — the opposite, a
+// smaller minimum radius around (x,y) for a corner that really is that tight (Seoul's rotary round Dongsipjagak)
+export function enforceMinRadius(pts,Rmin,step=3,wide=[],tight=[]){
   const out=[];const n=pts.length;
   for(let i=0;i<n;i++){const a=pts[i],b=pts[(i+1)%n],l=Math.hypot(b[0]-a[0],b[1]-a[1]),k=Math.max(1,Math.round(l/step));
     for(let j=0;j<k;j++)out.push([a[0]+(b[0]-a[0])*j/k,a[1]+(b[1]-a[1])*j/k]);}
   const m=out.length,rad=i=>{const p=out[(i-4+m)%m],c=out[i],q=out[(i+4)%m],x1=c[0]-p[0],y1=c[1]-p[1],x2=q[0]-c[0],y2=q[1]-c[1];
     const cr=Math.abs(x1*y2-y1*x2);return cr<1e-6?1e9:Math.hypot(x1,y1)*Math.hypot(x2,y2)*Math.hypot(q[0]-p[0],q[1]-p[1])/(2*cr);};
-  const rm=out.map(p=>{let r=Rmin;for(const [x,y,R,reach] of wide)if(Math.hypot(p[0]-x,p[1]-y)<reach)r=Math.max(r,R);return r;});
+  const rm=out.map(p=>{let r=Rmin;for(const [x,y,R,reach] of tight)if(Math.hypot(p[0]-x,p[1]-y)<reach)r=Math.min(r,R);
+    for(const [x,y,R,reach] of wide)if(Math.hypot(p[0]-x,p[1]-y)<reach)r=Math.max(r,R);return r;});
   // the usual 400 passes everywhere; any extra passes only work on the widened corners, so the rest
   // of the circuit comes out exactly as before
   for(let it=0;it<(wide.length?1500:400);it++){let moved=false;
@@ -46,7 +48,7 @@ export function enforceMinRadius(pts,Rmin,step=3,wide=[]){
 // a generous fillet turns the city's square street corners into sweeping bends instead of a lap of
 // 90° hairpins; the short zigzag sections keep their character because the arc can never eat more
 // than 45% of the straights either side of it
-export const RAW=TR.fillet?enforceMinRadius(filletPath(simplifyPath(TR.raw,TR.simp||0),TR.fillet),TR.minR||26,3,TR.wide||[]):TR.raw;
+export const RAW=TR.fillet?enforceMinRadius(filletPath(simplifyPath(TR.raw,TR.simp||0),TR.fillet),TR.minR||26,3,TR.wide||[],TR.tight||[]):TR.raw;
 export const rawV=RAW.map(p=>new THREE.Vector3(p[0],0,-p[1]));
 export let curve=new THREE.CatmullRomCurve3(rawV,true,'centripetal'); curve.arcLengthDivisions=6000;
 export const SC=TRACK_LEN/curve.getLength();

@@ -6,24 +6,27 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261008s';
-import {perf} from './perf.js?v=20261008s';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261008s';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261008s';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261008s';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261008s';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261008s';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009a';
+import {perf} from './perf.js?v=20261009a';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261009a';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009a';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009a';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261009a';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009a';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261008s';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick} from './scenery-seoul.js?v=20261008s';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009a';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009a';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261008s'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261008s'):import('./data/osm-songdo.js?v=20261008s')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009a'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009a'):import('./data/osm-songdo.js?v=20261009a')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
+// the Time Trial boards (laps, sectors, ghosts) of this circuit: `board` starts a fresh one when the layout changes, so
+// laps of the old layout (kept under the old key) are never ranked against the new one
+const LB_ID=TR.board||TRACK_ID;
 
 /* ================= RENDERER / SCENE / QUALITY ================= */
 const qState={mode:loadMode()};
@@ -481,6 +484,8 @@ async function buildOSM(){
       if(treeGap)for(;nextT<acc+seg;nextT+=treeGap){const t=(nextT-acc)/seg,x=pts[k-1][0]+ax*t,z=pts[k-1][1]+az*t;
         for(const sd of [-1,1]){const tx=x+dz*sd*(w/2+3.4),tz=z-dx*sd*(w/2+3.4);if(!blocked(tx,tz,-3)&&treePos.length<7000)treePos.push([tx,tz,rand(.75,1.15)]);}}
       acc+=seg;}}
+  // `bare`: [[x0,y0,x1,y1], …] raw rectangles of open lawn that get no scattered trees (Gwanghwamun's forecourt)
+  const bare=(rx,ry)=>(TR.bare||[]).some(([a,b,c,d])=>rx>a&&rx<c&&ry>b&&ry<d);
   // park trees (Central Park and the other lawns) — only within ~700 m of the circuit; nobody sees the far ones
   {const near=new Set();for(let i=0;i<N;i+=10){const cx=Math.floor(X[i]/100),cz=Math.floor(Z[i]/100);for(let a=-7;a<=7;a++)for(let b=-7;b<=7;b++)near.add((cx+a)+','+(cz+b));}
    const inP=(p,x,z)=>{let c=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2){const xi=p[i]*SC,zi=-p[i+1]*SC,xj=p[j]*SC,zj=-p[j+1]*SC;
@@ -490,7 +495,7 @@ async function buildOSM(){
    const wet=(x,z)=>(D.lk&&inP(D.lk[0],x,z)&&!D.lk.slice(1).some(h=>inP(h,x,z)))||WB.some(([w,b])=>x>=b[0]&&x<=b[1]&&z>=b[2]&&z<=b[3]&&inP(w,x,z));
    for(const p of D.g){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(let k=0;k<p.length;k+=2){const x=p[k]*SC,z=-p[k+1]*SC;x0=Math.min(x0,x);x1=Math.max(x1,x);z0=Math.min(z0,z);z1=Math.max(z1,z);}
      for(let x=x0;x<x1;x+=15)for(let z=z0;z<z1;z+=15){if(treePos.length>=11000)break;const tx=x+rand(-6,6),tz=z+rand(-6,6);
-       if(!near.has(Math.floor(tx/100)+','+Math.floor(tz/100))||Math.random()<0.35||!inP(p,tx,tz)||wet(tx,tz)||blocked(tx,tz,-2))continue;treePos.push([tx,tz,rand(.8,1.3)]);}}}
+       if(!near.has(Math.floor(tx/100)+','+Math.floor(tz/100))||Math.random()<0.35||!inP(p,tx,tz)||wet(tx,tz)||blocked(tx,tz,-2)||bare(tx/SC,-tz/SC))continue;treePos.push([tx,tz,rand(.8,1.3)]);}}}
   if(walkG.length){const m=new THREE.Mesh(mergeGeometries(walkG),mat({color:0x6b6e75,map:texConcrete,normalMap:texConcreteN,roughness:.95,side:THREE.DoubleSide,...po(0.1)}));m.position.y=LY.walk;m.receiveShadow=true;groundLayer(m);scene.add(m);}
   for(const cls of [2,3,4])if(roadG[cls].length){const m=new THREE.Mesh(mergeGeometries(roadG[cls]),roadMats[cls]);m.position.y=LY.road;m.receiveShadow=true;groundLayer(m);scene.add(m);}
   if(waterG.length){const m=new THREE.Mesh(mergeGeometries(waterG),waterMat);m.material.side=THREE.DoubleSide;m.position.y=LY.water;scene.add(m);}
@@ -512,7 +517,7 @@ async function buildOSM(){
   // trees scattered through parks
   {const trees=[];const inP=(p,x,y)=>{let c=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2){const xi=p[i],yi=p[i+1],xj=p[j],yj=p[j+1];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c;}return c;};
    for(const p of D.g){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(let k=0;k<p.length;k+=2){x0=Math.min(x0,p[k]);x1=Math.max(x1,p[k]);y0=Math.min(y0,p[k+1]);y1=Math.max(y1,p[k+1]);}
-     const n=Math.min(400,Math.floor((x1-x0)*(y1-y0)/350));for(let t=0;t<n&&trees.length<5000;t++){const x=rand(x0,x1),y=rand(y0,y1);if(!inP(p,x,y))continue;const [wx,wz]=W2(x,y);if(!blocked(wx,wz,-2))trees.push([wx,wz,rand(.7,1.4)]);}}
+     const n=Math.min(400,Math.floor((x1-x0)*(y1-y0)/350));for(let t=0;t<n&&trees.length<5000;t++){const x=rand(x0,x1),y=rand(y0,y1);if(!inP(p,x,y)||bare(x,y))continue;const [wx,wz]=W2(x,y);if(!blocked(wx,wz,-2))trees.push([wx,wz,rand(.7,1.4)]);}}
    const im=new THREE.InstancedMesh(new THREE.ConeGeometry(2.6,8,7).translate(0,4.6,0),mat({color:DAY?0x2d5229:0x16331d,roughness:.9}),trees.length);const m4=new THREE.Matrix4();
    trees.forEach(([x,z,s],k)=>{m4.makeScale(s,s,s);m4.setPosition(x,0,z);im.setMatrixAt(k,m4);});addTiledT(520,700,im);}
   await stage("Buildings…",.5);
@@ -525,10 +530,12 @@ async function buildOSM(){
   const ST=[{tw:26,th:26,rough:.72,metal:.05,env:.22},{tw:26,th:34,rough:.15,metal:.72,env:1.05},
     {tw:22,th:22,rough:.68,metal:.05,env:.2},{tw:26,th:26,rough:.8,metal:.05,env:.22},
     {tw:20,th:20,rough:.72,metal:.04,env:.18},
-    {tw:44,th:64,rough:.82,metal:.02,env:.15}]; // 5: Shinsegae Centum City — sandstone panels, almost no windows
+    {tw:44,th:64,rough:.82,metal:.02,env:.15}, // 5: Shinsegae Centum City — sandstone panels, almost no windows
+    ...(SEOUL?SEOUL_ST:[])]; // 6…: Seoul's own facades (scenery-seoul.js), drawn by their own draw / lit
   // facades are drawn at 512×1024, one floor every 64 px, so mullions, balcony rails and shopfronts
   // still read as building parts at the distance you actually drive past them
   const facade=s=>{const map=canvasTex(512,1024,(x)=>{
+      if(ST[s].draw){ST[s].draw(x);return;}
       const grain=(n,a)=>{for(let i=0;i<n;i++){const v=Math.random();x.fillStyle=`rgba(${v>0.5?255:0},${v>0.5?255:0},${v>0.5?255:0},${Math.random()*a})`;x.fillRect(Math.random()*512,Math.random()*1024,3,3);}};
       if(s===0){
         // apartment tower: pale precast bays, each with a recessed glazed column and a balcony rail
@@ -604,6 +611,7 @@ async function buildOSM(){
       }
       grain(5200,.06);},true);
     const emi=canvasTex(256,512,(x)=>{x.fillStyle='#000';x.fillRect(0,0,256,512);
+      if(ST[s].lit){ST[s].lit(x);return;}
       const warm=()=>`hsl(${33+Math.random()*12},${55+Math.random()*25}%,${58+Math.random()*18}%)`;
       // not every flat is in and not every office floor is lit — an even grid of identical bright
       // squares is exactly what makes a night skyline look drawn rather than photographed
@@ -625,18 +633,18 @@ async function buildOSM(){
         for(let r=0;r<140;r+=32)for(let c=0;c<256;c+=24)if(Math.random()<.2){x.fillStyle='#cfe0f0';x.fillRect(c+3,r+4,17,19);}
       }},true);
     // by day only the shopfronts glow a little; the windows are just glass
-    return mat({map,emissiveMap:emi,emissive:0xffffff,emissiveIntensity:DAY?(s===2||s===4?.25:0):.8,vertexColors:true,roughness:ST[s].rough,metalness:ST[s].metal,envMap:s===1?skyEnv:envTex,envMapIntensity:ST[s].env*(DAY&&s===1?1.35:1),side:THREE.DoubleSide});};
+    return mat({map,emissiveMap:emi,emissive:0xffffff,emissiveIntensity:DAY?(s===2||s===4?.25:0):.8,vertexColors:true,roughness:ST[s].rough,metalness:ST[s].metal,envMap:s===1||s===6?skyEnv:envTex,envMapIntensity:ST[s].env*(DAY&&(s===1||s===6)?1.35:1),side:THREE.DoubleSide});};
   const TINT=[[0xffffff,0xf1ece2,0xe7e9ec,0xf6efe4,0xdfe3e6,0xece4d6,0xd9dde2,0xf7f3ea,0xe3dcd0],
     [0xffffff,0xd8e6f2,0xcfe0da,0xe4e4ea,0xbcd2e6,0xc9dcd6,0xdce8f0,0xaec6da],
     [0xffffff,0xf0d9c0,0xcf8f6a,0xb86b52,0x6d6f75,0xe9dcc6,0xd8c8a8,0xc2a184],
     [0xffffff,0xe0e0dc,0xd2d6da,0xcdd2cf,0xe8e6df],
     [0xffffff,0xf4f2ee,0xe8e5df,0xfaf9f6,0xece9e3],
-    [0xffffff]];
+    [0xffffff],...ST.slice(6).map(t=>t.tint)];
   // the LED crowns Songdo's towers wear after dark (see the Central Park skyline at dusk)
   const CROWN=[0x36d67a,0xff4f8b,0xff6a2b,0x49b7ff,0xc46bff,0xffd24a,0x4ae0d0];
   // `overhead`: structures that really do pass over the circuit (Busan's viaducts, sky bridges, footbridges).
   // They skip the overhang check below and cast shadows onto the track.
-  const WB_=[0,1,2,3,4,5].map(()=>({p:[],u:[],c:[]})),ROOF={p:[],c:[]},beacons=[],extra=[],overhead=[];
+  const WB_=ST.map(()=>({p:[],u:[],c:[]})),ROOF={p:[],c:[]},beacons=[],extra=[],overhead=[];
   const col=new THREE.Color();
   // walls between successive footprint rings [y, scale-toward-centroid, twist (rad, optional)]
   // rings: [y, scale toward the centroid, twist (rad), x / z offset] — the offsets lean a facade (Seoul City Hall's wave)
@@ -690,10 +698,12 @@ async function buildOSM(){
   const SCX=SEOUL?{scene,mat,canvasTex,po,groundLayer,DAY,envTex,skyEnv,W2,ringWalls,roofCap,oba,edgeFacing,signAt,extra,overhead,blocked,footprintHitsTrack,
     mergeGeometries,rand,SC,beacons,D,rw,X,Z,TX,TZ,WL,WR,N,TR}:null;
   D.b.forEach((b,bi)=>{let h=b[0];const kind=b[1],lm=b[2],pts=[];for(let k=3;k<b.length;k+=2)pts.push(W2(b[k],b[k+1]));if(pts.length<3)return;
-    if(footprintHitsTrack(pts)){skipped++;return;}kept++;
+    // (Dongsipjagak is the island the Seoul rotary runs round: inside the inner barrier, closer than the outer one)
+    if(!(SEOUL&&lm===62)&&footprintHitsTrack(pts)){skipped++;return;}kept++;
     let ar=0;for(let i=0;i<pts.length;i++){const j=(i+1)%pts.length;ar+=pts[i][0]*pts[j][1]-pts[j][0]*pts[i][1];}ar=Math.abs(ar/2);
     if(h<=0)h=kind===1?(ar>250?rand(60,100):rand(9,15)):kind===2?rand(40,70):ar>1500?rand(16,26):ar>300?rand(9,18):rand(4,8);
-    const s=lm===6?4:lm===7?2:lm===1||lm===2||lm===8?1:lm===3?3:kind===1?0:kind===2?1:kind===3?2:3;
+    let s=lm===6?4:lm===7?2:lm===1||lm===2||lm===8?1:lm===3?3:kind===1?0:kind===2?1:kind===3?2:3;
+    if(SEOUL&&!lm)s=seoulStyle(kind,h,bi)??s; // Seoul's plain blocks: its own glass / granite / ribbon-window facades
     let tint=TINT[s][(bi*7)%TINT[s].length];
     if(SEOUL&&(lm>=41||kind===5)&&seoulBuilding(SCX,pts,kind===5?b[0]:h,ar,kind,lm,bi))return;
     /* ---------------- Busan landmarks (codes 21–34, from the aerial photos and Kakao roadview) ---------------- */
@@ -872,14 +882,17 @@ async function buildOSM(){
     // Seoul's flat roofs: most low and mid-rise blocks wear the green waterproofing paint seen all over the skyview
     if(SEOUL&&h<50&&bi%4)rc=[0x5c9a6a,0x4d8a63,0x6aa37a,0x7a9e86][bi%4];
     let r;
+    // Seoul's stone and concrete blocks stand on a glazed ground floor of shops and lobbies, set back a little (roadview)
+    const g0=SEOUL&&h>12&&(s===7||s===8||s===11)?4.5:0;
+    if(g0){ringWalls(pts.map(p=>r_c(p,pts,0.985)),[[0,1],[g0,1]],6,0xb8c4cc);roofCap(pts,g0,0x6f6a64);}
     const podPts=pts.map(p=>r_c(p,pts,1.16));
     if(h>70&&style<2&&!footprintHitsTrack(podPts)){ // tower on a wider podium (common in Songdo) — only where the wider base stays clear of the circuit
       const pod=Math.min(h*0.13,16);
-      const pr=ringWalls(podPts,[[0,1],[pod,1]],s===1?3:s,new THREE.Color(tint).multiplyScalar(0.92).getHex());
-      roofCap(pr.top,pod,rc);
+      const pr=ringWalls(podPts,[[g0,1],[pod,1]],s===1?3:s,new THREE.Color(tint).multiplyScalar(0.92).getHex());
+      roofCap(pr.top,pod,rc);if(g0)roofCap(podPts,g0,0x6f6a64);
       r=ringWalls(pts,[[0,1],[h*0.82,1],[h,0.9]],s,tint);roofCap(r.top,h,rc);}
-    else if(h>70&&style===2){r=ringWalls(pts,[[0,1],[h*0.55,1],[h*0.56,0.9],[h,0.9]],s,tint);roofCap(r.top,h,rc);} // stepped setback
-    else {r=ringWalls(pts,[[0,1],[h,1]],s,tint);roofCap(r.top,h,rc);}
+    else if(h>70&&style===2){r=ringWalls(pts,[[g0,1],[h*0.55,1],[h*0.56,0.9],[h,0.9]],s,tint);roofCap(r.top,h,rc);} // stepped setback
+    else {r=ringWalls(pts,[[g0,1],[h,1]],s,tint);roofCap(r.top,h,rc);}
     const out=f=>pts.map(p=>[r.cx+(p[0]-r.cx)*f,r.cz+(p[1]-r.cz)*f]);
     if((lm===6||lm===7)&&!footprintHitsTrack(out(1.035))){
       // street level: a lit canopy over the shopfronts, then the signage that covers both malls —
@@ -997,7 +1010,7 @@ async function buildOSM(){
   const chunkMeshes=(P,U,C,material)=>{for(const e of chunked(P,U,C).values()){const g=new THREE.BufferGeometry();
       g.setAttribute('position',new THREE.Float32BufferAttribute(e.p,3));if(U)g.setAttribute('uv',new THREE.Float32BufferAttribute(e.u,2));g.setAttribute('color',new THREE.Float32BufferAttribute(e.c,3));
       g.computeVertexNormals();g.computeBoundingSphere();scene.add(new THREE.Mesh(g,material));}};
-  for(let s=0;s<6;s++){const B=WB_[s];if(!B.p.length)continue;chunkMeshes(B.p,B.u,B.c,facade(s));}
+  for(let s=0;s<ST.length;s++){const B=WB_[s];if(!B.p.length)continue;chunkMeshes(B.p,B.u,B.c,facade(s));}
   if(ROOF.p.length)chunkMeshes(ROOF.p,null,ROOF.c,mat({vertexColors:true,roughness:.9,side:THREE.DoubleSide}));
   // Nothing decorative may hang over the circuit. Roofs, signage bands, LED crowns and billboards are
   // all sized from a building's bounding box, and on an L-shaped plan that box reaches well past the
@@ -1005,7 +1018,8 @@ async function buildOSM(){
   // stretched across the track. Measure what each piece actually occupies and throw away any that
   // overlaps the circuit, whatever produced it.
   {let dropped=0;const bb=new THREE.Box3();
-   for(let k=extra.length-1;k>=0;k--){const m=extra[k];m.updateMatrixWorld(true);bb.setFromObject(m);
+   for(let k=extra.length-1;k>=0;k--){const m=extra[k];if(m.userData.island)continue; // (inside the inner barrier)
+     m.updateMatrixWorld(true);bb.setFromObject(m);
      if(!isFinite(bb.min.x)||!isFinite(bb.min.z)){extra.splice(k,1);dropped++;continue;}
      const nx=Math.min(9,Math.max(2,Math.ceil((bb.max.x-bb.min.x)/8))),nz=Math.min(9,Math.max(2,Math.ceil((bb.max.z-bb.min.z)/8)));
      let hit=false;
@@ -1596,9 +1610,9 @@ function ttCross(c){
 function ttInvalidate(why){const c=player;if(session!=='tt'||tt.stage!=='flying'||!c||c.lapInvalid)return;
   c.lapInvalid=true;c.invWhy=why;msg('LAP DELETED',why+' · THIS LAP WILL NOT COUNT');}
 async function ttSubmit(lt,sec,path){if(!ttName)return;
-  const team=TEAMS[player.team].name,r=await lbSubmit(TRACK_ID,{name:ttName,t:+lt.toFixed(3),sec,team,path,hz:GH_HZ});
+  const team=TEAMS[player.team].name,r=await lbSubmit(LB_ID,{name:ttName,t:+lt.toFixed(3),sec,team,path,hz:GH_HZ});
   // every valid lap's sectors go to the sector records too (a lap outside the top 5 can still hold one)
-  const rs=await lbSecSubmit(TRACK_ID,{name:ttName,sec,team},tt.board);
+  const rs=await lbSecSubmit(LB_ID,{name:ttName,sec,team},tt.board);
   await refreshBoard(true);
   if(tt.flash&&tt.flash.secs&&r.rank)tt.flash.pos=r.rank;
   // the board keeps the top 5 laps: say where this one landed (or that it missed it)
@@ -1608,8 +1622,8 @@ async function ttSubmit(lt,sec,path){if(!ttName)return;
   const got=rs.ranks.map((p,k)=>p?'S'+(k+1)+' P'+p:'').filter(Boolean);
   if(got.length)setTimeout(()=>msg('SECTOR RECORD · '+got.join(' · ')),2800);}
 async function refreshBoard(force){if(!force&&performance.now()/1000-tt.boardT<20)return;tt.boardT=performance.now()/1000;
-  const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;loadGhost();
-  tt.secBoard=(await lbSecLoad(TRACK_ID,r.rows)).s;} // the sector records (top 3 of each sector)
+  const r=await lbLoad(LB_ID);tt.board=r.rows;tt.boardShared=r.shared;loadGhost();
+  tt.secBoard=(await lbSecLoad(LB_ID,r.rows)).s;} // the sector records (top 3 of each sector)
 // lap progress for the delta to the personal best: time at each 1/64 of the lap
 function ttTrack(c){if(session!=='tt'||tt.stage!=='flying'||!c.cum)return;const k=Math.min(63,Math.floor(c.s/L*64));if(!c.cum[k])c.cum[k]=simTime-c.lapStart;
   // the driving line, GH_HZ samples a second (position and heading), stored with the lap if it makes the top 5
@@ -1630,7 +1644,7 @@ function setGhost(on){ghostOn=on;try{localStorage.setItem('hrc-ghost',on?'on':'o
   const b=$('ttGhost');if(b)b.textContent='GHOST: '+(on?'ON':'OFF');}
 // follow the board's P1: fetch its line when it changes
 async function loadGhost(){const top=tt.board[0];if(!top||!top.at||top.at===ghostAt)return;ghostAt=top.at;
-  const g=await lbGhost(TRACK_ID,top.at);if(ghostAt!==top.at)return;
+  const g=await lbGhost(LB_ID,top.at);if(ghostAt!==top.at)return;
   ghost=g&&g.p?{...decodePath(g.p),hz:g.hz||GH_HZ,name:g.name,time:g.time}:null;
   // where along the lap (s, m from the line) each sample was: the record's time at any point, for the live delta
   if(ghost){const sp=new Float32Array(ghost.n);let hint=null,prev=0;
@@ -2731,7 +2745,7 @@ function setTxt(id,v){if(_hc[id]!==v){_hc[id]=v;$(id).textContent=v;}}
 function setW(id,p){const v=Math.round(p);if(_hc['w'+id]!==v){_hc['w'+id]=v;$(id).style.width=v+'%';}}
 function updateHud(){
   const c=player,kmh=c.v*3.6,g=gearOf(c);
-  const rev=reversing(c),rpm=rev?REV_RPM:c.held?4000+c.throttle*7500:rpmOf(c);
+  const rev=reversing(c),rpm=rev?revRpm(c):c.held?4000+c.throttle*7500:rpmOf(c);
   setTxt('spd',rev?Math.round(c.revV*3.6):Math.round(kmh));setTxt('gear',rev?'R':c.v<0.3&&c.held?'N':(g+1));setTxt('rpmTxt',Math.round(rpm/10)*10);
   // the arcs are pathLength=100, so the dash length is a percentage; bars are 60 px wide
   const rp=Math.round(clamp((rpm-4000)/8200,0,1)*100);if(_hc.rp!==rp){_hc.rp=rp;$('rpmArc').style.strokeDasharray=rp+' 100';}
@@ -2962,7 +2976,7 @@ function audioInit(){try{const ac=new (window.AudioContext||window.webkitAudioCo
   const mk=(type,fr,q)=>{const n=ac.createBufferSource();n.buffer=buf;n.loop=true;const bf=ac.createBiquadFilter();bf.type=type;bf.frequency.value=fr;bf.Q.value=q;const g=ac.createGain();g.gain.value=0;n.connect(bf).connect(g).connect(master);n.start();return g;};
   const cyc=engineCycle(ac);
   au={ac,master,buf,me:engineVoice(ac,master,buf,.34,cyc),opp:engineVoice(ac,master,buf,0,cyc),sq:mk('bandpass',1250,4),wn:mk('lowpass',500,.7),
-    scrape:scrapeVoice(ac,master,buf),kerb:kerbVoice(ac,master,buf),rev:revVoice(ac,master)};
+    scrape:scrapeVoice(ac,master,buf),kerb:kerbVoice(ac,master,buf)};
   // swap in the real-time exhaust as soon as its worklet has loaded (the looped voice plays until then, or for good)
   if(ac.audioWorklet&&window.AudioWorkletNode){const url=URL.createObjectURL(new Blob([ENGINE_WORKLET],{type:'text/javascript'}));
     ac.audioWorklet.addModule(url).then(()=>{if(!au)return;const me=workletVoice(ac,master,buf,.36),opp=workletVoice(ac,master,buf,0);
@@ -2989,10 +3003,8 @@ function audioUpdate(rpm,g){if(!au||replay)return;const t=au.ac.currentTime,c=pl
   if(g>lastGear&&c.throttle>.3)au.me.cut(t);else if(g<lastGear){au.me.blip(t);crackle(t,rpm);}lastGear=g;
   // slamming the throttle shut at high revs: the exhaust crackles on the overrun
   if(lastThr>0.55&&c.throttle<0.12&&rpm>4200)crackle(t,rpm);lastThr=c.throttle;
-  // reversing: the engine pulls at reverse-gear revs on a light throttle (the player's throttle is off meanwhile)
-  const rev=reversing(c);au.me.set(rpm,rev?0.35:c.throttle,t);
-  au.rev.g.gain.setTargetAtTime(rev?.07:0,t,rev?.04:.08);
-  if(rev){const f=560+c.revV*70;au.rev.a.frequency.setTargetAtTime(f,t,.1);au.rev.b.frequency.setTargetAtTime(f*1.5,t,.1);au.rev.bp.frequency.setTargetAtTime(f*1.3,t,.1);}
+  // reversing: the same engine pulling away on a part throttle (the player's throttle is off meanwhile)
+  au.me.set(rpm,reversing(c)?REV_THR:c.throttle,t);
   if(c.throttle<.05&&rpm>5200&&c.v>15&&Math.random()<.05)pop(t);
   // nearest rival: distance attenuation + doppler
   let o=null,bd=150;for(const x of cars){if(x===c||x.parked)continue;const d=Math.hypot(x.x-c.x,x.z-c.z);if(d<bd){bd=d;o=x;}}
@@ -3021,14 +3033,10 @@ function scrapeVoice(ac,master,buf){
   const rum=ac.createBiquadFilter();rum.type='lowpass';rum.frequency.value=150;const rg=ac.createGain();rg.gain.value=0.9;
   const g=ac.createGain();g.gain.value=0;src.connect(rum).connect(rg).connect(g);am.connect(g);g.connect(master);
   src.start(0,Math.random()*1.5);fl.start(0,Math.random()*1.5);return {g,body,grit};}
-// reversing (SPACE + S, or S in the pit lane): the engine held at reverse-gear revs under a light load, and the high
-// straight-cut whine of the reverse gear — two tones a fifth apart through a resonant band, pitched by the crawl speed
-const REV_RPM=6200,reversing=c=>c.revT!=null&&simTime-c.revT<0.1;
-function revVoice(ac,master){const a=ac.createOscillator(),b=ac.createOscillator(),bp=ac.createBiquadFilter(),g=ac.createGain();
-  a.type='sawtooth';b.type='triangle';a.frequency.value=700;b.frequency.value=1050;
-  bp.type='bandpass';bp.frequency.value=900;bp.Q.value=2.5;g.gain.value=0;
-  const bg=ac.createGain();bg.gain.value=0.6;a.connect(bp);b.connect(bg).connect(bp);bp.connect(g).connect(master);a.start();b.start();
-  return {a,b,bp,g};}
+// reversing (SPACE + S, or S in the pit lane): it sounds like the car pulling away in 1st on a part throttle — the same
+// exhaust voice, revs and load as going forwards (the reverse gear is about as short as 1st), with no extra gear whine
+const REV_THR=0.45,reversing=c=>c.revT!=null&&simTime-c.revT<0.1;
+const revRpm=c=>Math.max(engRpm(c.revV*3.6,0),RPM_IDLE+REV_THR*4000);
 // riding a kerb: the "드르르르르" of the tyres hammering over its ridges — not a tone but a fast train of separate hits.
 // Each hit is a burst of noise (the rattle) over a low thump (the body), switched on and off by a square wave at the
 // ridge rate: speed / ridge spacing, kept in the 12–38 hits a second the ear hears as a rattle rather than a buzz.
@@ -3294,7 +3302,7 @@ function replayAudio(C){if(!au)return;const t=au.ac.currentTime;
   const me=hear(player);if(me)au.me.set(me.rpm,me.thr,t,me.vol*0.42);
   let o=null;for(const c of cars){if(c===player||c.parked)continue;const h=hear(c);if(h&&(!o||h.d<o.d))o=h;}
   if(o)au.opp.set(o.rpm,o.thr,t,o.vol*0.3);else au.opp.set(4000,0,t,0);
-  for(const g of [au.sq.gain,au.wn.gain,au.scrape.g.gain,au.kerb.g.gain,au.rev.g.gain])g.setTargetAtTime(0,t,.05);}
+  for(const g of [au.sq.gain,au.wn.gain,au.scrape.g.gain,au.kerb.g.gain])g.setTargetAtTime(0,t,.05);}
 function replayFrame(dt){
   const R=replay;R.t+=dt;const dur=(R.n-1)/REC_HZ;if(R.t>=dur){endReplay();return;}
   const f=R.t*REC_HZ,i0=Math.floor(f),a=f-i0,fs=cars.length*REC_F,A=i0*fs,B=Math.min(R.n-1,i0+1)*fs,cl=R.clip;
@@ -3363,7 +3371,7 @@ let ttFromPause=false;
 // the circuit's top 5 as table rows (lap, gap, the three sectors and the day it was set) into a <tbody>, with the
 // source note next to its heading — used by the lobby and the time trial dialog
 async function fillBoard(body,src,sec){$(body).innerHTML='<tr><td colspan="8" style="color:var(--mute)">Loading…</td></tr>';
-  const r=await lbLoad(TRACK_ID);tt.board=r.rows;tt.boardShared=r.shared;const lead=r.rows.length?r.rows[0].t:null;
+  const r=await lbLoad(LB_ID);tt.board=r.rows;tt.boardShared=r.shared;const lead=r.rows.length?r.rows[0].t:null;
   $(src).textContent=r.shared?'· ALL PLAYERS':lbShared?'· SERVER UNREACHABLE — THIS BROWSER ONLY':'· THIS BROWSER';
   const sc=s=>'<td class="num" style="color:var(--mute)">'+(s||'—')+'</td>';
   $(body).innerHTML=r.rows.length?r.rows.map((x,k)=>'<tr><td class="num">'+(k+1)+'</td><td><b>'+esc(x.name)+'</b></td><td class="num">'+x.time+'</td><td class="num">'+(k?'+'+(x.t-lead).toFixed(3):'—')+'</td>'+sc(x.s1)+sc(x.s2)+sc(x.s3)+'<td class="num">'+esc(x.date||'—')+'</td></tr>').join('')
@@ -3372,7 +3380,7 @@ async function fillBoard(body,src,sec){$(body).innerHTML='<tr><td colspan="8" st
 // the sector records: three small tables side by side (S1 / S2 / S3), top 3 each — place, driver, time, gap (the day it
 // was set on hover)
 async function fillSecBoard(id,lapRows){const box=$(id);
-  const s=(await lbSecLoad(TRACK_ID,lapRows)).s;tt.secBoard=s;
+  const s=(await lbSecLoad(LB_ID,lapRows)).s;tt.secBoard=s;
   box.innerHTML=s.map((rows,k)=>'<table><thead><tr><th colspan="4">SECTOR '+(k+1)+'</th></tr></thead><tbody>'+
     (rows.length?rows.map((x,i)=>'<tr title="'+esc(x.name+' · '+(x.date||''))+'"><td class="num">'+(i+1)+'</td><td class="nm"><b>'+esc(x.name)+'</b></td><td class="num'+(i?'':' pu')+'">'+x.time+'</td><td class="num" style="color:var(--mute)">'+(i?'+'+(x.t-rows[0].t).toFixed(3):'')+'</td></tr>').join('')
       :'<tr><td colspan="4" style="color:var(--mute)">No times yet</td></tr>')+'</tbody></table>').join('');}

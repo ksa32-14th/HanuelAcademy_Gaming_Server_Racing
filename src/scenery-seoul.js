@@ -78,6 +78,23 @@ function ledTexture(kind){const t=C.canvasTex(512,1024,(x)=>{
       x.fillStyle='#14080c';x.font=font(46);x.textAlign='center';x.fillText(kind===2?'코리아 그랑프리':'HRC 2026',256,120);x.font=font(28,700);x.fillText('하늘 레이싱 챔피언십',256,172);});
   },false);
   t.repeat.set(1,0.25);t.offset.set(0,0.75);leds.push({tex:t,frame:0,phase:kind*1.3});return t;}
+// the same for a tall screen (Dong-A Media Center's corner): four 1 × 2 portrait frames
+function ledTextureTall(){const t=C.canvasTex(256,2048,(x)=>{
+    const F=(i,draw)=>{x.save();x.translate(0,i*512);x.beginPath();x.rect(0,0,256,512);x.clip();draw();x.restore();};
+    const font=(s,w=900)=>`${w} ${s}px "HRC F1", "Noto Sans KR", Titillium Web, Arial, sans-serif`;
+    F(0,()=>{const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#14080c');g.addColorStop(1,'#e10600');x.fillStyle=g;x.fillRect(0,0,256,512);
+      x.fillStyle='#fff';x.textAlign='center';x.font=font(54);x.fillText('SEOUL',128,200);x.font=font(30,700);x.fillText('GRAND',128,250);x.fillText('PRIX',128,286);
+      x.fillStyle='#ffd200';x.fillRect(48,320,160,8);});
+    F(1,()=>{const g=x.createLinearGradient(0,0,256,512);g.addColorStop(0,'#bde3ff');g.addColorStop(1,'#1e88e5');x.fillStyle=g;x.fillRect(0,0,256,512);
+      x.fillStyle='rgba(255,255,255,.85)';for(let k=0;k<5;k++){x.beginPath();x.ellipse(60+k*40,90+k*70,50,18,0,0,7);x.fill();}
+      x.fillStyle='#0b2a5a';x.textAlign='center';x.font=font(44);x.fillText('광화문',128,400);x.font=font(22,700);x.fillText('GWANGHWAMUN',128,440);});
+    F(2,()=>{x.fillStyle='#0d1014';x.fillRect(0,0,256,512);
+      for(let k=0;k<5;k++){x.fillStyle=['#ff2d48','#2a9dff','#ffd200','#3ddc6a','#ff7a00'][k];x.fillRect(24,70+k*80,208*(0.35+0.65*Math.abs(Math.sin(k*1.9))),50);}
+      x.fillStyle='#fff';x.textAlign='left';x.font=font(24,700);x.fillText('LAP RECORD',24,44);});
+    F(3,()=>{const g=x.createRadialGradient(128,256,10,128,256,320);g.addColorStop(0,'#ffe9a8');g.addColorStop(1,'#d9480f');x.fillStyle=g;x.fillRect(0,0,256,512);
+      x.fillStyle='#14080c';x.textAlign='center';x.font=font(40);x.fillText('HRC',128,230);x.fillText('2026',128,280);x.font=font(18,700);x.fillText('하늘 레이싱 챔피언십',128,330);});
+  },false);
+  t.repeat.set(1,0.25);t.offset.set(0,0.75);leds.push({tex:t,frame:0,phase:2.1});return t;}
 // the Kyobo poem board (Gwanghwamun geulpan): a big white banner with a short verse and a painted sky.
 // (Our own lines, not a quoted poem.)
 function poemTexture(){return C.canvasTex(1024,512,(x)=>{const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#eaf4fb');g.addColorStop(1,'#fdfbf3');x.fillStyle=g;x.fillRect(0,0,1024,512);
@@ -94,11 +111,75 @@ function stoneTexture(rx=1,ry=1){const t=C.canvasTex(256,256,(x)=>{x.fillStyle='
   for(let r=0;r<8;r++)for(let c=0;c<4;c++){const t=180+Math.random()*30|0;x.fillStyle=`rgb(${t},${t-5},${t-16})`;x.fillRect(c*64+((r%2)*32)%64+2,r*32+2,60,28);}
   x.fillStyle="rgba(0,0,0,.18)";for(let r=0;r<8;r++)x.fillRect(0,r*32,256,2);},true);t.repeat.set(rx,ry);return t;}
 
+/* ---------------- Seoul facades ----------------
+   The office blocks round Gwanghwamun are not Songdo's teal glass and precast flats. From the Kakao roadview: blue-grey
+   curtain walls with a plain mullion grid, pale granite towers with punched windows, 1970s–80s concrete slabs with
+   ribbon windows and fins (the US Embassy), Kyobo's bronze-and-blue bands, the Plaza Hotel's maroon, the Press
+   Center's stone piers. Each is a 512 × 1024 canvas (16 floors of 64 px), appended to buildOSM's facade styles as
+   6, 7, … (SEOUL_ST[k] is style 6 + k). `draw` paints the day texture, `lit` the windows that glow at night (256 × 512,
+   half scale), `tint` the per-building colour variations. */
+const grainOn=(x,n,a)=>{for(let i=0;i<n;i++){const v=Math.random()>0.5?255:0;x.fillStyle=`rgba(${v},${v},${v},${Math.random()*a})`;x.fillRect(Math.random()*512,Math.random()*1024,3,3);}};
+// lit windows on a regular grid (half-scale canvas): cols × 16 floors, about `frac` of the floors lit, cells inset by `pad`
+const litGrid=(x,cols,frac,pad,hue=40)=>{const cw=256/cols;
+  for(let f=0;f<16;f++){if(Math.random()>frac)continue;
+    for(let c=0;c<cols;c++)if(Math.random()<.55){x.globalAlpha=.4+Math.random()*.6;x.fillStyle=`hsl(${hue+Math.random()*14},${30+Math.random()*30}%,${58+Math.random()*20}%)`;x.fillRect(c*cw+pad,f*32+pad,cw-2*pad,32-2*pad);}}
+  x.globalAlpha=1;};
+export const SEOUL_ST=[
+ // 6: blue-grey curtain wall — 1.5 m mullions, a dark spandrel at every 4 m floor, the sky caught panel by panel
+ {tw:24,th:64,rough:.16,metal:.7,env:1.0,tint:[0xffffff,0xdfe8ef,0xc9d4dc,0xeef0f2,0xb4c3cd,0xd6dde3],
+  draw(x){const g=x.createLinearGradient(0,0,300,1024);g.addColorStop(0,'#9fb4c3');g.addColorStop(.45,'#6f879a');g.addColorStop(1,'#4a5f70');x.fillStyle=g;x.fillRect(0,0,512,1024);
+   for(let r=0;r<1024;r+=64)for(let c=0;c<512;c+=32){x.fillStyle=`rgba(${200+Math.random()*40|0},${215+Math.random()*30|0},235,${Math.random()*.16})`;x.fillRect(c+2,r+2,28,46);}
+   for(let r=0;r<1024;r+=64){x.fillStyle='rgba(30,40,50,.72)';x.fillRect(0,r+48,512,16);x.fillStyle='rgba(255,255,255,.12)';x.fillRect(0,r+48,512,2);}
+   x.fillStyle='#b9c3ca';for(let c=0;c<512;c+=32)x.fillRect(c,0,2,1024);grainOn(x,1500,.04);},
+  lit(x){litGrid(x,16,.7,2,205);}},
+ // 7: pale granite tower with punched windows — 3.5 m bays, deep reveals
+ {tw:28,th:60,rough:.78,metal:.03,env:.2,tint:[0xffffff,0xf1ebe0,0xe4e4e2,0xdcd3c4,0xf6f3ee],
+  draw(x){x.fillStyle='#d9d4ca';x.fillRect(0,0,512,1024);
+   for(let r=0;r<1024;r+=32)for(let c=0;c<512;c+=64){const t=206+Math.random()*22|0;x.fillStyle=`rgb(${t},${t-4},${t-12})`;x.fillRect(c,r,64,32);}
+   for(let r=0;r<1024;r+=64)for(let c=0;c<512;c+=64){x.fillStyle='rgba(0,0,0,.28)';x.fillRect(c+12,r+12,40,40);x.fillStyle='#34424f';x.fillRect(c+15,r+15,34,35);
+     x.fillStyle='rgba(190,210,225,.22)';x.fillRect(c+15,r+15,34,9);x.fillStyle='#8c949b';x.fillRect(c+31,r+15,2,35);x.fillStyle='rgba(255,255,255,.35)';x.fillRect(c+12,r+52,40,3);}
+   grainOn(x,4000,.06);},
+  lit(x){litGrid(x,8,.55,5,38);}},
+ // 8: concrete slab of the 1970s–80s — ribbon windows between beige spandrels, slim fins every 1.5 m (the US Embassy)
+ {tw:24,th:56,rough:.72,metal:.04,env:.2,tint:[0xffffff,0xf3ead6,0xe8e6e0,0xddd3c2,0xf0e6da],
+  draw(x){x.fillStyle='#ddd3c2';x.fillRect(0,0,512,1024);
+   for(let r=0;r<1024;r+=64){x.fillStyle='#3e4b56';x.fillRect(0,r+8,512,34);x.fillStyle='rgba(180,200,215,.25)';x.fillRect(0,r+8,512,8);
+     x.fillStyle='rgba(0,0,0,.25)';x.fillRect(0,r+42,512,4);x.fillStyle='#e9e2d4';for(let c=0;c<512;c+=32)x.fillRect(c,r+4,6,42);}
+   grainOn(x,3000,.06);},
+  lit(x){litGrid(x,16,.6,4,40);}},
+ // 9: Kyobo — bands of bronze-brown spandrel and blue glass, thin dark mullions
+ {tw:20,th:64,rough:.42,metal:.3,env:.6,tint:[0xffffff],
+  draw(x){for(let r=0;r<1024;r+=64){x.fillStyle='#8a5f45';x.fillRect(0,r,512,26);x.fillStyle='rgba(0,0,0,.18)';x.fillRect(0,r+22,512,4);
+     const g=x.createLinearGradient(0,r+26,0,r+64);g.addColorStop(0,'#7895b0');g.addColorStop(1,'#4f6d8a');x.fillStyle=g;x.fillRect(0,r+26,512,38);}
+   x.fillStyle='rgba(30,30,35,.55)';for(let c=0;c<512;c+=16)x.fillRect(c,0,2,1024);grainOn(x,1800,.05);},
+  lit(x){litGrid(x,32,.6,3,45);}},
+ // 10: maroon slab with narrow vertical windows (the Plaza Hotel)
+ {tw:22,th:56,rough:.7,metal:.05,env:.25,tint:[0xffffff],
+  draw(x){x.fillStyle='#74413a';x.fillRect(0,0,512,1024);
+   for(let c=0;c<512;c+=32){x.fillStyle='#2c2a2e';x.fillRect(c+11,0,10,1024);x.fillStyle='rgba(255,255,255,.08)';x.fillRect(c+9,0,2,1024);}
+   for(let r=0;r<1024;r+=64){x.fillStyle='rgba(0,0,0,.18)';x.fillRect(0,r,512,3);}grainOn(x,2500,.06);},
+  lit(x){for(let f=0;f<16;f++)for(let c=0;c<16;c++)if(Math.random()<.4){x.globalAlpha=.5+Math.random()*.5;x.fillStyle=`hsl(${36+Math.random()*10},60%,${60+Math.random()*15}%)`;x.fillRect(c*16+5,f*32+4,6,24);}x.globalAlpha=1;}},
+ // 11: pale stone piers with dark recessed glass between (the Press Center, the newer granite towers)
+ {tw:24,th:60,rough:.7,metal:.05,env:.3,tint:[0xffffff,0xece8e0,0xdedede],
+  draw(x){x.fillStyle='#2f3b46';x.fillRect(0,0,512,1024);
+   for(let r=0;r<1024;r+=64){x.fillStyle='#b8b6b0';x.fillRect(0,r+50,512,14);x.fillStyle='rgba(170,195,215,.18)';x.fillRect(0,r+2,512,14);}
+   for(let c=0;c<512;c+=64){x.fillStyle='#d2cec6';x.fillRect(c,0,18,1024);x.fillStyle='rgba(0,0,0,.25)';x.fillRect(c+18,0,4,1024);x.fillStyle='rgba(255,255,255,.3)';x.fillRect(c,0,2,1024);}
+   x.fillStyle='#8a939a';for(let c=40;c<512;c+=64)x.fillRect(c,0,2,1024);grainOn(x,2500,.05);},
+  lit(x){litGrid(x,8,.6,5,42);}},
+];
+// the facade a plain (non-landmark) Seoul building wears: offices mostly glass or granite, older and lower blocks the
+// ribbon-window concrete; retail keeps the stone-panel shopfront style (2) now and then
+export function seoulStyle(kind,h,bi){const r=(bi*2654435761>>>0)%100;
+  if(kind===2)return h>45?(r<55?6:r<80?7:11):(r<35?7:r<70?8:6);
+  if(kind===3)return r<40?2:r<75?8:7;
+  if(kind===4)return r<45?8:r<75?7:3;
+  return null;}
+
 /* an LED board facing (tx,tz) on a building footprint: a dark frame and the lit screen */
 function ledBoard(pts,tx,tz,w,hgt,y,kind){const fe=C.edgeFacing(pts,tx,tz);if(!fe)return;const ww=Math.min(w,fe.len*0.85);
   const ry=Math.atan2(fe.nx,fe.nz);
   add(box(ww+1.2,hgt+1.2,0.6,M(0x1a1c20,.6,.3),fe.mx+fe.nx*0.4,y,fe.mz+fe.nz*0.4,ry));
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(ww,hgt),new THREE.MeshBasicMaterial({map:ledTexture(kind),toneMapped:false}));
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(ww,hgt),new THREE.MeshBasicMaterial({map:kind==='tall'?ledTextureTall():ledTexture(kind),toneMapped:false}));
   m.position.set(fe.mx+fe.nx*0.75,y,fe.mz+fe.nz*0.75);m.rotation.y=ry;C.scene.add(m);}
 // a flat picture (banner) on a facade
 function facadePicture(pts,tx,tz,tex,w,hgt,y,lit){const fe=C.edgeFacing(pts,tx,tz);if(!fe)return null;const ww=Math.min(w,fe.len*0.9);
@@ -134,60 +215,78 @@ export function seoulBuilding(ctx,pts,h,ar,kind,lm,bi){C=ctx;const {ringWalls,ro
     const stone=C.mat({map:stoneTexture(3,1.2),roughness:.92,color:0xf2ede2});const b=new THREE.Mesh(new THREE.BoxGeometry(L,4.8,W),stone);b.position.y=2.4;g.add(b);
     for(let k=0;k<8;k++){const t=-L/2+L*(k+0.5)/8;for(const s of [-1,1]){g.add(box(1,0.9,0.5,M(0x6b6a66,.9),t,5.25,s*(W/2-0.25)));g.add(box(0.5,0.9,1,M(0x6b6a66,.9),s*(L/2-0.25),5.25,t));}}
     hanokStorey(g,L*0.55,W*0.55,4.8,3.0,2.2,{ov:1.8,lift:0.8});hanokStorey(g,L*0.42,W*0.42,4.8+3+0.9+1.6,1.6,2.6,{ov:1.6,lift:0.9,walls:false});
-    add(g);return true;}
+    // the island of the rotary round it: a low hexagon of granite setts with a kerb (the circuit's inner barrier
+    // stands ~1 m outside it)
+    const isl=new THREE.Mesh(new THREE.CylinderGeometry(8.6,8.8,0.22,6),M(0xbdb6a6,.95));isl.position.y=0.11;isl.rotation.y=Math.PI/6;g.add(isl);
+    g.userData.island=true;add(g);return true;}
   case 63:{ // Daehanmun, the main gate of Deoksugung: three bays on a granite step, hipped roof, red doors
     const o=C.oba(pts),L=o.l1-o.l0,W=o.w1-o.w0,g=placed(o.mx,o.mz,o.ang);platform(g,L+1,W+1,1.0);
     hanokStorey(g,L*0.86,W*0.6,1.0,5.4,3.6,{ov:2.6,lift:1.0,walls:false});
     for(let k=0;k<3;k++)g.add(box(L*0.86/3*0.8,4.6,0.25,M(0x8a2a20,.8),-L*0.86/3+k*L*0.86/3,1+2.3,0));
     add(g);return true;}
   case 64:{hanok(pts,7.5,ar,false);return true;} // Gijeonbijeon: the small monument pavilion at the Gwanghwamun junction
-  case 41:{ // Sejong Center for the Performing Arts (1978): a monumental front onto the square — a colonnade of tall
-    // square stone piers under a deep, upward-curving cornice that quotes a palace eave; pale granite all over
-    const hh=h||(ar>4000?31:16),r=ringWalls(pts,[[0,1],[hh,1]],5,0xeee9de);roofCap(r.top,hh,0xb8b2a6);
+  case 41:{ // Sejong Center for the Performing Arts (1978): pale granite, and onto the square a colonnade of tall square
+    // white piers in front of dark glazing, under a heavy flat cornice slab that juts out far over them (roadview);
+    // the whole block wears a thick overhanging roof slab, and so do the lower wings either side
+    const hh=h||(ar>4000?31:16),r=ringWalls(pts,[[0,1],[hh,1]],5,0xeee9de);
+    const rim=ringWalls(pts.map(p=>[r.cx+(p[0]-r.cx)*1.035,r.cz+(p[1]-r.cz)*1.035]),[[hh-0.4,1],[hh+2.2,1]],3,0xe4e0d8);roofCap(rim.top,hh+2.2,0xc2beb6);
     const fe=C.edgeFacing(pts,...T(-104,-160));
-    if(fe&&ar>4000){const ry=Math.atan2(fe.nx,fe.nz),ux=fe.nz,uz=-fe.nx,n=Math.floor(fe.len*0.8/7);
-      for(let k=0;k<n;k++){const t=(k-(n-1)/2)*7;add(box(2.2,hh*0.78,2.2,M(0xe9e3d6,.85),fe.mx+ux*t+fe.nx*4.5,hh*0.39,fe.mz+uz*t+fe.nz*4.5,ry));}
-      // the cornice and its curving eave
-      add(box(fe.len*0.86,2.2,9,M(0xdcd6c8,.85),fe.mx+fe.nx*3.6,hh*0.78+1.1,fe.mz+fe.nz*3.6,ry));
-      const e=new THREE.Mesh(roofGeo(fe.len*0.86,7,1.6,1.2,1.2),M(0x8f8a80,.8,0,{flatShading:true,side:THREE.DoubleSide}));
-      e.position.set(fe.mx+fe.nx*3.6,hh*0.78+2.2,fe.mz+fe.nz*3.6);e.rotation.y=ry+Math.PI/2;add(e);
-      sign(fe,'세종문화회관',hh*0.62,Math.min(36,fe.len*0.4),5,'#4a3b2a',null,1);}
+    if(fe&&ar>4000){const ry=Math.atan2(fe.nx,fe.nz),ux=fe.nz,uz=-fe.nx,n=Math.floor(fe.len*0.8/7),ch=hh*0.8;
+      add(box(fe.len*0.82,ch,0.4,M(0x262c33,.35,.4),fe.mx+fe.nx*0.6,ch/2,fe.mz+fe.nz*0.6,ry)); // the glazing behind the piers
+      for(let k=0;k<n;k++){const t=(k-(n-1)/2)*7;add(box(2.0,ch,2.0,M(0xf1ede6,.8),fe.mx+ux*t+fe.nx*5.2,ch/2,fe.mz+uz*t+fe.nz*5.2,ry));}
+      // the cornice slab over the colonnade: thick, flat, pale, its soffit a shade darker
+      add(box(fe.len*0.9,2.8,10.5,M(0xe2ded6,.85),fe.mx+fe.nx*4.6,ch+1.4,fe.mz+fe.nz*4.6,ry));
+      add(box(fe.len*0.88,0.3,10,M(0xbdb8ae,.9),fe.mx+fe.nx*4.6,ch-0.1,fe.mz+fe.nz*4.6,ry));
+      sign(fe,'세종문화회관',hh*0.92,Math.min(30,fe.len*0.32),4,'#5a4a36',null,1);}
     return true;}
-  case 42:{ // Kyobo Life Building (1980): a dark bronze-brown box of strip windows and the Gwanghwamun poem board
-    // (geulpan) facing the junction
-    const hh=h||87;const r=ringWalls(pts,[[0,1],[hh,1]],3,0x6a5446);roofCap(r.top,hh,0x4a3e36);
+  case 42:{ // Kyobo Life Building (1980): bands of bronze-brown spandrel and blue glass all the way up (roadview), and the
+    // Gwanghwamun poem board (geulpan) facing the junction
+    const hh=h||87;const r=ringWalls(pts,[[0,1],[hh,1]],9,0xffffff);roofCap(r.top,hh,0x4a3e36);
     ringWalls(pts.map(p=>[r.cx+(p[0]-r.cx)*1.01,r.cz+(p[1]-r.cz)*1.01]),[[hh,1],[hh+1.6,1]],3,0x4d3f36);
     facadePicture(pts,...T(-70,-420),poemTexture(),24,12,13,!C.DAY); // floodlit after dark
     sign(C.edgeFacing(pts,...T(-70,-330)),'KYOBO',hh-5,22,5,'#ffffff',null,1);
     return true;}
-  case 47:{ // Dong-A Media Center (2000): glass and granite with the big LED board over the Gwanghwamun junction and
-    // the round drum on the roof
-    const hh=h||103,r=ringWalls(pts,[[0,1],[hh,1]],1,0xb9c9d3);roofCap(r.top,hh,0x76808a);
+  case 47:{ // Dong-A Media Center (2000): pale stone piers and glass, the round drum on the roof, and on the face to the
+    // Gwanghwamun junction a giant portrait LED screen from the 3rd floor to near the top (roadview)
+    const hh=h||103,r=ringWalls(pts,[[0,1],[hh,1]],11,0xf2f2f0);roofCap(r.top,hh,0x76808a);
     const cyl=new THREE.Mesh(new THREE.CylinderGeometry(9,9,6,28),M(0xd9dcdf,.5,.3));cyl.position.set(r.cx,hh+3,r.cz);add(cyl);
     add(box(4,0.2,4,M(0x3a8f4a,.8),r.cx,hh+6.15,r.cz));
-    ledBoard(pts,...T(-66,-430),22,13,24,0);sign(C.edgeFacing(pts,...T(-66,-430)),'동아일보',hh-6,20,5,'#ffffff',null,1);
+    ledBoard(pts,...T(-95,-490),26,hh*0.62,10+hh*0.31,'tall'); // (on the west face, beside the rounded corner)sign(C.edgeFacing(pts,...T(-66,-430)),'동아일보',hh-6,20,5,'#ffffff',null,1);
     return true;}
   case 48:{ // Ilmin Museum of Art: the 1926 Dong-A Ilbo building — five storeys of cream stone, arched windows, cornice
     const hh=h||19,r=ringWalls(pts,[[0,1],[hh,1]],2,0xf1e3c4);roofCap(r.top,hh,0x8a8070);
     ringWalls(pts.map(p=>[r.cx+(p[0]-r.cx)*1.03,r.cz+(p[1]-r.cz)*1.03]),[[hh-1.4,1],[hh-0.4,1]],3,0xe2d6bb);return true;}
-  case 50:{ // Hotel Koreana (1971): grey banded tower, the LED board high on the face toward Sejong-daero
-    const hh=h||84,r=ringWalls(pts,[[0,1],[hh,1]],3,0xc9c6bf);roofCap(r.top,hh,0x6d6f72);
-    ledBoard(pts,...T(-30,-640),18,12,hh-16,2);sign(C.edgeFacing(pts,...T(-30,-640)),'KOREANA HOTEL',hh-4,24,4,'#e8d8a0',null,1);
+  case 50:{ // the Koreana Hotel corner: re-clad all in blue curtain-wall glass, its crest bowed up in a shallow curve along
+    // the face to Sejong-daero, the name small on the crown (2026 roadview — the old LED board is gone)
+    const hh=h||84,r=ringWalls(pts,[[0,1],[hh,1]],6,0xd6e4ee);roofCap(r.top,hh,0x5f6a72);
+    const fe=C.edgeFacing(pts,...T(-30,-640));
+    if(fe){const ry=Math.atan2(fe.nx,fe.nz),L=fe.len*0.96,sh=new THREE.Shape();sh.moveTo(-L/2,0);
+      for(let k=0;k<=12;k++){const t=k/12;sh.lineTo(-L/2+L*t,3.2*Math.sin(Math.PI*t));}sh.lineTo(L/2,0);sh.closePath();
+      const crest=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:0.6,bevelEnabled:false}).translate(0,0,-0.3),M(0x9fb6c8,.2,.6));
+      crest.position.set(fe.mx-fe.nx*0.3,hh,fe.mz-fe.nz*0.3);crest.rotation.y=ry;add(crest);
+      sign(fe,'KOREANA',hh-3,12,2.4,'#ffffff',null,1);}
     return true;}
-  case 55:{ // Gwanghwamun Building: the duty-free store's LED wall on the corner facing the junction
-    const hh=h||85,r=ringWalls(pts,[[0,1],[hh,1]],1,0xa9b8c4);roofCap(r.top,hh,0x6d747c);
+  case 55:{ // Gwanghwamun Building: a white stone tower with a glass bay, the duty-free store's LED wall on the corner
+    // facing the junction
+    const hh=h||85,r=ringWalls(pts,[[0,1],[hh,1]],7,0xf6f3ee);roofCap(r.top,hh,0x6d747c);
     ledBoard(pts,...T(-64,-420),20,26,22,1);return true;}
-  case 51:{ // Korea Press Center (1985): dark brown granite and bronze glass, the newspaper's name on the crown
-    const hh=h||86,r=ringWalls(pts,[[0,1],[hh,1]],3,0x7c6253);roofCap(r.top,hh,0x4e4540);
-    sign(C.edgeFacing(pts,...T(-68,-720)),'서울신문',hh-5,20,5,'#ffffff',null,1);return true;}
+  case 51:{ // Korea Press Center (1985): pale grey stone piers running the full height with dark glass recessed between
+    // them (roadview), the newspaper's name on the crown
+    const hh=h||86,r=ringWalls(pts,[[0,1],[hh,1]],11,0xffffff);roofCap(r.top,hh,0x8a8a86);
+    sign(C.edgeFacing(pts,...T(-68,-720)),'서울신문',hh-5,20,5,'#2a3640',null,1);return true;}
   case 52:{ // Seoul City Hall (2012): the glass "wave" — the whole block leans out over the plaza as it rises and its
     // crest overhangs the old hall, solar glazing on the sloping back
     const hh=h||48,fe=C.edgeFacing(pts,...T(-30,-905));const nx=fe?fe.nx:0,nz=fe?fe.nz:1;
     const rings=[];for(let k=0;k<=8;k++){const t=k/8,lean=Math.pow(t,2.2)*11;rings.push([hh*t,1,0,nx*lean,nz*lean]);}
-    const r=ringWalls(pts,rings,1,0xc3d6e0);roofCap(r.top,hh,0x5d7484);
+    const r=ringWalls(pts,rings,6,0xd2e2ea);roofCap(r.top,hh,0x5d7484);
     return true;}
-  case 53:{ // Seoul Metropolitan Library — the 1926 City Hall: grey granite, the central clock tower, the big banner
-    const hh=h||18,o=C.oba(pts),r=ringWalls(pts,[[0,1],[hh,1]],2,0xd8d0bf);roofCap(r.top,hh,0x6f6a62);
+  case 54:{ // The Plaza hotel (1976): a maroon slab of narrow vertical windows over Seoul Plaza, its name on the crown
+    const hh=h||87,r=ringWalls(pts,[[0,1],[hh,1]],10,0xffffff);roofCap(r.top,hh,0x4b3a36);
+    ringWalls(pts.map(p=>[r.cx+(p[0]-r.cx)*1.01,r.cz+(p[1]-r.cz)*1.01]),[[hh-0.2,1],[hh+1.4,1]],3,0x5a3631);
+    sign(C.edgeFacing(pts,...T(-10,-960)),'THE PLAZA',hh-5,20,4,'#f2e6c8',null,1);return true;}
+  case 53:{ // Seoul Metropolitan Library — the 1926 City Hall: grey granite, rows of tall windows, the central clock
+    // tower, the big banner
+    const hh=h||18,o=C.oba(pts),r=ringWalls(pts,[[0,1],[hh,1]],7,0xe2ddd2);roofCap(r.top,hh,0x6f6a62);
     const tw=box(9,12,9,M(0xd2c9b6,.9),r.cx,hh+6,r.cz);add(tw);
     const cap=new THREE.Mesh(new THREE.CylinderGeometry(3,6.4,4,4),M(0x4f5a5c,.6,.3));cap.position.set(r.cx,hh+14,r.cz);cap.rotation.y=Math.PI/4+o.ang;add(cap);
     const fe=C.edgeFacing(pts,...T(-30,-905));
@@ -196,29 +295,40 @@ export function seoulBuilding(ctx,pts,h,ar,kind,lm,bi){C=ctx;const {ringWalls,ro
       const d=Math.hypot(fe.mx-r.cx,fe.mz-r.cz);clock.position.set(r.cx+fe.nx*4.6,hh+8,r.cz+fe.nz*4.6);clock.rotation.y=ry;C.scene.add(clock);
       facadePicture(pts,...T(-30,-905),bannerTexture(['함께 달리는 서울','SEOUL GRAND PRIX']),18,6.5,hh*0.55,false);}
     return true;}
-  case 57:{ // Twin Tree Towers (2010): two trunks of white floor bands and glass, every floor's outline swaying a little
-    // off the one below like growth rings
+  case 57:{ // Twin Tree Towers (2010): two trunks of dark blue-grey glass ringed by thin pale floor edges, every floor's
+    // outline swaying a little off the one below like growth rings (roadview from the Dongsipjagak rotary)
     const hh=h||62,nf=Math.round(hh/3.7);let y=0;
     for(let f=0;f<nf;f++){const s=1+0.045*Math.sin(f*0.55+bi),t=0.03*Math.sin(f*0.37+bi*2);
-      ringWalls(pts,[[y,s,t],[y+2.7,s,t]],1,0x9fc0d4);ringWalls(pts,[[y+2.7,s*1.02,t],[y+3.7,s*1.02,t]],5,0xffffff);y+=3.7;}
+      ringWalls(pts,[[y,s,t],[y+3.1,s,t]],6,0xa9b9c6);ringWalls(pts,[[y+3.1,s*1.015,t],[y+3.7,s*1.015,t]],5,0xd4d8dc);y+=3.7;}
     const r=ringWalls(pts,[[y,1],[y+0.5,1]],5,0xffffff);roofCap(r.top,y+0.5,0xe9e9e9);return true;}
   case 65:{ // Jongno Tower (1999): a glass body on three cores, a gap, and the square "Top Cloud" crown ring held above it
     const hh=h||133,o=C.oba(pts),bodyH=hh*0.7,S=Math.min(o.l1-o.l0,o.w1-o.w0)*0.8;
-    const r=ringWalls(pts,[[0,1],[bodyH,1]],1,0x9db2c0);roofCap(r.top,bodyH,0x6a737a);
+    const r=ringWalls(pts,[[0,1],[bodyH,1]],6,0xaebdc8);roofCap(r.top,bodyH,0x6a737a);
     for(let k=0;k<3;k++){const a=k/3*Math.PI*2+o.ang,c=new THREE.Mesh(new THREE.CylinderGeometry(3,3,hh-bodyH,14),M(0xcfd5da,.4,.5));
       c.position.set(r.cx+Math.cos(a)*S*0.3,bodyH+(hh-bodyH)/2,r.cz+Math.sin(a)*S*0.3);add(c);}
     const g=placed(r.cx,r.cz,o.ang);const yy=hh-9;
     for(const s of [-1,1]){g.add(box(S,9,4,M(0x8fa6b6,.15,.7),0,yy,s*(S/2-2)));g.add(box(4,9,S,M(0x8fa6b6,.15,.7),s*(S/2-2),yy,0));}
     g.add(box(S+1,0.8,S+1,M(0xd5dbe0,.5,.4),0,yy+4.8,0));add(g);return true;}
-  case 45:{ // US Embassy (1961): beige stone and a regular grid of windows, the flag on the roof
-    const hh=h||27,r=ringWalls(pts,[[0,1],[hh,1]],3,0xe0d2b6);roofCap(r.top,hh,0x8a8274);
-    add(box(0.25,8,0.25,M(0xdddddd,.5,.5),r.cx,hh+4,r.cz));return true;}
+  case 45:{ // US Embassy (1961): eight storeys of beige concrete, ribbon windows between slim vertical fins, plant rooms
+    // on the roof and the flag; at its foot the white security wall and the police buses' steel canopy (roadview)
+    const hh=h||27,r=ringWalls(pts,[[0,1],[hh,1]],8,0xffffff);roofCap(r.top,hh,0x8a8274);
+    const pr=ringWalls(pts.map(p=>[r.cx+(p[0]-r.cx)*0.45,r.cz+(p[1]-r.cz)*0.45]),[[hh,1],[hh+3.6,1]],8,0xf0ebe2);roofCap(pr.top,hh+3.6,0x9a9488);
+    add(box(0.25,8,0.25,M(0xdddddd,.5,.5),r.cx,hh+4,r.cz));
+    const fe=C.edgeFacing(pts,...T(-64,-89));
+    if(fe){const ry=Math.atan2(fe.nx,fe.nz),ux=fe.nz,uz=-fe.nx,L=Math.min(30,fe.len*0.55),cx=fe.mx+fe.nx*7,cz=fe.mz+fe.nz*7;
+      add(box(L,0.5,8,M(0xe9ecee,.5,.4),cx,5.6,cz,ry));add(box(L,0.9,0.25,M(0xd5d9dc,.5,.5),cx+fe.nx*4,5.2,cz+fe.nz*4,ry));
+      for(let q=-L/2+1;q<=L/2-1;q+=L/4)for(const s of [-3.5,3.5])add(box(0.3,5.4,0.3,M(0xe9ecee,.5,.4),cx+ux*q+fe.nx*s,2.7,cz+uz*q+fe.nz*s,ry));
+      add(box(fe.len*0.9,2.6,0.4,M(0xf3f3f1,.8),fe.mx+fe.nx*11.5,1.3,fe.mz+fe.nz*11.5,ry));} // the security wall
+    return true;}
   case 46:{ // National Museum of Korean Contemporary History: white horizontal louvres over the old ministry block
     const hh=h||32,r=ringWalls(pts,[[0,1],[hh,1]],3,0xf6f6f4);roofCap(r.top,hh,0xbfc2c4);return true;}
   case 43:case 44:case 49:case 58:case 59:case 67:case 72:{ // glass offices of the CBD (KT, SFC, D Tower, Gran Seoul, Hana, SK)
-    const hh=h||90,tint={43:0xb0c4cf,44:0xc8d4d8,49:0x8fa8a0,58:0xaec7cf,59:0x9fb1bd,67:0xbac9d2,72:0x7f93a3}[lm];
-    const r=ringWalls(pts,[[0,1],[hh*0.94,1],[hh,0.96]],1,tint);roofCap(r.top,hh,0x5c646b);
+    const hh=h||90,tint={43:0xd4e2ec,44:0xe2eaee,49:0xc4d4d0,58:0xd0dde4,59:0xc6d0d8,67:0xd8e2e8,72:0xaebccb}[lm];
+    const r=ringWalls(pts,[[0,1],[hh*0.94,1],[hh,0.96]],6,tint);roofCap(r.top,hh,0x5c646b);
     if(lm===43||lm===44)sign(C.edgeFacing(pts,...T(lm===43?-64:20,lm===43?-200:-150)),'kt',hh-6,9,5,'#e4002b',null,1);
+    // KT Gwanghwamun West: two big white billboards on its face to Sejong-daero (roadview)
+    if(lm===43){const tex=bannerTexture(['SEOUL GRAND PRIX','광화문 · 2026'],'#f6f8fa','#1b4fa0');
+      facadePicture(pts,...T(-64,-215),tex,Math.min(30,hh*0.55),hh*0.24,hh*0.5,true);} // (back-lit, bright by day too)
     if(hh>100)C.beacons.push([r.cx,hh+1,r.cz]);
     return true;}
   }
@@ -343,8 +453,10 @@ export function seoulScenery(ctx){C=ctx;const {D,W2,SC}=C;const T=(x,y)=>W2(x,y)
       const b=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),M(0xd8d2c4,.9));b.scale.set(0.9,1.1,1.4);b.position.set(0,2.6,0.2);h.add(b);
       const hd=new THREE.Mesh(new THREE.SphereGeometry(0.75,12,8),M(0xd8d2c4,.9));hd.position.set(0,3.7,1.1);h.add(hd);add(h);}}
   // Gyeongbokgung's south wall either side of Gwanghwamun (granite footing, plastered wall, tiled coping), returning
-  // north along Samcheong-ro and Hyoja-ro; the other palace walls (Deoksugung's stone wall) come from OpenStreetMap
-  const walls=[[[-120,213],[-306,219],[-306,900]],[[-89,214],[112,230],[112,900]]].map(l=>({h:5.2,pts:l.map(p=>T(...p))}));
+  // north along Samcheong-ro and Hyoja-ro; the other palace walls (Deoksugung's stone wall) come from OpenStreetMap.
+  // East of the gate it no longer reaches Dongsipjagak: it cuts the corner north-east along the road west of the
+  // rotary and only then turns north up Samcheong-ro (Kakao skyview)
+  const walls=[[[-120,213],[-306,219],[-306,900]],[[-89,214],[85,224.5],[120.5,274],[121,900]]].map(l=>({h:5.2,pts:l.map(p=>T(...p))}));
   for(const w of D.wl||[]){const pts=[];for(let k=1;k<w.length;k+=2)pts.push(T(w[k],w[k+1]));walls.push({h:Math.min(w[0],4.2),pts});}
   {const geos={f:[],w:[],c:[]};for(const {h,pts} of walls)for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1];const l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(l<0.5)continue;
       const ry=-Math.atan2(b[1]-a[1],b[0]-a[0]),mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;

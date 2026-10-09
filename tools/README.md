@@ -45,6 +45,8 @@ hrc.detHash(1, 6000)   // seed 1, 120 Hz 물리 6000스텝(50초): { hash, laps,
    ```
 2. `powershell -ExecutionPolicy Bypass -File tools/osm-seoul.ps1 <원본.json> src/data/osm-seoul.js <리포트.txt> <Seoul_GrandPrix.gpx>`
    (건물 거리 필터에 GPX 경로를 씁니다. 리포트에는 트랙 260 m 이내의 이름 있는 건물과 랜드마크 코드가 나옵니다.)
+3. 거리별 간소화: `powershell -ExecutionPolicy Bypass -File tools/osm-seoul-lod.ps1` (기본값: `src/data/osm-seoul.js`를 `src/data/tracks.js`의 서울 중심선 기준으로 제자리에서 줄임)
+   트랙에서 300 m까지는 그대로, 300–500 m 건물은 1.5 m 단순화, 500 m 밖은 회전 직사각형(또는 3 m 단순화). 랜드마크·전통 건축은 그대로. 녹지·주차장·광장은 300 m 밖 2 m(700 m 밖 4 m), 도로는 500 m 밖 2.5 m. 레이아웃을 바꾸면 원본에서 1–3을 다시 실행하세요(이미 간소화된 파일에 다시 돌려도 결과는 거의 같습니다).
 
 ## 개발용 자유 카메라
 콘솔에서 `window.__freeCam=true` 로 로비의 회전 카메라를 멈추고 `hrc.camera`(그리고 `hrc.sun`)를 직접 움직여 원하는 지점의 장면을 볼 수 있습니다.
