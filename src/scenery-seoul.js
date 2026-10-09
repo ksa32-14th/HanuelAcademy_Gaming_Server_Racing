@@ -466,6 +466,15 @@ export function seoulScenery(ctx){C=ctx;const {D,W2,SC}=C;const T=(x,y)=>W2(x,y)
       geos.c.push(new THREE.BoxGeometry(l+0.2,0.6,1.8).rotateY(ry).translate(mx,h+0.2,mz));}
     if(geos.f.length){C.scene.add(new THREE.Mesh(C.mergeGeometries(geos.f),M(GRANITE,.9)));C.scene.add(new THREE.Mesh(C.mergeGeometries(geos.w),M(0xc9a98a,.95)));
       C.scene.add(new THREE.Mesh(C.mergeGeometries(geos.c),M(TILE,.8)));}}
+  // the Sambong-ro roundabout (T3): a mountable granite apron round a planted island with a small tree (Kakao skyview),
+  // inside the circuit's inner barrier
+  {const [x,z]=T(43.9,-146.1),g=placed(x,z,0);
+    const ap=new THREE.Mesh(new THREE.CylinderGeometry(7,7.1,0.14,40),M(0xb9b4a8,.95));ap.position.y=0.07;g.add(ap);
+    const kb=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.6,0.35,32),M(0xd8d4ca,.9));kb.position.y=0.17;g.add(kb);
+    const gr=new THREE.Mesh(new THREE.CylinderGeometry(4.3,4.3,0.4,32),M(C.DAY?0x4f7a3c:0x1f3420,1));gr.position.y=0.2;g.add(gr);
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.28,3,6),M(0x4a3a2c,1));tr.position.y=1.9;g.add(tr);
+    const cr=new THREE.Mesh(new THREE.SphereGeometry(2.4,9,7),M(C.DAY?0x3d6a30:0x1d3a22,1));cr.position.y=4.4;cr.scale.set(1,0.85,1);g.add(cr);
+    g.userData.island=true;add(g);}
   // "Spring" (Claes Oldenburg & Coosje van Bruggen, 2006): the 20 m spiral shell in Cheonggye Plaza, red and blue
   {const [x,z]=T(-20,-532),g=placed(x,z,0);const pts=[];for(let k=0;k<=160;k++){const t=k/160,a=t*Math.PI*9,r=4.2*(1-t)+0.4;pts.push(new THREE.Vector3(Math.cos(a)*r,1+t*19,Math.sin(a)*r));}
     const crv=new THREE.CatmullRomCurve3(pts);
