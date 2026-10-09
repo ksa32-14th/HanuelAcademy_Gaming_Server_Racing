@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261009e';
-import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009e';
+import {clamp,wrapA,smooth} from './util.js?v=20261009f';
+import {TR,TRACK_LEN,W,HW,KERB_W,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009f';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -112,8 +112,18 @@ for(let pass=0;pass<4;pass++){for(const A of [WL,WR]){const c=A.slice();for(let 
 // (WP / TLP: the wall and the track limit on the pit side)
 export const WP=PS>0?WR:WL;
 for(let i=0;i<N;i++){const sp=spI(i),p=pitOffSp(sp);if(p!=null)WP[i]=Math.max(WP[i],Math.abs(p)+PIT_HW+(sp<PIT_B?3.2:1.8));}
+// KWa: kerb width per sample — KERB_W everywhere, except that a circuit may give its right-angle (and tighter) corners a
+// slightly wider kerb (`kerbWide`, m): a kerbed bend that turns ≥ ~70° through a radius under ~45 m
+export const KWa=new Float32Array(N).fill(KERB_W);
 {const raw=new Uint8Array(N);for(let i=0;i<N;i++)raw[i]=Math.abs(K[i])>1/140?1:0;
- for(let i=0;i<N;i++){for(let j=-6;j<=6;j++)if(raw[(i+j+N)%N]){KB[i]=1;break;}}}
+ for(let i=0;i<N;i++){for(let j=-6;j<=6;j++)if(raw[(i+j+N)%N]){KB[i]=1;break;}}
+ if(TR.kerbWide){let i0=0;while(i0<N&&raw[i0])i0++;
+   for(let k=0;k<N;k++){const i=(i0+k)%N;if(!raw[i])continue;let n=0,ang=0,km=0;
+     while(n<N&&raw[(i+n)%N]){const kk=K[(i+n)%N];ang+=kk*DS;km=Math.max(km,Math.abs(kk));n++;}
+     if(Math.abs(ang)>=1.2&&km>1/45)for(let j=-6;j<n+6;j++)KWa[(i+j+N)%N]=TR.kerbWide;
+     k+=n-1;}
+   // ease in and out along the kerb rather than stepping
+   for(let p=0;p<3;p++){const c=KWa.slice();for(let i=0;i<N;i++)KWa[i]=Math.max(KERB_W,(c[(i-1+N)%N]+2*c[i]+c[(i+1)%N])/4);}}}
 // the track limits (white line) per side, left TLL / right TLR, as an offset from the centre line. With a kerb it is the
 // circuit's edge (HWa) as before, kerb outside it; where there is no kerb (the straights) the tarmac runs on to within
 // EDGE_GAP of the wall, as on a street circuit. It eases out over EDGE_RAMP metres from each kerb, and never widens

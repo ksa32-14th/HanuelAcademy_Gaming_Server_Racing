@@ -6,21 +6,21 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009e';
-import {perf} from './perf.js?v=20261009e';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261009e';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009e';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009e';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261009e';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009e';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009f';
+import {perf} from './perf.js?v=20261009f';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261009f';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009f';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009f';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261009f';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009f';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009e';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009e';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009f';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009f';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009e'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009e'):import('./data/osm-songdo.js?v=20261009e')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009f'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009f'):import('./data/osm-songdo.js?v=20261009f')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -253,8 +253,8 @@ async function buildWorld(){
   await stage("Kerbs & barriers…",.1);
   // kerbs: raised, sloped profile with a vertical outer lip
   const runs=[];let on=false,st=0;for(let k=0;k<N;k++){if(KB[k]&&!on){on=true;st=k;}else if(!KB[k]&&on){on=false;runs.push([st,k-st+1]);}}if(on)runs.push([st,N-st+1]);
-  {const kg=[];for(const [a,n] of runs){kg.push(strip(a,n,i=>-hwI(i)-KERB_W,i=>-hwI(i),0.09,0.03,matKerb,2,true,true),strip(a,n,hwI,i=>hwI(i)+KERB_W,0.03,0.09,matKerb,2,true,true),
-    strip(a,n,i=>-hwI(i)-KERB_W,i=>-hwI(i)-KERB_W,0,0.09,matKerb,2,false,true),strip(a,n,i=>hwI(i)+KERB_W,i=>hwI(i)+KERB_W,0,0.09,matKerb,2,false,true));}
+  {const kg=[];for(const [a,n] of runs){kg.push(strip(a,n,i=>-hwI(i)-KWa[i%N],i=>-hwI(i),0.09,0.03,matKerb,2,true,true),strip(a,n,hwI,i=>hwI(i)+KWa[i%N],0.03,0.09,matKerb,2,true,true),
+    strip(a,n,i=>-hwI(i)-KWa[i%N],i=>-hwI(i)-KWa[i%N],0,0.09,matKerb,2,false,true),strip(a,n,i=>hwI(i)+KWa[i%N],i=>hwI(i)+KWa[i%N],0,0.09,matKerb,2,false,true));}
    const km=new THREE.Mesh(mergeGeometries(kg),matKerb);km.receiveShadow=true;scene.add(km);} // one draw call for every kerb
   // concrete barriers: sponsor-board face, concrete cap and back, debris fence with posts and rails
   const barrier=(i0,n,off,side,flip)=>{ // side: -1 = wall on the left of the track, +1 = right
@@ -2104,7 +2104,7 @@ function post(c){
   const hw=HWa[c.idx];
   const s=c.s,ad=Math.abs(c.d),inPit=sp>(c.pitPlan?PIT_A-70:PIT_A)&&sp<PIT_D&&PS*c.d>hw;
   const edge=c.d<0?TLL[c.idx]:TLR[c.idx]; // the track limit on this side (see track.js)
-  c.surf=(ad<=edge||inPit)?1:(ad<=edge+KERB_W&&KB[c.idx])?0.95:0.8;
+  c.surf=(ad<=edge||inPit)?1:(ad<=edge+KWa[c.idx]&&KB[c.idx])?0.95:0.8;
   c.limiter=c.pitSide&&sp>PIT_L&&sp<PIT_C;
   if(c.limiter&&c.v>PIT_LIMIT)c.v=PIT_LIMIT;
   const box=BOX_S[c.team],psp=spOf(ps);
@@ -2116,7 +2116,7 @@ function post(c){
       else if(!c.autoBox&&c.v<0.4&&Math.abs(along)<3.7&&Math.abs(lat)<1.8&&!c.revIn)startPit(c);}
     else if(c.pitPlan&&psp<box&&sp>=box)startPit(c);}
   if(sp>PIT_D&&sp<PIT_D+120&&c.boxDone){c.boxDone=false;c.pitPlan=false;}
-  if(phase==='race'||phase==='quali'){const off=ad>edge+KERB_W+1.2*CAR_SZ&&!inPit&&!c.pitSide;if(off&&!c.tlOut){c.tlOut=true;trackLimit(c);}else if(ad<edge)c.tlOut=false;}
+  if(phase==='race'||phase==='quali'){const off=ad>edge+KWa[c.idx]+1.2*CAR_SZ&&!inPit&&!c.pitSide;if(off&&!c.tlOut){c.tlOut=true;trackLimit(c);}else if(ad<edge)c.tlOut=false;}
   if(session==='tt'&&c.isPlayer){if(c.pitSide)ttInvalidate('PIT LANE');ttTrack(c);}
   if(ps>L-80&&s<80)lapCross(c);else if(ps<80&&s>L-80&&session!=='tt')c.lapCount--;
   if(c.lapCount>=0)for(let k=0;k<2;k++)if(ps<SEC[k]&&s>=SEC[k]&&s-ps<50)sectorDone(c,k,simTime);
@@ -3063,7 +3063,7 @@ function kerbVoice(ac,master,buf){
   n.start();th.start();lfo.start();return {o:lfo,g};}
 // is any wheel on a kerb? (the car is ~2 m wide: a wheel is on it from ~1 m inside the white line to ~1 m past it)
 function onKerb(c){if(!KB[c.idx]||c.pitSide)return false;const edge=c.d<0?TLL[c.idx]:TLR[c.idx],ad=Math.abs(c.d);
-  return ad>edge-1.0&&ad<edge+KERB_W+1.0;}
+  return ad>edge-1.0&&ad<edge+KWa[c.idx]+1.0;}
 // DRS ready: the dash "삡" — measured off an F1 25 onboard (the beep ~1 s before DRS opens): ONE short pure sine at
 // ~3.9 kHz, ~70 ms, no harmonics, ~15 dB clear of the engine at that pitch
 function beep(){if(!au)return;const ac=au.ac,t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();

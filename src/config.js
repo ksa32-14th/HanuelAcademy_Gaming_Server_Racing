@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261009e';
-import {clamp} from './util.js?v=20261009e';
+import {TRACKS} from './data/tracks.js?v=20261009f';
+import {clamp} from './util.js?v=20261009f';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -11,8 +11,7 @@ try{const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(o.tod&&o.tod[T
 
 /* ================= REGULATION / VEHICLE CONSTANTS ================= */
 // track width 15 m (was 20 m — far wider than a real F1 street circuit's 12–15 m); the grid columns sit ±3.9 m apart
-// (`kerbW`: a circuit's own kerb width — Seoul's are wider)
-export const TRACK_LEN=TR.len, W=15, HW=W/2, GRID_D=3.9, KERB_W=TR.kerbW??1.6;
+export const TRACK_LEN=TR.len, W=15, HW=W/2, GRID_D=3.9, KERB_W=1.6;
 // car body scale (length, height, width) and wheel scale. The model is built to the real 2022 F1 dimensions (5.6 × 2.0 m)
 // and drawn a little larger, so it reads as big on screen as before (collision box and track limits scale with it)
 export const CAR_SX=1.05, CAR_SY=1.18, CAR_SZ=1.2, WHEEL_S=1.18;
@@ -35,10 +34,11 @@ export const BRK=0.90;
 export const TC_P=0.72, SLIDE=0.5;
 // mechanical grip is lower at low speed (no downforce to lean on, tyres slide more easily)
 export const gripV=v=>0.84+0.16*Math.min(1,v/55);
-// steering lock (rad): an ~8.5 m minimum turning radius at a crawl (was ~13.5 m), shrinking with speed — ~10 m at
-// 30 km/h (was ~15 m), ~11.5 m at 50 km/h (was ~16.5 m; from there the tyres' grip is the limit, not the lock). At
-// racing speeds the grip limit (dGrip) is far smaller than either, so fast corners are unchanged
-export const steerLock=v=>0.40/(1+v/45);
+// steering lock (rad): falls in a straight line with speed, from LOCK0 standing still to LOCK1 at LOCK_V (300 km/h) and
+// stays there above. 0.30 rad is a ~11.6 m minimum turning radius at a crawl (the original 0.26 / (1 + v/70) gave
+// ~13.5 m); above ~50 km/h the tyres' grip (dGrip) is the tighter limit anyway, so fast corners are unchanged
+const LOCK0=0.30,LOCK1=0.12,LOCK_V=300/3.6;
+export const steerLock=v=>LOCK0-(LOCK0-LOCK1)*Math.min(1,Math.max(0,v)/LOCK_V);
 // `pitWallGap`: track edge to pit wall (3.5 m; Seoul squeezes the lane onto Sejong-daero's other carriageway)
 export const PITWALL=HW+(TR.pitWallGap??3.5), PIT_HW=6, PIT_OFF=PITWALL+1+PIT_HW+1, PIT_LIMIT=60/3.6;
 // the 12 m lane is split in two: the fast lane by the pit wall and the working lane in front of the garages, where

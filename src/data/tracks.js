@@ -152,9 +152,10 @@ export const TRACKS={
   // than Sejong-daero
   narrow:[[[104,197],[262,-395],11],[[118,-436],[398,-585],11]],
   wallGap:1.2,clear:1.0,pitWallGap:2.0,
-  // corners get more room than the straights: wider kerbs (2.6 m) with the inside wall set 2.2 m further back to make
-  // space for them, and the outside wall 2.5 m further back for 60 m past each corner where cars run out wide
-  kerbW:2.6,innerGap:2.2,exitGap:2.5,exitLen:60,
+  // corners get more room than the straights: the inside wall of each kerbed corner 2.2 m further back, the outside wall
+  // 2.5 m further back for 60 m past each corner where cars run out wide; only the right-angle (and tighter) corners get
+  // a slightly wider kerb, 2.2 m instead of 1.6
+  kerbWide:2.2,innerGap:2.2,exitGap:2.5,exitLen:60,
   // pits: the southbound carriageway of Sejong-daero is the pit lane, Gwanghwamun Square the paddock — the garages
   // stand between the statue of Admiral Yi Sun-sin and the statue of King Sejong. Entry after Cheonggye Plaza, exit
   // before the Woldae.
