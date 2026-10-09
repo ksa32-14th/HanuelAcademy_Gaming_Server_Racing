@@ -6,21 +6,21 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009b';
-import {perf} from './perf.js?v=20261009b';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261009b';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009b';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009b';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261009b';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009b';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009c';
+import {perf} from './perf.js?v=20261009c';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261009c';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009c';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009c';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261009c';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009c';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009b';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009b';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009c';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009c';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009b'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009b'):import('./data/osm-songdo.js?v=20261009b')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009c'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009c'):import('./data/osm-songdo.js?v=20261009c')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1535,15 +1535,23 @@ function leaveBox(){
 // how far before the line the last straight begins: walk back until the road bends
 // (Busan's line is only ~160 m past the BEXCO corner: a 200 m floor would drop the car mid-corner)
 function straightBack(){let d=900;for(let k=6;k<N;k++){const i=(N-k)%N;if(Math.abs(K[i])>1/200){d=(k-6)*DS;break;}}return clamp(d,120,1500);}
+// The out lap (qualifying, time trial) starts here: DRS is open to the driver from the start, as it would be after any
+// detection line (the rolling start is usually already past the main straight's), and for the first OUT_AUTO seconds the
+// AI drives the car so the player is not handed a car at full speed from a standing camera — then control is theirs.
+const OUT_AUTO=2;
 function rollingStart(c,back){const sp=-back,i=idxSp(sp),off=RL[i];
   c.idx=i;c.x=X[i]-TZ[i]*off;c.z=Z[i]+TX[i]*off;c.yaw=c.chi=ANG[i];
   c.v=VP[i]*0.94;c.delta=0;c.r=0;c.slip=0;c.laneOff=0;c.laneOffT=0;c.sep=0;
   c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;c.pitSide=false;c.limiter=false;c.boxDone=false;
-  locate(c);c.prevS=c.s;c.lapCount=-1;c.shortLap=false;c.throttle=1;c.brake=0;camYaw=null;}
+  locate(c);c.prevS=c.s;c.lapCount=-1;c.shortLap=false;c.throttle=1;c.brake=0;camYaw=null;
+  c.drsElig=c.drsElig.map(()=>true);c.drsOpen=false;
+  if(c.isPlayer&&!AUTOPILOT){c.auto=true;c.autoUntil=simTime+OUT_AUTO;}}
+// …and back to the driver (after OUT_AUTO, or at the line at the latest: a timed lap is never the AI's)
+function handBack(c){if(c.autoUntil==null)return;c.auto=false;c.autoUntil=null;c.steerIn=clamp(c.delta/0.26,-1,1);}
 
 function qualiCross(c){
   if(c.pitSide)return; // crossing the line inside the pit lane is not a lap of the circuit
-  if(qStage==='out'){qStage='flying';c.lapStart=simTime;c.secStart=simTime;c.lapInvalid=false;
+  if(qStage==='out'){handBack(c);qStage='flying';c.lapStart=simTime;c.secStart=simTime;c.lapInvalid=false;
     msg('FLYING LAP');return;}
   if(qStage!=='flying')return;
   const lt=simTime-c.lapStart;
@@ -1585,7 +1593,7 @@ function startTT(){const c=player;
 function ttCross(c){
   if(c.pitSide)return;
   const t=simTime;
-  if(tt.stage==='out'){tt.stage='flying';}
+  if(tt.stage==='out'){handBack(c);tt.stage='flying';}
   else{const lt=t-c.lapStart;sectorDone(c,2,t);tt.laps++;
     // the lap box holds the finished lap (time, sectors, where it ranks) for a few seconds
     tt.flash={txt:c.lapInvalid?'DELETED':lbFmt(lt),cls:'',until:simTime+6,secs:c.secCol.slice(),
@@ -1745,7 +1753,7 @@ function startRace(){
     c.hp=[];c.ht=[];c.drsOpen=false;c.drsElig=[false,false,false];c.detT=[null,null,null];c.zone=-1;
     c.tow=0;c.slip=0;c.v=0;c.gear=0;c.delta=0;c.r=0;c.laneOff=0;c.laneOffT=0;c.laneHold=0;c.sep=0;c.held=true;
     c.dnf=false;c.dnfWhy=null;c.maxLap=-1;c.defUntil=null;c.mArm=false;c.mT=0;c.passCar=null;
-    c.waveBy=false;c.unlap=false;c.vd=0;c.infr=[];c.flagSt=0;c.dyT=0;c.dyFast=0;c.dWarn=0;c.msk=null;c.pRel=null;c.autoBox=false;
+    c.waveBy=false;c.unlap=false;c.vd=0;c.infr=[];c.flagSt=0;c.dyT=0;c.dyFast=0;c.dWarn=0;c.msk=null;c.pRel=null;c.autoBox=false;handBack(c);
     c.dm=newDmg();c.wingShare=0;c.wingChange=false;c.tT=null;c.bT=null;if(c.isPlayer){c.pitWing=c.pitWing||"AUTO";c.planLap=null;}
     placeOnGrid(c,slot);c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;});
   resetRaceControl();
@@ -2126,7 +2134,10 @@ function computeTow(){for(const c of cars){c.tow=0;if(c.parked)continue;for(cons
   if(a>3&&a<45&&Math.abs(o.d-c.d)<1.8)c.tow=Math.max(c.tow,1-a/45);}}}
 
 /* ================= DRIVER INPUT / AI ================= */
-function playerControl(dt){const c=player;if(c.auto){aiDrive(c,dt);return;}const tg=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+function playerControl(dt){const c=player;
+  // the out lap's first seconds on the AI (rollingStart), then the driver's: the wheel is handed over where the AI held it
+  if(c.autoUntil!=null&&simTime>=c.autoUntil)handBack(c);
+  if(c.auto){aiDrive(c,dt);return;}const tg=(keys.KeyD?1:0)-(keys.KeyA?1:0);
   // steering winds on in ~0.25 s at low speed and ~0.75 s at 300 km/h and centres in ~0.2 s: a keyboard tap gives a
   // gentle, progressive turn instead of flicking the car left-right; throttle and brake ~35 ms
   // catching a slide (steering towards the direction of travel) the hands are quick: lock-to-lock in ~0.25 s
