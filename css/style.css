@@ -213,7 +213,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
    to a tile (title over the time) and the driver's panel opens beside it. .clip hides it from the left edge, so taking
    .clip off builds it in from the right (and putting it back breaks it up), in pixel steps; .dith = the dithered bar
    while that happens. */
-#secB{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 14px);transform:translateX(-50%);display:flex;width:264px;height:40px;
+#secB{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 14px);transform:translateX(-50%);display:flex;width:var(--bw,264px);height:40px;
   opacity:0;pointer-events:none;font-family:var(--f-disp);clip-path:inset(0 0 0 0);transition:clip-path .5s steps(10)}
 #secB.notr,#secB.notr *{transition:none!important}
 #secB.clip{clip-path:inset(0 0 0 100%)}
@@ -223,8 +223,11 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 #secB .sb-l i{font:800 15px/1.1 var(--f-disp);font-style:normal;font-variant-numeric:tabular-nums;color:#fff;transition:opacity .3s,max-height .35s;max-height:20px;overflow:hidden}
 #secB .sb-r{flex:1;background:linear-gradient(90deg,#1d1238,#2a0f2c);display:flex;align-items:center;justify-content:center;
   font:900 14px var(--f-disp);letter-spacing:.04em;text-transform:uppercase;color:var(--tc,#e10600);transition:opacity .3s;overflow:hidden;white-space:nowrap}
-#secB.bar .sb-l{width:264px} #secB.bar .sb-l i{opacity:0;max-height:0} #secB.bar .sb-r{opacity:0}
+#secB.bar .sb-l{width:var(--bw,264px)} #secB.bar .sb-l i{opacity:0;max-height:0} #secB.bar .sb-r{opacity:0}
 #secB.dith .sb-l{background:repeating-linear-gradient(90deg,#a10fd8 0 5px,#5a0a7a 5px 7px)}
+/* NEW RACE LEADER (race): the same build, in the broadcast's dark grey with the leader's surname in the team colour */
+#secB.lead .sb-l{background:#1a1c22} #secB.lead .sb-l i{display:none} #secB.lead .sb-r{background:#0e0f13;font-size:15px}
+#secB.lead.dith .sb-l{background:repeating-linear-gradient(90deg,#1a1c22 0 5px,#3a3d47 5px 7px)}
 #msg.low{top:calc(12px + min(440px,46vw)/3.6 + 140px)}
 .spec{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 0}
 .spec div{background:#10162a;border-radius:6px;padding:8px}

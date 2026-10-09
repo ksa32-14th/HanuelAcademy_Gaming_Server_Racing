@@ -3,12 +3,14 @@
 // engine/tyre sound (N mutes those, B turns the music on/off). YouTube's terms want the player visible while it plays,
 // so it sits in a slim "now playing" strip in the top-right corner (a small player and the track name); it is hidden
 // while the music is off. Browsers only let it start after a user gesture, so the first click or key press starts it.
-// The first track is the official Formula 1 broadcast theme; the circuit intro film plays it from the top.
+// The order is Hans Zimmer's F1, Lose My Mind, then the official Formula 1 broadcast theme (THEME), which the circuit
+// intro film plays from the top.
 export const PLAYLIST=[
-  {title:'Formula 1 Theme',artist:'Brian Tyler',yt:'_QmiNC9d788'},               // Brian Tyler - Topic (℗ 2018 Formula 1)
   {title:'F1',artist:'Hans Zimmer',yt:'YhX_Woa3kVA'},                             // Hans Zimmer - Topic (F1 The Album)
   {title:'Lose My Mind',artist:'Don Toliver feat. Doja Cat',yt:'VJxppgsHjF8'},   // F1 The Album (official audio)
+  {title:'Formula 1 Theme',artist:'Brian Tyler',yt:'_QmiNC9d788'},               // Brian Tyler - Topic (℗ 2018 Formula 1)
 ];
+const THEME=2;
 const KEY='hrc-music',VOL=35;
 let player=null,ready=false,cur=0,on=true,failed=new Set(),card=null,onChange=()=>{};
 try{const o=JSON.parse(localStorage.getItem(KEY)||'{}');if(o.on===false)on=false;}catch(e){}
@@ -43,8 +45,8 @@ function advance(){let i=cur;for(let k=0;k<PLAYLIST.length;k++){i=(i+1)%PLAYLIST
 export function musicStart(){if(!on)return;if(!player){create();return;}if(ready)player.playVideo();}
 export function musicSet(v){on=v;save();if(on){failed.clear();if(!player)create();else if(ready)player.playVideo();}else if(ready)player.pauseVideo();changed();return on;}
 export const musicToggle=()=>musicSet(!on);
-// the circuit intro film: the first track (the F1 theme) from the top, the playlist carrying on from there
-export function musicIntro(){if(!on)return;cur=0;failed.delete(0);if(!player){create();return;}if(ready)player.loadVideoById(PLAYLIST[0].yt,0);changed();}
+// the circuit intro film: the F1 theme from the top, the playlist carrying on from there (round to the first track)
+export function musicIntro(){if(!on)return;cur=THEME;failed.delete(THEME);if(!player){create();return;}if(ready)player.loadVideoById(PLAYLIST[THEME].yt,0);changed();}
 // (yt: the YouTube player state, 1 = playing; t: seconds into the track)
 export const musicState=()=>({on,track:now(),allFailed:failed.size>=PLAYLIST.length,yt:ready?player.getPlayerState():-2,t:ready?player.getCurrentTime():0});
 export function onMusicChange(fn){onChange=fn;}

@@ -6,23 +6,23 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010s';
-import {perf} from './perf.js?v=20261010s';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261010s';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010s';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010s';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261010s';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261010s';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010u';
+import {perf} from './perf.js?v=20261010u';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261010u';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010u';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010u';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261010u';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261010u';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010s';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010s';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010s';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010s';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010u';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010u';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010u';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010u';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010s'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010s'):import('./data/osm-songdo.js?v=20261010s')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010u'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010u'):import('./data/osm-songdo.js?v=20261010u')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1431,6 +1431,7 @@ function animBoxMarker(){if(!boxMarker)return;const u=boxMarker.userData,t=perfo
 /* ================= RACE STATE ================= */
 let cars=[],player=null,phase='menu',simTime=0,raceStart=null,gridT0=0,lightsOutAt=0,lightsOn=-1;
 let drsEnabled=false,checkered=false,targetLaps=5,totalLaps=5,wearMult=1,timeLimitHit=false,fastest=null;
+let raceLeader=null,leadCand=null,leadCandT=0; // the race leader (for NEW RACE LEADER) and a car about to take over
 const bestSecAll=[null,null,null];let paused=false,hudMode=0,lastHist=0,resultsShown=false;
 const keys={};
 
@@ -1769,7 +1770,7 @@ function startRace(){
     placeOnGrid(c,slot);c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;});
   resetRaceControl();
   simTime=0;raceStart=null;gridT0=0.8;lightsOutAt=gridT0+5+rand(0.3,2.6);lightsOn=-1;
-  drsEnabled=false;checkered=false;timeLimitHit=false;fastest=null;bestSecAll.fill(null);resultsShown=false;
+  drsEnabled=false;checkered=false;timeLimitHit=false;fastest=null;raceLeader=null;leadCand=null;bestSecAll.fill(null);resultsShown=false;
   camYaw=null;recReset();
   $('tower').hidden=false;buildTower();$('lights').hidden=false;setLights(0);
   msg('FORMATION COMPLETE · LIGHTS OUT WHEN ALL FIVE GO OUT');
@@ -2111,6 +2112,10 @@ function sectorDone(c,k,t){const st=t-c.secStart;c.secStart=t;
     // a lap can still be deleted after this split, so its sectors only become bests once it ends valid (ttCross):
     // a deleted lap's data is never used anywhere — no PB, no best sectors, no board, no ghost
     return;}
+  // race: the player's purple sector (quicker than anyone in the race so far) gets the SECTOR banner, as in the time
+  // trial — from lap 2 on (on the opening lap every first time is purple); sector 3 waits for the line, where a FASTEST
+  // LAP banner takes precedence (lapCross)
+  if(session==='race'&&c.isPlayer&&c.secCol[k]==='pu'&&c.lapCount>=(k===2?2:1)){if(k<2)secBanner(k,st);else c.s3Pu=st;}
   if(c.bestSec[k]==null||st<c.bestSec[k])c.bestSec[k]=st;if(bestSecAll[k]==null||st<bestSecAll[k])bestSecAll[k]=st;}
 function lapCross(c){
   if(session==='tt'){if(c===player){c.fuel=12;ttCross(c);}return;}
@@ -2122,7 +2127,9 @@ function lapCross(c){
   sectorDone(c,2,t);const lt=t-c.lapStart;c.lastLap=lt;c.lapStart=t;
   if(c.shortLap){c.shortLap=false;c.lastLap=null;} // from a grid slot ahead of the line: not a full lap, no time
   else if(c.bestLap==null||lt<c.bestLap)c.bestLap=lt;
-  if(c.lastLap!=null&&(!fastest||lt<fastest.t)){fastest={t:lt,car:c};if(c.isPlayer&&c.lapCount>1)msg('FASTEST LAP',fmt(lt));}
+  // FASTEST LAP, as on the broadcast, for whoever sets it (not on the opening lap, when every first lap is one)
+  if(c.lastLap!=null&&(!fastest||lt<fastest.t)){fastest={t:lt,car:c};if(c.lapCount>=2){banner('FASTEST LAP',fmt(lt),c);c.s3Pu=null;}}
+  if(c.s3Pu!=null){secBanner(2,c.s3Pu);c.s3Pu=null;}
   if(!checkered&&c.lapCount>=targetLaps){checkered=true;if(!c.isPlayer)msg('CHEQUERED FLAG · '+c.code+' WINS');}
   if(checkered&&!c.finished){c.finished=true;c.finishT=t-raceStart;if(c.isPlayer){msg('FINISH · P'+(order().indexOf(c)+1));setTimeout(showResults,3000);}}
 }
@@ -2813,6 +2820,13 @@ function step(dt){
   if(perf.on){const pt2=performance.now();perf.acc('ai',pt1-pt0);perf.acc('physics+post',pt2-pt1);}
   if(phase==='race'){
     let lead=cars[0];for(const c of cars)if(c.progress>lead.progress)lead=c;
+    // NEW RACE LEADER, as on the broadcast: once a new car has held the lead for 1.5 s (no flicker while two run side by
+    // side), from 5 s after the start, until the chequered flag
+    {let ld=null;for(const c of cars)if(!c.dnf&&(!ld||c.progress>ld.progress))ld=c;
+     if(ld&&ld!==raceLeader){if(leadCand!==ld){leadCand=ld;leadCandT=simTime;}
+       else if(simTime-leadCandT>1.5){const was=raceLeader;raceLeader=ld;leadCand=null;
+         if(was&&!checkered&&simTime-raceStart>5)banner('NEW RACE LEADER','',ld,'lead');}}
+     else leadCand=null;}
     // DRS: off under the SC / VSC, back one lap after the green flag
     if(!drsEnabled&&!scActive()&&lead.lapCount>=DRS_FROM_LAP-1&&(drsResume==null||lead.progress>=drsResume)){drsEnabled=true;drsResume=null;msg('DRS ENABLED');}
     if((scOn()||vsc)&&drsEnabled){drsEnabled=false;for(const c of cars)c.drsOpen=false;}
@@ -2849,16 +2863,23 @@ function fastestSector(k,st){let best=bestSecAll[k]??Infinity;for(const r of tt.
 // panel opens beside it (surname in the team colour); ~2.5 s later it folds back to the bar and breaks up the same way.
 // It takes the top spot under the mirror; other messages shown meanwhile drop below it.
 let sbT=[],fastUntil=0;
-function banner(title,time){const b=$('secB');sbT.forEach(clearTimeout);
-  b.className='notr bar clip';void b.offsetWidth;
-  $('sbT').textContent=title;$('sbTime').textContent=time;$('sbName').textContent=surname(ttName||'YOU');
-  b.style.setProperty('--tc',hex(TEAMS[player.team].c));b.style.setProperty('--lw',title.length>9?'132px':'96px');
+// (car: whose it is — the player by default; kind 'lead': the dark NEW RACE LEADER version, no time). One shows at a time:
+// another that comes while one is up waits for it (at most two waiting, and none older than ~6 s)
+let bQ=[],bBusy=0;
+function banner(title,time,car=player,kind=''){const now=performance.now();
+  if(now<bBusy){bQ=bQ.filter(q=>now-q.at<6000).slice(-1);bQ.push({at:now,a:[title,time,car,kind]});return;}
+  bBusy=now+4850;showBanner(title,time,car,kind);}
+function showBanner(title,time,car,kind){const b=$('secB');sbT.forEach(clearTimeout);
+  b.className='notr bar clip'+(kind?' '+kind:'');void b.offsetWidth;
+  $('sbT').textContent=title;$('sbTime').textContent=time;$('sbName').textContent=surname(car.isPlayer?(ttName||'YOU'):car.name);
+  b.style.setProperty('--tc',hex(TEAMS[car.team].c));b.style.setProperty('--lw',kind==='lead'?'170px':title.length>9?'132px':'96px');
+  b.style.setProperty('--bw',kind==='lead'?'330px':'264px');
   b.classList.remove('notr');b.classList.add('on','dith');b.classList.remove('clip');
   fastUntil=performance.now()+4900;$('msg').classList.add('low');
   sbT=[setTimeout(()=>b.classList.remove('dith'),550),setTimeout(()=>b.classList.remove('bar'),900),
     setTimeout(()=>b.classList.add('bar'),3700),setTimeout(()=>b.classList.add('dith','clip'),4200),
-    setTimeout(()=>{b.className='';},4800)];}
-const secBanner=(k,st)=>banner('SECTOR '+(k+1),st<60?st.toFixed(3):fmt(st));
+    setTimeout(()=>{b.className='';bBusy=0;const q=bQ.shift();if(q&&performance.now()-q.at<6000)banner(...q.a);},4800)];}
+const secBanner=(k,st,car)=>banner('SECTOR '+(k+1),st<60?st.toFixed(3):fmt(st),car);
 function msg(t,sub=''){const m=$('msg');m.classList.toggle('low',performance.now()<fastUntil);m.innerHTML=t+(sub?'<small>'+sub+'</small>':'');m.classList.add('on');clearTimeout(msgTimer);msgTimer=setTimeout(()=>m.classList.remove('on'),2600);}
 function setLights(n){[...$('lights').children].forEach((l,i)=>l.classList.toggle('on',i<n));gantryLamps.forEach((m,i)=>m.color.setHex(i<n?0xff1a0a:0x220404));}
 let rowEls=[];
