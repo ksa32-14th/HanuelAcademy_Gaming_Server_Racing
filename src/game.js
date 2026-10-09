@@ -6,22 +6,22 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009m';
-import {perf} from './perf.js?v=20261009m';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261009m';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009m';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009m';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261009m';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009m';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009q';
+import {perf} from './perf.js?v=20261009q';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261009q';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009q';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009q';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261009q';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009q';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009m';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009m';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange} from './music.js?v=20261009m';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009q';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009q';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261009q';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009m'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009m'):import('./data/osm-songdo.js?v=20261009m')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009q'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009q'):import('./data/osm-songdo.js?v=20261009q')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -3506,7 +3506,7 @@ function showIntroLines(u){ // u: 0…1 through the lap shot; the sectors draw i
   if(!introLines)introLines=buildIntroLines();const {g,parts}=introLines;g.visible=u!=null;if(u==null)return;
   parts.forEach((p,k)=>{const f=clamp((u*1.6-k*0.3)/0.45,0,1),c=Math.floor(p.count*easeIO(f)/6)*6;p.geo.setDrawRange(0,c);p.sp.visible=f>0.6;p.post.visible=f>=1;});}
 function playIntro(done){if(!INTRO){done();return;}
-  intro={t:0,t0:performance.now(),done,cur:-1};
+  intro={t:0,t0:performance.now(),done,cur:-1};musicIntro(); // the film runs to Hans Zimmer's F1 theme
   // the film is shot from hundreds of metres up: thin the haze so the city is not washed out (restored after)
   scene.fog.near=FOG0[0]*2.5;scene.fog.far=FOG0[1]*2.5;$('menu').hidden=true;$('intro').hidden=false;
   $('iPlaceEn').textContent=INTRO.placeEn;$('iPlace').textContent=INTRO.place;}
@@ -3582,7 +3582,7 @@ function musicLabel(){const t=musicState().track;return t.title+' · '+t.artist;
 function buildMusicSel(){const ms=$('musSel');if(!ms)return;ms.innerHTML='';const st=musicState();
   ms.appendChild(chip('OFF','',!st.on,()=>musicSet(false)));
   ms.appendChild(chip('ON',PLAYLIST.length+' tracks in order',st.on,()=>musicSet(true)));
-  $('musInfo').textContent=st.allMissing?'· no audio files in /music (see music/README.md)':st.on&&st.track?'· ♪ '+musicLabel()+' · B in race':'· B in race';}
+  $('musInfo').textContent=st.allFailed?'· YouTube unavailable (offline or blocked)':st.on&&st.track?'· ♪ '+musicLabel()+' · B in race':'· B in race';}
 onMusicChange(buildMusicSel);
 // browsers only let audio start after a user gesture: the first click or key anywhere starts the music
 {const first=()=>{musicStart();removeEventListener('pointerdown',first,true);removeEventListener('keydown',first,true);};

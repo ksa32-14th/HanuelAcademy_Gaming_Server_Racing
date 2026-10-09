@@ -138,7 +138,9 @@ FIA 국제 스포팅 코드 부록 H(깃발 신호)와 F1 스포팅 규정(세�
 사이트 전체 글꼴은 **Formula1 Display**입니다([`fonts/`](fonts/README.md): Regular · Bold · Wide). 큰 제목에는 Wide를 씁니다. 라이선스가 있는 글꼴이라 문제가 되면 `fonts/`의 `.ttf` 파일만 지우면 Titillium Web(한글은 Noto Sans KR)으로 돌아갑니다.
 
 ## 조작
-`W` 스로틀 · `A`/`D` 조향 · `SPACE` 브레이크 · `M` 클러치(레이스 스타트: `W`+`M`을 누른 채 기다리다 불이 꺼지면 `M`을 떼어 출발) · `SPACE`+`S` 후진(어디서나, 피트레인에서는 `S`만) · 피트 박스에서 `P` 출발 · `E` DRS · `1`/`2`/`3` 다음 타이어 · `F` MFD(페이지), MFD 안에서 `←↑↓→` · `C` 시점 · `L` 레이싱 라인 · `G` 고스트(Time Trial) · `H` HUD · `R` 복귀 · `P` 일시정지 · `0` 리플레이 · `N` 사운드 · `B` 음악 켜기/끄기(로비의 MUSIC 줄에서도 선택, 곡은 `PLAYLIST` 순서대로 반복 재생). 음악 파일은 저장소에 없습니다: [`music/`](music/README.md)에 직접 넣으세요.
+`W` 스로틀 · `A`/`D` 조향 · `SPACE` 브레이크 · `M` 클러치(레이스 스타트: `W`+`M`을 누른 채 기다리다 불이 꺼지면 `M`을 떼어 출발) · `SPACE`+`S` 후진(어디서나, 피트레인에서는 `S`만) · 피트 박스에서 `P` 출발 · `E` DRS · `1`/`2`/`3` 다음 타이어 · `F` MFD(페이지), MFD 안에서 `←↑↓→` · `C` 시점 · `L` 레이싱 라인 · `G` 고스트(Time Trial) · `H` HUD · `R` 복귀 · `P` 일시정지 · `0` 리플레이 · `N` 사운드 · `B` 음악 켜기/끄기(로비의 MUSIC 줄에서도 선택).
+
+음악(`src/music.js`): 공식 YouTube 업로드(Hans Zimmer - Topic의 "F1", F1 The Album 채널의 "Lose My Mind" Official Audio)를 YouTube IFrame Player API로 스트리밍합니다(음원 파일은 저장소에 없음). `PLAYLIST` 순서대로 재생하고 마지막 곡 다음에는 첫 곡으로 돌아가며, 서킷 인트로 영상이 시작되면 F1 테마를 처음부터 재생합니다. YouTube 약관상 재생 중에는 플레이어가 보여야 해서 오른쪽 아래에 작은 카드로 표시합니다(음악을 끄면 숨김). 브라우저 자동재생 제한 때문에 첫 클릭/키 입력 때 시작되고, 인터넷 연결이 필요합니다. 곡을 바꾸거나 추가하려면 `PLAYLIST`에 `{title, artist, yt: 영상 ID}`를 넣으면 됩니다.
 
 게임 내 `Q`: 그래픽 품질 순환 (AUTO→LOW→MEDIUM→HIGH→ULTRA). 로비에서도 선택 가능. 텍스처 해상도가 바뀌는 전환은 자동 새로고침됩니다.
 
