@@ -6,21 +6,21 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009f';
-import {perf} from './perf.js?v=20261009f';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261009f';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009f';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009f';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261009f';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009f';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009g';
+import {perf} from './perf.js?v=20261009g';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261009g';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009g';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009g';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261009g';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009g';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009f';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009f';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009g';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009g';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009f'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009f'):import('./data/osm-songdo.js?v=20261009f')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009g'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009g'):import('./data/osm-songdo.js?v=20261009g')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1799,7 +1799,7 @@ function physics(c,dt){
   // otherwise every launch sat in full wheelspin for seconds — revs pinned, speed barely building
   c.spin=Fdem>Ftr*TC_SLACK?Math.min(1,(Fdem/(Ftr*TC_SLACK)-1)*1.5)*clamp((v-14)/8,0,1):0;
   const Fp=Math.min(Fdem,Ftr)*(1-0.25*c.spin);
-  const Fdrag=0.5*RHO*cda*v*v+(v>0.1?CRR*m*G:0),Fb=c.brake*mu*BRK*Nn;
+  const bk=brakeK(v),Fdrag=0.5*RHO*cda*v*v+(v>0.1?CRR*m*G:0),Fb=c.brake*mu*BRK*bk*Nn; // (bk: better brakes below 150 km/h)
   // steering lock shrinks with speed (heavy steering / small angles at 300 km/h); the player may ask
   // for ~30 % more than the grip limit, which now makes the car slide instead of tracking on rails
   const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=steerLock(v); // ~10 m minimum turning radius, and still limited at speed
@@ -1823,7 +1823,7 @@ function physics(c,dt){
   // out of slow corners, locking up into them) — hard to drive on the limit, but no tail-out slides.
   if(c.chi===undefined)c.chi=c.yaw;
   const beta=wrapA(c.yaw-c.chi),rReq=v*Math.tan(c.delta)/WB,ayReq=v*rReq;
-  const n=Math.hypot(axT/(aMax*1.05),ayReq/(aMax*(1-0.2*c.spin))); // spinning rears corner worse
+  const n=Math.hypot(axT/(aMax*1.05*(axT<0?bk:1)),ayReq/(aMax*(1-0.2*c.spin))); // spinning rears corner worse
   let ay=ayReq;c.slip=0;if(n>1){c.slip=n-1;const lose=1-0.14*Math.min(c.slip,1);axT=axT/n*lose;ay=ayReq/n*lose;}
   const ax=axT-Fdrag/m-Math.min(c.slip,1)*3.0;
   c.v=Math.max(0,v+ax*dt);
@@ -1882,9 +1882,11 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   // (the pedal asks for ~45 % more than before; the ABS and the tyres' longitudinal grip decide what it gets)
   // the rears brake lightly (≤ ~55 % of their grip, less still with lock on): braking into a corner they keep their
   // cornering grip, so the car turns in instead of swapping ends
-  const FbP=Fb*1.45,Fbr=Math.min(FbP*0.9*Nr/(Nf+Nr),Fr*LONG*(0.55-0.4*abs)),Fbf=Math.min(FbP-Fbr,Ff*LONG*(0.95-0.65*abs));
+  // (below 150 km/h the tyres' braking budget grows with brakeK, so the stronger brakes are not just clipped by the ABS)
+  const bk=brakeK(v0),LB=LONG*bk;
+  const FbP=Fb*1.45,Fbr=Math.min(FbP*0.9*Nr/(Nf+Nr),Fr*LB*(0.55-0.4*abs)),Fbf=Math.min(FbP-Fbr,Ff*LB*(0.95-0.65*abs));
   const Fxf=-Fbf,Fxr=Fdrv-Fbr;
-  const Fyf0=Ff*Math.sqrt(Math.max(0,1-(Fxf/(LONG*Ff))**2)),Fyr0=Fr*Math.sqrt(Math.max(0,1-(Fxr/(LONG*Fr))**2));
+  const Fyf0=Ff*Math.sqrt(Math.max(0,1-(Fxf/(LB*Ff))**2)),Fyr0=Fr*Math.sqrt(Math.max(0,1-(Fxr/((Fxr<0?LB:LONG)*Fr))**2));
   let fy=0,alr=0;
   for(let i=0;i<n;i++){const u=Math.max(vx,3),sp=Math.hypot(vx,vy)||1;
     const af=d-Math.atan2(vy+CG_F*r,u),ar=-Math.atan2(vy-CG_R*r,u);

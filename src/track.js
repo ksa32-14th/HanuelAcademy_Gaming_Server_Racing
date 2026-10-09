@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261009f';
-import {TR,TRACK_LEN,W,HW,KERB_W,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009f';
+import {clamp,wrapA,smooth} from './util.js?v=20261009g';
+import {TR,TRACK_LEN,W,HW,KERB_W,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,brakeK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009g';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -191,7 +191,7 @@ export const VP=new Float32Array(N);{
  // AI arrived at corners far too fast (it then ran wide into the barriers)
  for(let i=0;i<N;i++){let k=0;for(let j=-2;j<=2;j++)k=Math.max(k,kr[(i+j+N)%N]);let v=VMAX;
   for(let it=0;it<4;it++){const mv=mu*gripV(v);v=k<=mv*kd?VMAX:Math.min(VMAX,Math.sqrt(mv*G/(k-mv*kd)));}VP[i]=v;}
- for(let p=0;p<2;p++)for(let i=N-1;i>=0;i--){const v=VP[(i+1)%N];const dec=mu*gripV(v)*BRK*0.97*(G+kd*v*v)+0.5*RHO*CDA*v*v/m;VP[i]=Math.min(VP[i],Math.sqrt(v*v+2*dec*DS));}
+ for(let p=0;p<2;p++)for(let i=N-1;i>=0;i--){const v=VP[(i+1)%N];const dec=mu*gripV(v)*BRK*brakeK(v)*0.97*(G+kd*v*v)+0.5*RHO*CDA*v*v/m;VP[i]=Math.min(VP[i],Math.sqrt(v*v+2*dec*DS));}
  for(let p=0;p<2;p++)for(let i=0;i<N;i++){const v=VP[i];const acc=Math.max(0.4,Math.min(POWER/(m*Math.max(v,5)),mu*gripV(v)*TRACTION*(G+kd*v*v))-0.5*RHO*CDA*v*v/m);const j=(i+1)%N;VP[j]=Math.min(VP[j],Math.sqrt(v*v+2*acc*DS));}
 }
 

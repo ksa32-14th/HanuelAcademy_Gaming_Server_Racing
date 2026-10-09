@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261009f';
-import {clamp} from './util.js?v=20261009f';
+import {TRACKS} from './data/tracks.js?v=20261009g';
+import {clamp} from './util.js?v=20261009g';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -27,6 +27,11 @@ export const G=9.81, RHO=1.2, MASS=798, POWER=700000, CDA=1.514, CLA=5.0, MU=1.5
 // its nose, so the braking zone is long enough that you have to place the car for the corner in it —
 // which is what makes out-in-out necessary instead of optional.
 export const BRK=0.90;
+// brake grip at low speed: below BRK_V (150 km/h) the brakes get better in a straight line as the speed falls, up to
+// 1 + BRK_LOW (+30 %) at a standstill — without downforce the tyres alone used to stop the car feebly in slow corners.
+// Multiplies the braking force and the tyres' longitudinal grip budget for braking (the friction ellipse's long axis).
+const BRK_V=150/3.6,BRK_LOW=0.30;
+export const brakeK=v=>v>=BRK_V?1:1+BRK_LOW*(1-Math.max(0,v)/BRK_V);
 // Player car only (see slideStep()): front and rear tyres are separate, and the rears share their grip between drive
 // and cornering. TC_P: the share of the rear grip the (lighter) traction control lets the throttle use — what is left
 // is all the rears have for cornering, so a big throttle in a slow corner steps the tail out. SLIDE: how far a rear
