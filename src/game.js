@@ -6,23 +6,23 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010u';
-import {perf} from './perf.js?v=20261010u';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261010u';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010u';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010u';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261010u';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261010u';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010v';
+import {perf} from './perf.js?v=20261010v';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261010v';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010v';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010v';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261010v';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261010v';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010u';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010u';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010u';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010u';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010v';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010v';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010v';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010v';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010u'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010u'):import('./data/osm-songdo.js?v=20261010u')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010v'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010v'):import('./data/osm-songdo.js?v=20261010v')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1500,7 +1500,7 @@ function setupSession(mode='gp'){
   // qualifying: the level's calibrated lap (a lone car on fresh softs) for each driver's pace
   const qBase=aiLapT[lv]??IDEAL_LAP*QUALI_K;
   for(const c of cars)if(!c.isPlayer){qTimes.set(c,qBase/c.skill*(1+rand(-0.003,0.010)));parkInGarage(c);}
-  simTime=0;raceStart=null;lightsOn=-1;drsEnabled=true;checkered=false;timeLimitHit=false;fastest=null;
+  simTime=0;lastHist=0;raceStart=null;lightsOn=-1;drsEnabled=true;checkered=false;timeLimitHit=false;fastest=null;
   bestSecAll.fill(null);resultsShown=false;qGrid=null;session=mode==='tt'?'tt':'quali';
   $('tower').hidden=true;$('lights').hidden=true;
   buildBoxMarker(pt);camYaw=null;recReset();
@@ -1769,7 +1769,8 @@ function startRace(){
     c.dm=newDmg();c.wingShare=0;c.wingChange=false;c.tT=null;c.bT=null;if(c.isPlayer){c.pitWing=c.pitWing||"AUTO";c.planLap=null;}
     placeOnGrid(c,slot);c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;});
   resetRaceControl();
-  simTime=0;raceStart=null;gridT0=0.8;lightsOutAt=gridT0+5+rand(0.3,2.6);lightsOn=-1;
+  simTime=0;lastHist=0;raceStart=null;gridT0=0.8; // (lastHist too: left at the last race's time, a restarted race kept no gap history — no intervals)
+  lightsOutAt=gridT0+5+rand(0.3,2.6);lightsOn=-1;
   drsEnabled=false;checkered=false;timeLimitHit=false;fastest=null;raceLeader=null;leadCand=null;bestSecAll.fill(null);resultsShown=false;
   camYaw=null;recReset();
   $('tower').hidden=false;buildTower();$('lights').hidden=false;setLights(0);
