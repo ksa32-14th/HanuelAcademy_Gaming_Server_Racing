@@ -211,13 +211,17 @@ export function seoulBuilding(ctx,pts,h,ar,kind,lm,bi){C=ctx;const {ringWalls,ro
     return true;}
   case 62:{ // Dongsipjagak: the palace's south-east corner watchtower, now alone on a traffic island — a tall granite
     // platform with a crenellated parapet and a square two-roofed pavilion
-    const o=C.oba(pts),L=o.l1-o.l0,W=o.w1-o.w0,g=placed(o.mx,o.mz,o.ang);
+    // it is exempt from the circuit-clearance test (it stands inside the ring), so it is fitted to the ring here instead:
+    // the nearest the inner barrier comes to it is measured, and the island and the tower (base corners, eaves) kept
+    // that far in, so no stone or roof ever reaches over the kerb onto the track
+    const o=C.oba(pts),rIn=barrierClear(o.mx,o.mz);
+    const fit=Math.min(1,(rIn-1.6)/Math.hypot(o.l1-o.l0,o.w1-o.w0)*2),L=(o.l1-o.l0)*fit,W=(o.w1-o.w0)*fit,g=placed(o.mx,o.mz,o.ang);
     const stone=C.mat({map:stoneTexture(3,1.2),roughness:.92,color:0xf2ede2});const b=new THREE.Mesh(new THREE.BoxGeometry(L,4.8,W),stone);b.position.y=2.4;g.add(b);
     for(let k=0;k<8;k++){const t=-L/2+L*(k+0.5)/8;for(const s of [-1,1]){g.add(box(1,0.9,0.5,M(0x6b6a66,.9),t,5.25,s*(W/2-0.25)));g.add(box(0.5,0.9,1,M(0x6b6a66,.9),s*(L/2-0.25),5.25,t));}}
     hanokStorey(g,L*0.55,W*0.55,4.8,3.0,2.2,{ov:1.8,lift:0.8});hanokStorey(g,L*0.42,W*0.42,4.8+3+0.9+1.6,1.6,2.6,{ov:1.6,lift:0.9,walls:false});
     // the island of the rotary round it: a low hexagon of granite setts with a kerb (the circuit's inner barrier
     // stands ~1 m outside it)
-    const isl=new THREE.Mesh(new THREE.CylinderGeometry(8.6,8.8,0.22,6),M(0xbdb6a6,.95));isl.position.y=0.11;isl.rotation.y=Math.PI/6;g.add(isl);
+    const ir=Math.min(rIn-1,Math.max(8.8,Math.hypot(L,W)/2+1.2)),isl=new THREE.Mesh(new THREE.CylinderGeometry(ir-0.2,ir,0.22,6),M(0xbdb6a6,.95));isl.position.y=0.11;isl.rotation.y=Math.PI/6;g.add(isl);
     g.userData.island=true;add(g);return true;}
   case 63:{ // Daehanmun, the main gate of Deoksugung: three bays on a granite step, hipped roof, red doors
     const o=C.oba(pts),L=o.l1-o.l0,W=o.w1-o.w0,g=placed(o.mx,o.mz,o.ang);platform(g,L+1,W+1,1.0);
@@ -458,23 +462,26 @@ export function seoulScenery(ctx){C=ctx;const {D,W2,SC}=C;const T=(x,y)=>W2(x,y)
   // rotary and only then turns north up Samcheong-ro (Kakao skyview)
   const walls=[[[-120,213],[-306,219],[-306,900]],[[-89,214],[85,224.5],[120.5,274],[121,900]]].map(l=>({h:5.2,pts:l.map(p=>T(...p))}));
   for(const w of D.wl||[]){const pts=[];for(let k=1;k<w.length;k+=2)pts.push(T(w[k],w[k+1]));walls.push({h:Math.min(w[0],4.2),pts});}
-  {const geos={f:[],w:[],c:[]};for(const {h,pts} of walls)for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1];const l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(l<0.5)continue;
-      const ry=-Math.atan2(b[1]-a[1],b[0]-a[0]),mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;
-      if(C.blocked(mx,mz,-1))continue;
-      geos.f.push(new THREE.BoxGeometry(l,1.4,1.3).rotateY(ry).translate(mx,0.7,mz));
-      geos.w.push(new THREE.BoxGeometry(l,h-1.4,1.0).rotateY(ry).translate(mx,1.4+(h-1.4)/2,mz));
-      geos.c.push(new THREE.BoxGeometry(l+0.2,0.6,1.8).rotateY(ry).translate(mx,h+0.2,mz));}
+  // each run is laid in pieces of ≤ 4 m, and a piece is left out where it would reach the circuit (testing only the middle
+  // of a long run let its ends cross the track round the Dongsipjagak rotary)
+  {const geos={f:[],w:[],c:[]};for(const {h,pts} of walls)for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1];const L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<0.5)continue;
+      const ry=-Math.atan2(b[1]-a[1],b[0]-a[0]),n=Math.ceil(L/4),l=L/n;
+      for(let q=0;q<n;q++){const t0=q/n,t1=(q+1)/n,mx=a[0]+(b[0]-a[0])*(t0+t1)/2,mz=a[1]+(b[1]-a[1])*(t0+t1)/2;
+        if(C.blocked(mx,mz,-1)||C.blocked(a[0]+(b[0]-a[0])*t0,a[1]+(b[1]-a[1])*t0,-1)||C.blocked(a[0]+(b[0]-a[0])*t1,a[1]+(b[1]-a[1])*t1,-1))continue;
+        geos.f.push(new THREE.BoxGeometry(l,1.4,1.3).rotateY(ry).translate(mx,0.7,mz));
+        geos.w.push(new THREE.BoxGeometry(l,h-1.4,1.0).rotateY(ry).translate(mx,1.4+(h-1.4)/2,mz));
+        geos.c.push(new THREE.BoxGeometry(l+0.2,0.6,1.8).rotateY(ry).translate(mx,h+0.2,mz));}}
     if(geos.f.length){C.scene.add(new THREE.Mesh(C.mergeGeometries(geos.f),M(GRANITE,.9)));C.scene.add(new THREE.Mesh(C.mergeGeometries(geos.w),M(0xc9a98a,.95)));
       C.scene.add(new THREE.Mesh(C.mergeGeometries(geos.c),M(TILE,.8)));}}
   // the Sambong-ro roundabout (T3): a mountable granite apron round a planted island with a small tree (Kakao skyview),
-  // inside the circuit's inner barrier
-  {const [x,z]=T(43.9,-146.1),g=placed(x,z,0);
+  // inside the circuit's inner barrier — shrunk to fit if the barrier comes closer than the real 7 m apron
+  {const [x,z]=T(43.9,-146.1),g=placed(x,z,0),f=Math.min(1,(barrierClear(x,z)-0.8)/7.1);
     const ap=new THREE.Mesh(new THREE.CylinderGeometry(7,7.1,0.14,40),M(0xb9b4a8,.95));ap.position.y=0.07;g.add(ap);
     const kb=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.6,0.35,32),M(0xd8d4ca,.9));kb.position.y=0.17;g.add(kb);
     const gr=new THREE.Mesh(new THREE.CylinderGeometry(4.3,4.3,0.4,32),M(C.DAY?0x4f7a3c:0x1f3420,1));gr.position.y=0.2;g.add(gr);
     const tr=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.28,3,6),M(0x4a3a2c,1));tr.position.y=1.9;g.add(tr);
     const cr=new THREE.Mesh(new THREE.SphereGeometry(2.4,9,7),M(C.DAY?0x3d6a30:0x1d3a22,1));cr.position.y=4.4;cr.scale.set(1,0.85,1);g.add(cr);
-    g.userData.island=true;add(g);}
+    g.scale.set(f,1,f);g.userData.island=true;add(g);}
   // "Spring" (Claes Oldenburg & Coosje van Bruggen, 2006): the 20 m spiral shell in Cheonggye Plaza, red and blue
   {const [x,z]=T(-20,-532),g=placed(x,z,0);const pts=[];for(let k=0;k<=160;k++){const t=k/160,a=t*Math.PI*9,r=4.2*(1-t)+0.4;pts.push(new THREE.Vector3(Math.cos(a)*r,1+t*19,Math.sin(a)*r));}
     const crv=new THREE.CatmullRomCurve3(pts);
@@ -497,6 +504,12 @@ export function seoulSky(ctx){C=ctx;const {TR}=C;
 export function seoulTick(t){for(const l of leds){const f=Math.floor((t+l.phase)/6)%4;if(f!==l.frame){l.frame=f;l.tex.offset.y=0.75-f*0.25;}}}
 
 /* ---------------- helpers ---------------- */
+// how close the circuit's barriers come to (x, z) — for a traffic island the track runs round (it is exempt from the
+// clearance test, so it is fitted inside this instead)
+function barrierClear(x,z){let r=1e9;
+  for(let i=0;i<C.N;i++){if(Math.hypot(C.X[i]-x,C.Z[i]-z)>45)continue;
+    for(const s of [-1,1]){const w=s<0?C.WL[i]:C.WR[i];r=Math.min(r,Math.hypot(C.X[i]-C.TZ[i]*w*s-x,C.Z[i]+C.TX[i]*w*s-z));}}
+  return r;}
 function cgTest(D){if(!D.cg||!D.cg.length)return ()=>false;const P=[];for(let k=0;k<D.cg.length;k+=2)P.push(C.W2(D.cg[k],D.cg[k+1]));
   let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const [x,z] of P){x0=Math.min(x0,x);x1=Math.max(x1,x);z0=Math.min(z0,z);z1=Math.max(z1,z);}
   return (x,z)=>{if(x<x0||x>x1||z<z0||z>z1)return false;let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [xi,zi]=P[i],[xj,zj]=P[j];if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi)c=!c;}return c;};}

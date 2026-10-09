@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261009h';
-import {TR,TRACK_LEN,W,HW,KERB_W,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,brakeK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009h';
+import {clamp,wrapA,smooth} from './util.js?v=20261009m';
+import {TR,TRACK_LEN,W,HW,KERB_W,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,brakeK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009m';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -103,8 +103,13 @@ const IN_GAP=TR.innerGap||0,EX_GAP=TR.exitGap||0,EX_N=Math.round((TR.exitLen||0)
 if(EX_GAP&&EX_N){let left=0,side=0;
   for(let k=0;k<2*N;k++){const i=k%N,kk=K[i];if(Math.abs(kk)>1/90){left=EX_N;side=kk>0?1:-1;continue;}
     if(left>0){left--;(side>0?exL:exR)[i]=EX_GAP;}}}
+// `roomy`: [[x, y, reach, m], …] — the walls m further back round (x, y) (raw coords), easing out over the last 15 m of
+// reach: both walls on the straights, only the outside one through a corner (the inside of a roundabout is its island)
+const ROOMY=(TR.roomy||[]).map(([x,y,reach,m])=>[...rw(x,y),reach*SC,m]);
 for(let i=0;i<N;i++){const k=K[i],ak=Math.abs(k),base=HWa[i]+WALL_GAP,extra=ak>1/90?(TR.cornerGap??3.5):0,inner=ak>1/140?IN_GAP:0;
-  let wl=base+(k>0?extra:inner)+exL[i],wr=base+(k<0?extra:inner)+exR[i];
+  let room=0;for(const [x,z,reach,m] of ROOMY)room=Math.max(room,m*smooth(clamp((reach-Math.hypot(X[i]-x,Z[i]-z))/15,0,1)));
+  const bend=ak>1/140;
+  let wl=base+(k>0?extra:inner)+exL[i]+(!bend||k>0?room:0),wr=base+(k<0?extra:inner)+exR[i]+(!bend||k<0?room:0);
   if(ak>1e-4){const cap=0.7/ak;if(k>0)wr=Math.min(wr,cap);else wl=Math.min(wl,cap);}
   WL[i]=Math.max(HWa[i]+1.6,wl);WR[i]=Math.max(HWa[i]+1.6,wr);}
 for(let pass=0;pass<4;pass++){for(const A of [WL,WR]){const c=A.slice();for(let i=0;i<N;i++){let s=0;for(let j=-4;j<=4;j++)s+=c[(i+j+N)%N];A[i]=s/9;}}}

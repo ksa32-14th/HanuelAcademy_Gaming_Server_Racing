@@ -6,21 +6,22 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009h';
-import {perf} from './perf.js?v=20261009h';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261009h';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009h';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009h';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261009h';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009h';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009m';
+import {perf} from './perf.js?v=20261009m';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261009m';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009m';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009m';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261009m';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009m';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009h';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009h';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009m';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009m';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange} from './music.js?v=20261009m';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009h'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009h'):import('./data/osm-songdo.js?v=20261009h')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009m'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009m'):import('./data/osm-songdo.js?v=20261009m')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -3357,6 +3358,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyL'){rlMode=(rlMode+1)%3;msg('RACING LINE · '+RL_MODES[rlMode]);}
   if(e.code==='KeyG'&&session==='tt'){setGhost(!ghostOn);msg('GHOST · '+(ghostOn?'ON':'OFF'),ghostOn?(ghost?'P1 · '+ghost.name+' · '+ghost.time:'NO GHOST LAP YET'):'');}
   if(e.code==='KeyN'){muted=!muted;msg('SOUND · '+(muted?'OFF':'ON'));}
+  if(e.code==='KeyB'){const on=musicToggle();msg('MUSIC · '+(on?'ON':'OFF'),on?musicLabel():'');}
   if(e.code==='KeyC'){camMode=(camMode+1)%CAM_MODES.length;msg('CAMERA · '+CAM_MODES[camMode]);}
   if(e.code==='KeyH'){hudMode=(hudMode+1)%3;mRect=null;$('hud').className=['lite','','min'][hudMode];msg('HUD · '+['COMPACT','FULL','MINIMAL'][hudMode]);}
   if(e.code==='Digit0'||e.code==='Numpad0'){if(replay)endReplay();else startReplay();return;}
@@ -3572,8 +3574,19 @@ function buildLobby(){
   for(const m of MODES)qs.appendChild(chip(m==='auto'?'AUTO':PRESETS[m].label,m==='auto'?'→ '+PRESETS[detectPreset(renderer.getContext())].label:'',m===qState.mode,()=>{
     setQualityMode(m);if(Q.texRes!==BUILT_TEX){location.reload();return;}buildLobby();}));
   $('qInfo').textContent='· '+(qState.mode==='auto'?'adapts resolution to keep 60 fps':'fixed preset')+' · Q in race';
+  buildMusicSel();
   drawTrackMap();
 }
+// music: on / off (the playlist plays in order, round and round); B in race
+function musicLabel(){const t=musicState().track;return t.title+' · '+t.artist;}
+function buildMusicSel(){const ms=$('musSel');if(!ms)return;ms.innerHTML='';const st=musicState();
+  ms.appendChild(chip('OFF','',!st.on,()=>musicSet(false)));
+  ms.appendChild(chip('ON',PLAYLIST.length+' tracks in order',st.on,()=>musicSet(true)));
+  $('musInfo').textContent=st.allMissing?'· no audio files in /music (see music/README.md)':st.on&&st.track?'· ♪ '+musicLabel()+' · B in race':'· B in race';}
+onMusicChange(buildMusicSel);
+// browsers only let audio start after a user gesture: the first click or key anywhere starts the music
+{const first=()=>{musicStart();removeEventListener('pointerdown',first,true);removeEventListener('keydown',first,true);};
+ addEventListener('pointerdown',first,true);addEventListener('keydown',first,true);}
 $('trkSub').textContent=TR.label+' · '+(TR.len/1000).toFixed(3)+' km';
 loadOpts();if(!LAP_CHOICES.includes(optLaps)&&optLaps!==TR.fullLaps)optLaps=5;buildLobby();
 // the lobby shows this circuit's time trial top 5 (reloaded whenever the lobby comes back)
