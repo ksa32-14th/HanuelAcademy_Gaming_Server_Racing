@@ -6,21 +6,21 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009c';
-import {perf} from './perf.js?v=20261009c';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261009c';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009c';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009c';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261009c';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009c';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009e';
+import {perf} from './perf.js?v=20261009e';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261009e';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009e';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009e';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261009e';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009e';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009c';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009c';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009e';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009e';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009c'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009c'):import('./data/osm-songdo.js?v=20261009c')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009e'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009e'):import('./data/osm-songdo.js?v=20261009e')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1547,7 +1547,7 @@ function rollingStart(c,back){const sp=-back,i=idxSp(sp),off=RL[i];
   c.drsElig=c.drsElig.map(()=>true);c.drsOpen=false;
   if(c.isPlayer&&!AUTOPILOT){c.auto=true;c.autoUntil=simTime+OUT_AUTO;}}
 // …and back to the driver (after OUT_AUTO, or at the line at the latest: a timed lap is never the AI's)
-function handBack(c){if(c.autoUntil==null)return;c.auto=false;c.autoUntil=null;c.steerIn=clamp(c.delta/0.26,-1,1);}
+function handBack(c){if(c.autoUntil==null)return;c.auto=false;c.autoUntil=null;c.steerIn=clamp(c.delta/steerLock(c.v),-1,1);}
 
 function qualiCross(c){
   if(c.pitSide)return; // crossing the line inside the pit lane is not a lap of the circuit
@@ -1784,7 +1784,7 @@ function physics(c,dt){
   // the brake held too (SPACE + S), e.g. to back out of a run-off after a spin
   if(c.isPlayer&&c.revIn&&(c.pitSide||c.brakeIn)&&c.v<0.3&&c.throttle<0.05){const vr=c.pitSide?2.2:4;c.v=0;c.aLong=0;c.aLat=0;c.r=0;
     c.revT=simTime;c.revV=vr; // reversing right now (the dash and the sound read it)
-    c.delta+=clamp(c.steerIn*0.26-c.delta,-4*dt,4*dt);c.yaw-=vr*Math.tan(c.delta)/WB*dt;c.chi=c.yaw;
+    c.delta+=clamp(c.steerIn*steerLock(0)-c.delta,-4*dt,4*dt);c.yaw-=vr*Math.tan(c.delta)/WB*dt;c.chi=c.yaw;
     c.x-=Math.cos(c.yaw)*vr*dt;c.z-=Math.sin(c.yaw)*vr*dt;return;}
   if(c.dnf){c.throttle=0;c.brake=1;c.deltaCmd=0;c.steerIn=0;}
   const v=c.v,m=MASS+c.fuel,tg=tyreGrip(c)*c.surf*(1-0.12*c.damage),mu=MU*tg*gripV(v);
@@ -1802,7 +1802,7 @@ function physics(c,dt){
   const Fdrag=0.5*RHO*cda*v*v+(v>0.1?CRR*m*G:0),Fb=c.brake*mu*BRK*Nn;
   // steering lock shrinks with speed (heavy steering / small angles at 300 km/h); the player may ask
   // for ~30 % more than the grip limit, which now makes the car slide instead of tracking on rails
-  const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=0.26/(1+v/70); // ~13.5 m minimum turning radius, and still limited at speed
+  const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=steerLock(v); // ~10 m minimum turning radius, and still limited at speed
   // sliding (player): steering INTO the slide (countersteer: towards the direction of travel) gets the slip angle as
   // extra lock, so there is enough of it to catch the car; steering further into the spin gets none
   // (a car still sliding sideways stays in it down to walking pace, so a spin skids to a stop instead of snapping straight)

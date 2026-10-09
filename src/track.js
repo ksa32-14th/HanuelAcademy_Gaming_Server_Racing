@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261009c';
-import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009c';
+import {clamp,wrapA,smooth} from './util.js?v=20261009e';
+import {TR,TRACK_LEN,W,HW,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261009e';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -96,8 +96,15 @@ export const HWmin=Math.min(...HWa);
 // wall (3 m by default; less where the circuit squeezes through narrow city streets)
 export const WALL_GAP=TR.wallGap??3.0;
 export const WL=new Float32Array(N),WR=new Float32Array(N),KB=new Uint8Array(N);
-for(let i=0;i<N;i++){const k=K[i],ak=Math.abs(k),base=HWa[i]+WALL_GAP,extra=ak>1/90?(TR.cornerGap??3.5):0;
-  let wl=base+(k>0?extra:0),wr=base+(k<0?extra:0);
+// `innerGap`: extra run-off on the inside of every kerbed corner (room for the wider kerb, `kerbW`, and for clipping it);
+// `exitGap` / `exitLen`: the outside wall stays set back that much further for `exitLen` m past each corner, where a
+// car runs out wide on the exit (both 0 by default: the walls are exactly as before)
+const IN_GAP=TR.innerGap||0,EX_GAP=TR.exitGap||0,EX_N=Math.round((TR.exitLen||0)/DS),exL=new Float32Array(N),exR=new Float32Array(N);
+if(EX_GAP&&EX_N){let left=0,side=0;
+  for(let k=0;k<2*N;k++){const i=k%N,kk=K[i];if(Math.abs(kk)>1/90){left=EX_N;side=kk>0?1:-1;continue;}
+    if(left>0){left--;(side>0?exL:exR)[i]=EX_GAP;}}}
+for(let i=0;i<N;i++){const k=K[i],ak=Math.abs(k),base=HWa[i]+WALL_GAP,extra=ak>1/90?(TR.cornerGap??3.5):0,inner=ak>1/140?IN_GAP:0;
+  let wl=base+(k>0?extra:inner)+exL[i],wr=base+(k<0?extra:inner)+exR[i];
   if(ak>1e-4){const cap=0.7/ak;if(k>0)wr=Math.min(wr,cap);else wl=Math.min(wl,cap);}
   WL[i]=Math.max(HWa[i]+1.6,wl);WR[i]=Math.max(HWa[i]+1.6,wr);}
 for(let pass=0;pass<4;pass++){for(const A of [WL,WR]){const c=A.slice();for(let i=0;i<N;i++){let s=0;for(let j=-4;j<=4;j++)s+=c[(i+j+N)%N];A[i]=s/9;}}}
