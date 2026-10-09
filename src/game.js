@@ -6,23 +6,23 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010o';
-import {perf} from './perf.js?v=20261010o';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261010o';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010o';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010o';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261010o';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261010o';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010s';
+import {perf} from './perf.js?v=20261010s';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261010s';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010s';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010s';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261010s';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261010s';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010o';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010o';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010o';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010o';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010s';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010s';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010s';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010s';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010o'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010o'):import('./data/osm-songdo.js?v=20261010o')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010s'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010s'):import('./data/osm-songdo.js?v=20261010s')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1628,9 +1628,10 @@ function ttCross(c){
 function ttInvalidate(why){const c=player;if(session!=='tt'||tt.stage!=='flying'||!c||c.lapInvalid)return;
   c.lapInvalid=true;c.invWhy=why;msg('LAP DELETED',why+' · THIS LAP WILL NOT COUNT');}
 async function ttSubmit(lt,sec,path){if(!ttName)return;
-  const team=TEAMS[player.team].name,r=await lbSubmit(LB_ID,{name:ttName,t:+lt.toFixed(3),sec,team,path,hz:GH_HZ});
-  // every valid lap's sectors go to the sector records too (a lap outside the top 5 can still hold one)
-  const rs=await lbSecSubmit(LB_ID,{name:ttName,sec,team},tt.board);
+  const at=Date.now(),team=TEAMS[player.team].name,r=await lbSubmit(LB_ID,{name:ttName,t:+lt.toFixed(3),sec,team,path,hz:GH_HZ,at});
+  // every valid lap's sectors go to the sector records too (a lap outside the top 5 can still hold one) — with the lap's
+  // own time stamp, so the same lap's sectors are one record wherever they come from
+  const rs=await lbSecSubmit(LB_ID,{name:ttName,sec,team,at},tt.board);
   await refreshBoard(true);
   if(tt.flash&&tt.flash.secs&&r.rank)tt.flash.pos=r.rank;
   // the board keeps the top 5 laps: say where this one landed (or that it missed it)
@@ -2202,7 +2203,10 @@ function aiDrive(c,dt){
     // (a car much slower than us is watched further ahead and over a wider strip: a queue braking for a corner, half a
     // lane over, is where the big rear-enders came from)
     const slower=o.v<c.v-12;
-    if(a>0&&a<(slower?40+c.v*2.2:30+c.v*1.8)&&Math.abs(lat)<(slower?4.4:3.0)&&o.pitSide===c.pitSide){
+    // (a car coming out of the pit exit still counts as in the pit lane until it is over the line — but at the merge it
+    // is about to be in our lane: it is watched from the end of the lane on, or it was hit at 330 km/h as it joined)
+    const merging=o.pitSide&&!c.pitSide&&(()=>{const so=spOf(o.s);return so>PIT_C-60&&so<PIT_D+20;})();
+    if(a>0&&a<(slower?40+c.v*2.2:30+c.v*1.8)&&Math.abs(lat)<(slower?4.4:3.0)&&(o.pitSide===c.pitSide||merging)){
       if(a<aheadA){aheadA=a;ahead=o;} // the car directly ahead in our lane (the nearest one, not whichever came last)
       // keep a braking-safe gap (reaction margin + car length) to the car ahead in our lane
       // gap = one car length + margin; 9 m used to freeze the whole grid behind cars 8 m apart
@@ -2337,69 +2341,97 @@ function aiDrive(c,dt){
    physics speeds) and lean part of the way towards the board's fastest laps (ailearn.js). Each AI level is that
    profile with its corner speeds (and braking) scaled by a factor, calibrated by driving one AI car round on its own,
    out of sight, until its lap matches the level's target: SIMULATION = the board's P1, HARD = the mean of the rest of
-   the top 5, MEDIUM / EASY 2.5 / 5 % slower than HARD. Rebuilt whenever the board changes (cached per board). With no
-   laps on the board yet the levels are fixed factors over the theoretical profile. */
-const AI_LV_DEF=[0.95,0.98,1.0,1.03],CAL_VER=4; // (no board laps) corner-speed factors, EASY … SIMULATION
+   the top 5, MEDIUM / EASY 2.5 / 5 % slower than HARD. With no laps on the board yet the levels are fixed factors over
+   the theoretical profile.
+   The calibration is done ONCE per board, for everybody: it is kept on the server (/ai/<board>, see leaderboard.js).
+   The first browser to see a new board — normally the one whose lap just got onto it — calibrates in the background (a
+   few milliseconds of each frame, nothing during a race) and shares the result; every other browser just downloads it
+   (and drops its own if the shared one turns up first). */
+const AI_LV_DEF=[0.95,0.98,1.0,1.03],CAL_VER=5; // (no board laps) corner-speed factors, EASY … SIMULATION
 // the theoretical corner limit is worked out conservatively (the tightest curvature nearby, 98.5 % of the grip): the
 // calibration may go this far past it — a lap that ends up on the walls is backed off again
-const AI_CAP_K=1.04;
-let learnSet=theory(),learnSig=null,learnNew=true,aiF=AI_LV_DEF.slice(),aiLapT=[null,null,null,null],AIP=[],AICAPS=null,calGen=0,calWant=false;
+const AI_CAP_K=1.12;
+let learnSet=theory(),learnSig=null,learnNew=true,aiF=AI_LV_DEF.slice(),aiLapT=[null,null,null,null],AIP=[],AICAPS=null,calGen=0;
 const aiLevel=()=>{const k=AI_LEVELS.findIndex(([,v])=>Math.abs(v-optAI)<1e-9);return k<0?1:k;};
+const calKey=()=>learnSig+'|'+CAL_VER;
 // a level's profile: the learned corner speeds × f (never past what the AI's car can hold on the line), then braking
 function aiProfile(f){const cp=learnSet.caps,o=new Float64Array(N);
   for(let i=0;i<N;i++)o[i]=cp[i]>=VMAX-0.1?VMAX:Math.min(cp[i]*f,AICAPS[i]*AI_CAP_K);
   return profileFrom(o,{grip:AI_CAR.gk,brake:AI_CAR.bf*Math.min(1,f)**2,power:AI_CAR.pk});}
 // the targets for EASY … SIMULATION (null: no board laps)
 function aiTargets(){const s=learnSet;if(s.top==null)return null;const hard=Math.max(s.rest,s.top*1.003);return [hard*1.05,hard*1.025,hard,s.top];}
+// a calibration record {sig, f, t, at} that fits this board
+const calOk=r=>!!r&&r.sig===calKey()&&Array.isArray(r.f)&&r.f.length===4&&r.f.every(x=>typeof x==='number'&&x>0.5&&x<1.5)&&Array.isArray(r.t)&&r.t.length===4;
+function useCal(r){aiF=r.f.slice();aiLapT=r.t.map(x=>typeof x==='number'?x:null);AIP=aiF.map(aiProfile);
+  try{localStorage.setItem('hrc-aical-'+LB_ID,JSON.stringify({sig:r.sig,f:aiF,t:aiLapT}));}catch(e){}}
 // put the latest learned set into use — never in the middle of a race (it waits for the next session)
 function applyLearn(){if(!learnNew||(session==='race'&&phase!=='menu'))return;learnNew=false;
   RL.set(learnSet.line);VP.set(learnSet.ref);AICAPS=cornerCaps(RL,AI_CAR.gk);
   let cache=null;try{cache=JSON.parse(localStorage.getItem('hrc-aical-'+LB_ID)||'null');}catch(e){}
-  if(cache&&cache.sig===learnSig+'|'+CAL_VER){aiF=cache.f;aiLapT=cache.t;}
-  else{aiF=AI_LV_DEF.slice();aiLapT=[null,null,null,null];calWant=true;}
-  AIP=aiF.map(aiProfile);
-  if(calWant&&!$('menu').hidden)calibrateAI();}
+  if(calOk(cache)){useCal(cache);return;}
+  aiF=AI_LV_DEF.slice();aiLapT=[null,null,null,null];AIP=aiF.map(aiProfile);
+  sharedCal();}
+// the shared calibration for this board: the server's, or — nobody has made it yet — make it here and share it
+async function sharedCal(){const key=calKey(),r=await lbAiGet(LB_ID);if(key!==calKey())return;
+  if(calOk(r)){calGen++;useCal(r);return;}
+  calibrateAI();}
 // read the board and its driving lines; learn again if they changed
 async function aiLearn(rows){
   try{if(!rows)rows=(await lbLoad(LB_ID)).rows;}catch(e){rows=[];}
   const sig=rows.map(r=>r.at).join(',');if(sig===learnSig)return;
   const laps=[];for(const r of rows.slice(0,5)){if(!r.at)continue;const g=await lbGhost(LB_ID,r.at);
     if(g&&g.p)laps.push({t:r.t,g:{...decodePath(g.p),hz:g.hz||GH_HZ}});}
+  calGen++; // (a calibration still running was for the old board)
   learnSig=sig;learnSet=learn(laps)||theory();learnNew=true;applyLearn();}
-// one lap of a lone AI car on profile P (rolling start, fresh softs, DRS in the zones as in the time trial): its time
-// and how long it spent against a wall
+// one lap of a lone AI car on profile P (rolling start, fresh softs, DRS in the zones as in the time trial), as a job
+// that runs in slices (yield): its time and how long it spent against a wall
 let probe=null;
-function probeLap(P){const c=probe||(probe=carState(99,0,['AI','AI'],false,1,'S',99));
+function* probeLap(P){const c=probe||(probe=carState(99,0,['AI','AI'],false,1,'S',99));
   Object.assign(c,{prof:P,skill:1,wear:0,damage:0,dm:newDmg(),fuel:12,tT:[90,90,90,90],bT:[400,400,400,400],held:false,dnf:false,
     pitPlan:false,pitLap:Infinity,finished:false,passCar:null,yieldSide:0,defUntil:null,exitUntil:null,laneOff:0,laneOffT:0,laneHold:0,sep:0,
-    gridD:null,lapCount:5,onWall:false,stuck:0,spin:0,slip:0,surf:1,tow:0,drsOpen:false,pitSide:false,limiter:false,pitStop:0,autoBox:false,gear:7});
+    gridD:null,lapCount:5,onWall:false,stuck:0,spin:0,slip:0,surf:1,tow:0,drsOpen:false,pitSide:false,limiter:false,pitStop:0,autoBox:false,gear:7,regain:null});
   const i0=idxSp(-straightBack()),off=RL[i0];c.idx=i0;c.x=X[i0]-TZ[i0]*off;c.z=Z[i0]+TX[i0]*off;c.yaw=c.chi=ANG[i0];c.v=P[i0]*0.95;
   c.delta=0;c.r=0;locate(c);
-  const keepCars=cars,keepSession=session;cars=[];session='probe';
-  let t=0,start=null,res=null,wall=0,prev=c.s;
-  try{for(let k=0;k<Math.round(260/H)&&res==null;k++){
-      aiDrive(c,H);physics(c,H);locate(c);walls(c);if(c.onWall)wall+=H;
-      const ad=Math.abs(c.d),edge=c.d<0?TLL[c.idx]:TLR[c.idx];c.surf=ad<=edge?1:(ad<=edge+KWa[c.idx]&&KB[c.idx])?0.95:0.8;
-      c.zone=drsZoneOf(c.s);let flat=c.zone>=0&&c.brake<0.05;
-      if(flat)for(let j=0;j<Math.round((30+c.v*1.6)/DS);j++)if(Math.abs(K[(c.idx+j)%N])>1/900){flat=false;break;}
-      c.drsOpen=flat;t+=H;
-      if(prev>L-80&&c.s<80){if(start==null)start=t;else res=t-start;}prev=c.s;}}
-  finally{cars=keepCars;session=keepSession;}
+  let t=0,start=null,res=null,wall=0,prev=c.s,k=0;const max=Math.round(260/H);
+  while(k<max&&res==null){
+    // (it drives alone: the field and the session are swapped out only while its own steps run)
+    const keepCars=cars,keepSession=session;cars=[];session='probe';
+    try{for(let n=0;n<240&&k<max&&res==null;n++,k++){
+        aiDrive(c,H);physics(c,H);locate(c);walls(c);if(c.onWall)wall+=H;
+        const ad=Math.abs(c.d),edge=c.d<0?TLL[c.idx]:TLR[c.idx];c.surf=ad<=edge?1:(ad<=edge+KWa[c.idx]&&KB[c.idx])?0.95:0.8;
+        c.zone=drsZoneOf(c.s);let flat=c.zone>=0&&c.brake<0.05;
+        if(flat)for(let j=0;j<Math.round((30+c.v*1.6)/DS);j++)if(Math.abs(K[(c.idx+j)%N])>1/900){flat=false;break;}
+        c.drsOpen=flat;t+=H;
+        if(prev>L-80&&c.s<80){if(start==null)start=t;else res=t-start;}prev=c.s;}}
+    finally{cars=keepCars;session=keepSession;}
+    if(res==null)yield;}
   return {t:res??260,wall};}
-const tick=()=>new Promise(r=>setTimeout(r,0));
-// fit each level's factor to its target lap (a few probe laps each, one per frame so the lobby stays responsive)
-async function calibrateAI(){const gen=++calGen,tg=aiTargets(),sig=learnSig;calWant=false;
-  for(let lv=0;lv<4;lv++){let f=aiF[lv],best=null;
-    for(let it=0;it<(tg?7:1);it++){await tick();if(gen!==calGen)return;if($('menu').hidden){calWant=true;return;} // (a session started: later)
-      const r=probeLap(aiProfile(f)),e=tg?Math.abs(r.t-tg[lv]):0;
+// run a job a slice per frame: ~12 ms of each frame in the lobby, ~3 ms while driving (time trial, practice), nothing
+// during a race; in a tab in the background (no frames) ~50 ms every 0.1 s on a timer. null if the board changed meanwhile.
+function runJob(job,gen){return new Promise(res=>{
+  const next=()=>document.hidden?setTimeout(slice,100):requestAnimationFrame(slice);
+  const slice=()=>{if(gen!==calGen){res(null);return;}
+    if(session==='race'&&phase!=='menu'){setTimeout(slice,500);return;}
+    const t0=performance.now(),budget=document.hidden?50:$('menu').hidden?3:12;let r;do{r=job.next();}while(!r.done&&performance.now()-t0<budget);
+    if(r.done)res(r.value);else next();};
+  next();});}
+// fit each level's factor to its target lap (a few probe laps each), then share it
+async function calibrateAI(){const gen=++calGen,tg=aiTargets(),key=calKey(),f=AI_LV_DEF.slice(),t=[null,null,null,null];let peek=performance.now();
+  for(let lv=0;lv<4;lv++){let ff=f[lv],best=null;
+    for(let it=0;it<(tg?7:1);it++){const r=await runJob(probeLap(aiProfile(ff)),gen);if(r==null)return;
+      // another browser may have shared it meanwhile: take theirs
+      if(performance.now()-peek>10000){peek=performance.now();const s=await lbAiGet(LB_ID);if(gen!==calGen)return;if(calOk(s)){calGen++;useCal(s);return;}}
+      const e=tg?Math.abs(r.t-tg[lv]):0;
       // (a lap spent on the walls is over the limit: it never counts as the fit)
-      if(!best||(r.wall===0)>(best.wall===0)||((r.wall===0)===(best.wall===0)&&e<best.e))best={f,t:r.t,e,wall:r.wall};
+      if(!best||(r.wall===0)>(best.wall===0)||((r.wall===0)===(best.wall===0)&&e<best.e))best={f:ff,t:r.t,e,wall:r.wall};
       if(!tg||(e<0.1&&r.wall===0))break;
       // too slow → faster corners (and the other way round); on the walls: back off
-      f=clamp(r.wall>0?f*0.985:f*Math.pow(r.t/tg[lv],2.5),0.7,1.3);}
-    aiF[lv]=best.f;aiLapT[lv]=best.t;AIP[lv]=aiProfile(best.f);}
-  try{localStorage.setItem('hrc-aical-'+LB_ID,JSON.stringify({sig:sig+'|'+CAL_VER,f:aiF,t:aiLapT}));}catch(e){}
-  if(gen===calGen)console.info('[HRC ai] calibrated',LB_ID,{targets:tg&&tg.map(x=>+x.toFixed(3)),f:aiF.map(x=>+x.toFixed(4)),lap:aiLapT.map(x=>+x.toFixed(3))});}
+      ff=clamp(r.wall>0?ff*0.985:ff*Math.pow(r.t/tg[lv],2.5),0.7,1.3);}
+    f[lv]=best.f;t[lv]=best.t;}
+  if(gen!==calGen)return;
+  const rec={sig:key,f,t,at:Date.now()};useCal(rec);lbAiPut(LB_ID,rec);
+  console.info('[HRC ai] calibrated and shared',LB_ID,{targets:tg&&tg.map(x=>+x.toFixed(3)),f:f.map(x=>+x.toFixed(4)),lap:t.map(x=>+x.toFixed(3))});}
+
 
 /* ================= MAIN STEP ================= */
 function orderCmp(a,b){
@@ -3722,7 +3754,7 @@ loadOpts();if(!LAP_CHOICES.includes(optLaps)&&optLaps!==TR.fullLaps)optLaps=5;bu
 aiLearn(); // the AI and the racing line learn from this circuit's time trial board
 // the lobby shows this circuit's time trial top 5 (reloaded whenever the lobby comes back)
 $('lobbyLbTrk').textContent=TR.label;fillBoard('lobbyLb','lobbyLbSrc','lobbySec');
-new MutationObserver(()=>{if(!$('menu').hidden){fillBoard('lobbyLb','lobbyLbSrc','lobbySec');aiLearn();if(calWant)calibrateAI();}}).observe($('menu'),{attributes:true,attributeFilter:['hidden']});
+new MutationObserver(()=>{if(!$('menu').hidden){fillBoard('lobbyLb','lobbyLbSrc','lobbySec');aiLearn();}}).observe($('menu'),{attributes:true,attributeFilter:['hidden']});
 
 // every session opens with the circuit intro (skippable); the lobby can replay it on its own
 $('startBtn').onclick=()=>{document.activeElement.blur();audioInit();

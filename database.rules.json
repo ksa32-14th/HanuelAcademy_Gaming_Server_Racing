@@ -12,6 +12,13 @@
         ".write": "newData.exists() && newData.child('s1').numChildren() <= 3 && newData.child('s2').numChildren() <= 3 && newData.child('s3').numChildren() <= 3"
       }
     },
+    "ai": {
+      "$track": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.hasChildren(['sig', 'f', 't', 'at']) && newData.child('f').numChildren() == 4 && newData.child('t').numChildren() <= 4"
+      }
+    },
     "ghost": {
       "$track": {
         ".read": true,

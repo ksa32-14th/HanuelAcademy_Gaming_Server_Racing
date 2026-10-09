@@ -7,7 +7,7 @@
 // Records: {name, time, s1, s2, s3 (lap and sector times as 'm:ss:mmm', e.g. '1:32:456'), team,
 //           date ('YYYY-MM-DD', the day it was set), at (ms, when it was set)}. Rows handed to the game also carry
 //           t (the lap, s) and st ([s1, s2, s3] in s, NaN where missing).
-import {LB_URL} from './config.js?v=20261010o';
+import {LB_URL} from './config.js?v=20261010s';
 
 export const lbShared=!!LB_URL;
 const base=LB_URL.replace(/\/+$/,'');
@@ -58,7 +58,7 @@ export async function lbGhost(track,at){
 // with its ghost. Resolves to {rank (its place, 0 = outside the top 5), improved (it is now the driver's best on the
 // board), shared}.
 export async function lbSubmit(track,lap){
-  const at=Date.now(),sec=lap.sec||[];
+  const at=lap.at||Date.now(),sec=lap.sec||[];
   const rec={name:lap.name,time:lbFmt(lap.t),s1:secStr(sec[0]),s2:secStr(sec[1]),s3:secStr(sec[2]),team:lap.team||'',date:dayOf(at),at};
   const ghost=lap.path?{at,name:rec.name,time:rec.time,hz:lap.hz||10,p:lap.path}:null;
   const result=rows=>{const rank=rows.findIndex(x=>x.at===rec.at&&x.name===rec.name)+1;
@@ -90,7 +90,9 @@ const secRows=list=>{const seen=new Set();
   return (Array.isArray(list)?list:Object.values(list||{})).filter(r=>r&&r.name&&typeof r.time==='string')
     .map(r=>({...secRec(r),date:typeof r.date==='string'?r.date:r.at?dayOf(r.at):'',t:lbParse(r.time)}))
     .filter(r=>isFinite(r.t)&&r.t>0).sort((a,b)=>a.t-b.t||a.at-b.at)
-    .filter(r=>{const k=r.name+'|'+r.at+'|'+r.time;if(seen.has(k))return false;seen.add(k);return true;}).slice(0,SEC_TOP);};
+    // (one lap's sector can arrive twice — folded in from its lap on the board and sent on its own a moment later, with a
+    // different time stamp — so the same driver with the same time is the same record)
+    .filter(r=>{const k=r.name+'|'+r.time;if(seen.has(k))return false;seen.add(k);return true;}).slice(0,SEC_TOP);};
 const secMerge=(boards,extra=[])=>SK.map((k,i)=>secRows([].concat(...boards.map(b=>(b&&b[i])||[]),extra[i]||[])));
 // the sectors of the top-5 laps, as sector records
 const fromLaps=rows=>SK.map(k=>rows.filter(r=>r[k]).map(r=>({name:r.name,time:r[k],team:r.team,date:r.date,at:r.at})));
@@ -109,7 +111,7 @@ export async function lbSecLoad(track,lapRows=[]){const laps=fromLaps(lapRows),l
 
 // a valid lap's sectors {name, sec ([s1,s2,s3] in s), team}: each kept where it makes that sector's top 3.
 // Resolves to {ranks: [place in S1, S2, S3] (0 = outside the top 3), shared}.
-export async function lbSecSubmit(track,lap,lapRows=[]){const at=Date.now(),sec=lap.sec||[];
+export async function lbSecSubmit(track,lap,lapRows=[]){const at=lap.at||Date.now(),sec=lap.sec||[]; // (lap.at: the lap's own stamp)
   const add=SK.map((k,i)=>secStr(sec[i])?[{name:lap.name,time:secStr(sec[i]),team:lap.team||'',date:dayOf(at),at}]:[]);
   const ranks=s=>s.map((rows,i)=>add[i].length?rows.findIndex(r=>r.at===at&&r.name===lap.name)+1:0);
   const laps=fromLaps(lapRows),loc=secMerge([secLocal(track)],add);secLocalSave(track,loc);
@@ -121,6 +123,16 @@ export async function lbSecSubmit(track,lap,lapRows=[]){const at=Date.now(),sec=
       if(w.status!==412)throw new Error(w.status);} // someone else's lap got in first — read again and merge
     throw new Error('busy');}
   catch(e){return {ranks:ranks(loc),shared:false,error:String(e.message||e)};}}
+
+/* ---- the AI pace calibration of a board, shared at /ai/<board> as {sig (the board it was made for), f (EASY …
+   SIMULATION factors), t (their probe laps, s), at}: made once by the first browser that sees the board (see
+   calibrateAI in game.js), used by everybody else. Without a server there is nothing to share (null / false). ---- */
+const aUrl=track=>`${base}/ai/${encodeURIComponent(track)}.json`;
+export async function lbAiGet(track){if(!lbShared)return null;
+  try{const r=await fetch(aUrl(track),{cache:'no-store'});return r.ok?await r.json():null;}catch(e){return null;}}
+export async function lbAiPut(track,rec){if(!lbShared)return false;
+  try{const r=await fetch(aUrl(track),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)});return r.ok;}
+  catch(e){return false;}}
 
 // the driver's real name in English capitals: first and last name, Latin letters (e.g. GILDONG HONG)
 export function checkName(raw){const n=(raw||'').trim().replace(/\s+/g,' ');
