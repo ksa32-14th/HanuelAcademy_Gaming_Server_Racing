@@ -28,7 +28,8 @@ function api(){if(apiP)return apiP;apiP=new Promise(res=>{if(window.YT&&window.Y
     const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';s.async=true;document.head.appendChild(s);});
   return apiP;}
 function create(){if(player)return;makeCard();
-  api().then(YT=>{player=new YT.Player('musicYT',{width:64,height:36,videoId:now().yt,
+  api().then(YT=>{// (the player itself is full size — YouTube won't start the next track in one under 200 × 200 — and only drawn small)
+  player=new YT.Player('musicYT',{width:356,height:200,videoId:now().yt,
     playerVars:{autoplay:on?1:0,controls:0,rel:0,playsinline:1,modestbranding:1,disablekb:1},
     events:{
       onReady:()=>{ready=true;player.setVolume(VOL);if(on)player.playVideo();changed();},

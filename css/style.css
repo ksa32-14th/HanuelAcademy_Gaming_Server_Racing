@@ -313,8 +313,8 @@ body.nomirror #mirror{display:none}
 /* music: a slim "now playing" strip in the top-right corner (the YouTube player has to stay visible while it plays) */
 #musicCard{position:fixed;right:16px;top:16px;z-index:60;width:240px;height:38px;display:flex;align-items:center;gap:8px;padding:0 8px 0 0;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 #musicCard[hidden]{display:none}
-#musicCard .yt{flex:0 0 64px;height:36px;background:#000}
-#musicCard .yt iframe{display:block;width:64px;height:36px;border:0}
+#musicCard .yt{flex:0 0 64px;height:36px;background:#000;overflow:hidden;position:relative}
+#musicCard .yt iframe{display:block;width:356px;height:200px;border:0;transform:scale(.18);transform-origin:0 0;pointer-events:none}
 #musicCard .nm{min-width:0;line-height:1.15}
 #musicCard .nm b,#musicCard .nm small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #musicCard .nm b{font:700 11px var(--f-disp);letter-spacing:.04em;color:var(--ink)}

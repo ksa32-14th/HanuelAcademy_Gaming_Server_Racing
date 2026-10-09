@@ -6,22 +6,23 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009r';
-import {perf} from './perf.js?v=20261009r';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261009r';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009r';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009r';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261009r';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009r';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010m';
+import {perf} from './perf.js?v=20261010m';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261010m';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010m';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010m';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261010m';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261010m';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009r';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009r';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261009r';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010m';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010m';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010m';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010m';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009r'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009r'):import('./data/osm-songdo.js?v=20261009r')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010m'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010m'):import('./data/osm-songdo.js?v=20261010m')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1402,33 +1403,24 @@ function makeCrew(){
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,2.6,6),mat({color:0x2a2e36}));pole.position.set(4.9,1.3,0);g.add(pole);
   g.userData={lolMat,guns,wheels};return g;}
 
-/* ---- "YOUR BOX": a marker over the player's own pit box that can't be missed from the lane — a pulsing glowing
-   outline and fill on the ground in the team colour, a big bobbing arrow pointing down at it and a "YOUR BOX" sign
-   (with the team name) that always faces the camera. Rebuilt whenever a session starts (the team can change). ---- */
+/* ---- the player's own pit box: a hologram plate in the team colour, the size of the box, hovering a little above it —
+   see-through, a brighter edge and faint scan lines, breathing gently. Rebuilt whenever a session starts (the team can
+   change). ---- */
 let boxMarker=null;
 function buildBoxMarker(team){
   if(boxMarker){scene.remove(boxMarker);boxMarker.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose();}});}
-  const t=TEAMS[team],i=idxSp(BOX_S[team]),g=new THREE.Group();
+  const t=TEAMS[team],i=idxSp(BOX_S[team]),g=new THREE.Group(),col=hex(t.c===0x1b1d21?t.a:t.c); // (a near-black livery uses its accent)
   g.position.set(X[i]-TZ[i]*PS*(PIT_OFF+BOX_D),0,Z[i]+TX[i]*PS*(PIT_OFF+BOX_D));g.rotation.y=-ANG[i];
-  const add={transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false};
-  const lineM=new THREE.MeshBasicMaterial({color:0xffffff,...add,...po(-8)}),fillM=new THREE.MeshBasicMaterial({color:t.c,opacity:.35,...add,...po(-7)});
-  const fill=new THREE.Mesh(new THREE.PlaneGeometry(7.5,3.6).rotateX(-Math.PI/2),fillM);fill.position.y=0.035;g.add(fill);
-  const ln=[];for(const [w,h,x,z] of [[8.1,.3,0,1.95],[8.1,.3,0,-1.95],[.3,4.2,3.9,0],[.3,4.2,-3.9,0]]){
-    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h).rotateX(-Math.PI/2),lineM);m.position.set(x,0.04,z);g.add(m);ln.push(m);}
-  const arrowM=new THREE.MeshBasicMaterial({color:t.c===0x1b1d21?t.a:t.c,toneMapped:false});
-  const arrow=new THREE.Group();arrow.position.y=5.2;g.add(arrow);
-  const head=new THREE.Mesh(new THREE.ConeGeometry(1.0,1.6,4).rotateX(Math.PI),arrowM);arrow.add(head);
-  const shaft=new THREE.Mesh(new THREE.BoxGeometry(.5,1.4,.5),arrowM);shaft.position.y=1.4;arrow.add(shaft);
-  const rim=new THREE.Mesh(new THREE.ConeGeometry(1.12,1.75,4).rotateX(Math.PI),new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,toneMapped:false}));arrow.add(rim);
-  const tex=canvasTex(512,192,(x)=>{x.fillStyle='rgba(8,11,16,.88)';x.beginPath();x.roundRect(6,6,500,180,22);x.fill();
-    x.lineWidth=10;x.strokeStyle=hex(t.c===0x1b1d21?t.a:t.c);x.stroke();
-    x.textAlign='center';x.textBaseline='middle';x.fillStyle='#ffd200';x.font='900 84px "HRC F1", Titillium Web, sans-serif';x.fillText('YOUR BOX',256,82);
-    x.fillStyle='#fff';x.font='700 30px "HRC F1", Titillium Web, sans-serif';x.fillText(t.name.toUpperCase(),256,150);});
-  const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true,toneMapped:false}));sign.scale.set(8.5,3.2,1);sign.position.y=9.2;g.add(sign);
-  g.userData={fillM,lineM,arrow};scene.add(g);boxMarker=g;}
-function animBoxMarker(){if(!boxMarker)return;const u=boxMarker.userData,t=performance.now()/1000,p=0.5+0.5*Math.sin(t*4);
+  const tex=canvasTex(512,256,(x)=>{x.clearRect(0,0,512,256);x.fillStyle=col;x.globalAlpha=0.28;x.fillRect(0,0,512,256);
+    x.globalAlpha=0.18;for(let y=0;y<256;y+=8)x.fillRect(0,y,512,3);                    // scan lines
+    x.globalAlpha=1;x.lineWidth=12;x.strokeStyle=col;x.strokeRect(6,6,500,244);          // the edge
+    x.globalAlpha=0.5;x.lineWidth=4;x.strokeRect(22,22,468,212);});
+  const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:false});
+  const plate=new THREE.Mesh(new THREE.PlaneGeometry(7.5,3.6).rotateX(-Math.PI/2),mat);plate.position.y=0.9;g.add(plate);
+  g.userData={mat,plate};scene.add(g);boxMarker=g;}
+function animBoxMarker(){if(!boxMarker)return;const u=boxMarker.userData,t=performance.now()/1000;
   boxMarker.visible=phase!=='menu'&&session!=='tt';
-  u.fillM.opacity=0.22+0.3*p;u.lineM.opacity=0.55+0.45*p;u.arrow.position.y=5.2+0.45*Math.sin(t*3);u.arrow.rotation.y=t*1.2;}
+  u.mat.opacity=0.75+0.25*Math.sin(t*2.2);u.plate.position.y=0.9+0.06*Math.sin(t*1.6);}
 
 /* ================= RACE STATE ================= */
 let cars=[],player=null,phase='menu',simTime=0,raceStart=null,gridT0=0,lightsOutAt=0,lightsOn=-1;
@@ -1436,7 +1428,14 @@ let drsEnabled=false,checkered=false,targetLaps=5,totalLaps=5,wearMult=1,timeLim
 const bestSecAll=[null,null,null];let paused=false,hudMode=0,lastHist=0,resultsShown=false;
 const keys={};
 
-function makeCar(k,team,drv,isPlayer,skill,comp,num){
+// The AI's car is the player's car: the player's slide model has ~10 % more tyre grip, ~15 % more torque and ~30 % more
+// grip along the tyre (launch, braking) than the base model the AI drives on, so the AI gets the same
+const AI_CAR={gk:1.1,pk:1.15,tk:1.3,bf:1.3};
+function makeCar(k,team,drv,isPlayer,skill,comp,num){const c=carState(k,team,drv,isPlayer,skill,comp,num),t=TEAMS[team];
+  // T-camera: black on the team's first car, fluorescent yellow on the second (as the FIA uses to tell them apart)
+  c.mesh=carMesh(t.c,t.a,num,cars.some(o=>o.team===team)?0xffe600:0x111214);c.mesh.band.color.setHex(COMP[comp].hex);return c;}
+// a car's state without its mesh (the AI pace calibration drives one of these round on its own)
+function carState(k,team,drv,isPlayer,skill,comp,num){
   const t=TEAMS[team];const c={id:k,team,code:drv[0],name:drv[1],isPlayer,skill,num,col:t.c,
     x:0,z:0,yaw:0,v:0,delta:0,r:0,onWall:false,aLong:0,aLat:0,pitch:0,pitchV:0,roll:0,rollV:0,visSlide:0,deltaCmd:0,steerIn:0,throttle:0,brake:0,idx:0,s:0,d:0,prevS:0,lapCount:-1,progress:0,
     fuel:Math.min(110,totalLaps*FUEL_PER_LAP+2.5),comp,nextComp:comp==='H'?'M':comp==='M'?'H':'M',wear:0,used:new Set([comp]),damage:0,
@@ -1444,8 +1443,8 @@ function makeCar(k,team,drv,isPlayer,skill,comp,num){
     pitStop:0,boxDone:false,pitPlan:false,pitLap:Infinity,pitCount:0,tl:0,tlOut:false,pen:0,finished:false,finishT:null,
     lapStart:0,secStart:0,lastLap:null,bestLap:null,sec:[null,null,null],secCol:['','',''],bestSec:[null,null,null],
     laneOff:0,laneOffT:0,laneHold:0,held:true,releaseAt:0,hp:[],ht:[]};
-  // T-camera: black on the team's first car, fluorescent yellow on the second (as the FIA uses to tell them apart)
-  c.mesh=carMesh(t.c,t.a,num,cars.some(o=>o.team===team)?0xffe600:0x111214);c.mesh.band.color.setHex(COMP[comp].hex);return c;}
+  if(!isPlayer)Object.assign(c,AI_CAR);
+  return c;}
 
 // grid slots run back from the start line (GRID_S, ahead of the timing line on some circuits). A car that starts
 // AHEAD of the timing line is already on lap 1 (lapCount 0) and its first lap to the line is short: that lap and its
@@ -1480,16 +1479,20 @@ function setupSession(mode='gp'){
   for(const c of cars)scene.remove(c.mesh.root); // a restart builds a fresh field
   closeOverlays();resetRaceControl();
   totalLaps=targetLaps=optLaps;wearMult=mode==='tt'?0:1;
-  const pt=optTeam,diff=optAI;
+  applyLearn(); // a newer time trial board learned meanwhile: the racing line and the AI pace take it now
+  const pt=optTeam,lv=aiLevel();
   cars=[];player=makeCar(0,pt,['YOU',ttName||'You'],true,1,'S',7);player.auto=AUTOPILOT;cars.push(player);
   if(mode==='gp'){
     const nums=[...Array(98).keys()].map(n=>n+2).sort(()=>rnd()-.5);
     const ai=[];let di=0;
-    for(let t=0;t<10;t++)for(let s=0;s<2;s++){if(t===pt&&s===0)continue;const perf=1-t*0.0035+rand(-0.006,0.004);ai.push({team:t,drv:DRIVERS[di++],skill:diff*perf});}
+    // skill: each driver's pace within the chosen level (the level itself is the profile, AIP)
+    for(let t=0;t<10;t++)for(let s=0;s<2;s++){if(t===pt&&s===0)continue;const perf=1-t*0.0035+rand(-0.006,0.004);ai.push({team:t,drv:DRIVERS[di++],skill:perf});}
     ai.sort((a,b)=>b.skill-a.skill);
-    ai.forEach((a,k)=>cars.push(makeCar(k+1,a.team,a.drv,false,a.skill,'S',nums[k])));}
+    ai.forEach((a,k)=>{const c=makeCar(k+1,a.team,a.drv,false,a.skill,'S',nums[k]);c.prof=AIP[lv];cars.push(c);});}
   qTimes=new Map();
-  for(const c of cars)if(!c.isPlayer){qTimes.set(c,IDEAL_LAP*QUALI_K/c.skill*(1+rand(-0.003,0.010)));parkInGarage(c);}
+  // qualifying: the level's calibrated lap (a lone car on fresh softs) for each driver's pace
+  const qBase=aiLapT[lv]??IDEAL_LAP*QUALI_K;
+  for(const c of cars)if(!c.isPlayer){qTimes.set(c,qBase/c.skill*(1+rand(-0.003,0.010)));parkInGarage(c);}
   simTime=0;raceStart=null;lightsOn=-1;drsEnabled=true;checkered=false;timeLimitHit=false;fastest=null;
   bestSecAll.fill(null);resultsShown=false;qGrid=null;session=mode==='tt'?'tt':'quali';
   $('tower').hidden=true;$('lights').hidden=true;
@@ -1631,7 +1634,7 @@ async function ttSubmit(lt,sec,path){if(!ttName)return;
   const got=rs.ranks.map((p,k)=>p?'S'+(k+1)+' P'+p:'').filter(Boolean);
   if(got.length)setTimeout(()=>msg('SECTOR RECORD · '+got.join(' · ')),2800);}
 async function refreshBoard(force){if(!force&&performance.now()/1000-tt.boardT<20)return;tt.boardT=performance.now()/1000;
-  const r=await lbLoad(LB_ID);tt.board=r.rows;tt.boardShared=r.shared;loadGhost();
+  const r=await lbLoad(LB_ID);tt.board=r.rows;tt.boardShared=r.shared;loadGhost();aiLearn(r.rows);
   tt.secBoard=(await lbSecLoad(LB_ID,r.rows)).s;} // the sector records (top 3 of each sector)
 // lap progress for the delta to the personal best: time at each 1/64 of the lap
 function ttTrack(c){if(session!=='tt'||tt.stage!=='flying'||!c.cum)return;const k=Math.min(63,Math.floor(c.s/L*64));if(!c.cum[k])c.cum[k]=simTime-c.lapStart;
@@ -1788,26 +1791,27 @@ function physics(c,dt){
     c.delta+=clamp(c.steerIn*steerLock(0)-c.delta,-4*dt,4*dt);c.yaw-=vr*Math.tan(c.delta)/WB*dt;c.chi=c.yaw;
     c.x-=Math.cos(c.yaw)*vr*dt;c.z-=Math.sin(c.yaw)*vr*dt;return;}
   if(c.dnf){c.throttle=0;c.brake=1;c.deltaCmd=0;c.steerIn=0;}
-  const v=c.v,m=MASS+c.fuel,tg=tyreGrip(c)*c.surf*(1-0.12*c.damage),mu=MU*tg*gripV(v);
+  // (gk / pk / tk / bf: the AI car's grip, engine, traction and braking against the base model — AI_CAR, set in makeCar)
+  const v=c.v,m=MASS+c.fuel,tg=tyreGrip(c)*c.surf*(1-0.12*c.damage),mu=MU*tg*gripV(v)*(c.gk||1),tk=c.tk||1,bf=c.bf||1;
   const cla=CLA*(c.drsOpen?0.9:1)*(1-0.3*c.damage),cda=CDA*(c.drsOpen?0.85:1)*(1-0.22*c.tow);
   const Nn=m*G+0.5*RHO*cla*v*v,aMax=mu*Nn/m;
   const thr=c.fuel>0&&!c.clutch?c.throttle:0; // clutch in: no drive
   // drive and wheelspin: TRACTION × grip is what the rear tyres can put down. A light traction control lets the driver
   // ask for up to TC_SLACK × that; past it the wheels spin (spin 0…1): the drive drops to ~75 % and the rears lose
   // some cornering grip, so too much throttle out of a slow corner is slower and pushes the car wide
-  const Fdem=thr>0?POWER*thr/Math.max(v,4):0,Ftr=mu*TRACTION*Nn;
+  const Fdem=thr>0?POWER*(c.pk||1)*thr/Math.max(v,4):0,Ftr=mu*TRACTION*tk*Nn;
   // pulling away and at crawling speed the traction control catches it completely (fades out from ~80 down to ~50 km/h):
   // otherwise every launch sat in full wheelspin for seconds — revs pinned, speed barely building
-  c.spin=Fdem>Ftr*TC_SLACK?Math.min(1,(Fdem/(Ftr*TC_SLACK)-1)*1.5)*clamp((v-14)/8,0,1):0;
+  c.spin=Fdem>Ftr*TC_SLACK&&c.isPlayer?Math.min(1,(Fdem/(Ftr*TC_SLACK)-1)*1.5)*clamp((v-14)/8,0,1):0; // (the AI's TC never lets it spin up)
   const Fp=Math.min(Fdem,Ftr)*(1-0.25*c.spin);
-  const bk=brakeK(v),Fdrag=0.5*RHO*cda*v*v+(v>0.1?CRR*m*G:0),Fb=c.brake*mu*BRK*bk*Nn; // (bk: better brakes below 200 km/h)
+  const bk=brakeK(v),Fdrag=0.5*RHO*cda*v*v+(v>0.1?CRR*m*G:0),Fb=c.brake*mu*BRK*bk*bf*Nn; // (bk: better brakes below 200 km/h)
   // steering lock shrinks with speed (heavy steering / small angles at 300 km/h); the player may ask
   // for ~30 % more than the grip limit, which now makes the car slide instead of tracking on rails
   const dGrip=Math.atan(aMax*WB/Math.max(v*v,1)),dPhys=steerLock(v); // ~10 m minimum turning radius, and still limited at speed
   // sliding (player): steering INTO the slide (countersteer: towards the direction of travel) gets the slip angle as
   // extra lock, so there is enough of it to catch the car; steering further into the spin gets none
   // (a car still sliding sideways stays in it down to walking pace, so a spin skids to a stop instead of snapping straight)
-  const slideOn=c.isPlayer&&!c.auto&&SLIDE>0&&(v>6||v>1&&Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.3),bTr=slideOn?wrapA((c.chi??c.yaw)-c.yaw):0;
+  const slideOn=c.isPlayer&&!c.auto&&SLIDE>0&&(v>6||v>1&&Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.3||v>1.5&&c.throttle>0.9&&Math.abs(c.steerIn)>0.8),bTr=slideOn?wrapA((c.chi??c.yaw)-c.yaw):0;
   // the skid has run out at walking pace: the car comes to rest where it points (no snap back to the old heading)
   if(c.isPlayer&&!c.auto&&SLIDE>0&&!slideOn&&Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.3){c.v=0;c.chi=c.yaw;c.r=0;afterMove(c,dt,thr,0,0);return;}
   const bSl=c.steerIn*bTr>0?Math.min(0.35,Math.abs(bTr)):0; // at most ~20° of extra lock
@@ -1823,8 +1827,11 @@ function physics(c,dt){
   // past the peak they give a little LESS than the peak, so the car pushes wide and scrubs speed (understeer, wheelspin
   // out of slow corners, locking up into them) — hard to drive on the limit, but no tail-out slides.
   if(c.chi===undefined)c.chi=c.yaw;
-  const beta=wrapA(c.yaw-c.chi),rReq=v*Math.tan(c.delta)/WB,ayReq=v*rReq;
-  const n=Math.hypot(axT/(aMax*1.05*(axT<0?bk:1)),ayReq/(aMax*(1-0.2*c.spin))); // spinning rears corner worse
+  const beta=wrapA(c.yaw-c.chi),rReq=v*Math.tan(c.delta)/WB,ayReq=v*rReq,lb=aMax*1.05*(axT<0?bk*bf:tk);
+  // the AI's traction control and ABS: drive and braking trimmed to what the tyres have left after the cornering, so it
+  // runs on the limit without sliding off it (the player has the same aids in the slide model)
+  if(!c.isPlayer){const lat=Math.min(1,Math.abs(ayReq)/aMax),room=lb*Math.sqrt(Math.max(0,1-lat*lat))*0.985;axT=clamp(axT,-room,room);}
+  const n=Math.hypot(axT/lb,ayReq/(aMax*(1-0.2*c.spin))); // spinning rears corner worse
   let ay=ayReq;c.slip=0;if(n>1){c.slip=n-1;const lose=1-0.14*Math.min(c.slip,1);axT=axT/n*lose;ay=ayReq/n*lose;}
   const ax=axT-Fdrag/m-Math.min(c.slip,1)*3.0;
   c.v=Math.max(0,v+ax*dt);
@@ -1871,9 +1878,17 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   const LONG=1.3;Fdem*=1.15; // and the engine's torque is ~15 % up on the AI's
   // the traction control lets ~85 % of the rears' grip go to drive in a straight line and less (TC_P) the harder the
   // car is cornering — it only steps aside a little, so a big throttle mid-corner still eats the rears' cornering grip
-  const tcL=Fr*LONG*(0.85-(0.85-TC_P)*Math.min(1,Math.abs(c.aLat||0)/(0.5*mu*Nn/m))),Fdrv=Math.min(Fdem,tcL);
+  // …except when the driver asks for it: near-full lock (over ~80 %) and the throttle nailed below ~160 km/h, held
+  // together for ~0.4 s (a brief overlap at a hairpin exit does nothing), the TC lets the rears flare (agg 0…1).
+  // Overspun, they keep the drive but lose nearly all their side grip, and the car swings round — held, through 180°
+  // and on to 270° and beyond, as an F1 car does when it's provoked
+  const want=Math.abs(c.steerIn||0)>0.8&&c.throttle>0.9&&v0<45;
+  c.aggT=want?Math.min(1,(c.aggT||0)+dt/0.4):Math.max(0,(c.aggT||0)-dt/0.2);
+  const agg=smooth(c.aggT)*clamp((45-v0)/20,0,1);
+  const tcL=Fr*LONG*((0.85-(0.85-TC_P)*Math.min(1,Math.abs(c.aLat||0)/(0.5*mu*Nn/m)))*(1-agg)+1.4*agg);
+  let Fdrv=Math.min(Fdem,tcL);const over=Fdrv>Fr*LONG*0.95;if(over)Fdrv=Fr*LONG*0.95;
   // the TC holds the wheels near their peak slip: what it trims off shows as a little wheelspin, not a full flare
-  c.spin=Fdem>tcL?0.3*Math.min(1,Fdem/tcL-1):0;
+  c.spin=over?1:Fdem>tcL?0.3*Math.min(1,Fdem/tcL-1):0;
   // brakes, with ABS at its strongest: the bias follows the axle loads (forward under braking), and no wheel is ever
   // braked to locking. In a straight line it lets the fronts use ~95 % of their grip and the rears ~70 %; as soon as
   // the driver steers it backs off with the steering input (at full lock to ~30 / ~25 %), so the tyres keep ~95 % of
@@ -1887,7 +1902,7 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   const bk=brakeK(v0),LB=LONG*bk;
   const FbP=Fb*1.45,Fbr=Math.min(FbP*0.9*Nr/(Nf+Nr),Fr*LB*(0.55-0.4*abs)),Fbf=Math.min(FbP-Fbr,Ff*LB*(0.95-0.65*abs));
   const Fxf=-Fbf,Fxr=Fdrv-Fbr;
-  const Fyf0=Ff*Math.sqrt(Math.max(0,1-(Fxf/(LB*Ff))**2)),Fyr0=Fr*Math.sqrt(Math.max(0,1-(Fxr/((Fxr<0?LB:LONG)*Fr))**2));
+  const Fyf0=Ff*Math.sqrt(Math.max(0,1-(Fxf/(LB*Ff))**2)),Fyr0=over?Fr*0.18:Fr*Math.sqrt(Math.max(0,1-(Fxr/((Fxr<0?LB:LONG)*Fr))**2));
   let fy=0,alr=0;
   for(let i=0;i<n;i++){const u=Math.max(vx,3),sp=Math.hypot(vx,vy)||1;
     const af=d-Math.atan2(vy+CG_F*r,u),ar=-Math.atan2(vy-CG_R*r,u);
@@ -1897,7 +1912,9 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
     let FX=Fxf*cd-Fyf*sd+Fxr,FY=Fyf*cd+Fxf*sd+Fyr,MZ=CG_F*(Fyf*cd+Fxf*sd)-CG_R*Fyr;
     // well sideways (~25° → 50°) the tyres stop rolling the car along and just skid: each axle's grip pulls straight
     // against the way its contact patch is sliding. That scrubs the spin (rotation and speed) down to a stop
-    const w=clamp((Math.abs(Math.atan2(vy,vx))-0.45)/0.4,0,1);
+    // (with the rears overspun on the throttle the drive keeps the car rotating: the skid scrub only takes over once the
+    // driver lets go)
+    const w=clamp((Math.abs(Math.atan2(vy,vx))-0.45)/0.4,0,1)*(1-0.85*agg);
     // (below ~1 m/s of patch slide the pull fades out with it, so the car settles instead of chattering)
     if(w>0){const fx=vx,fy_=vy+CG_F*r,fl=Math.max(1,Math.hypot(fx,fy_)),rx=vx,ry=vy-CG_R*r,rl=Math.max(1,Math.hypot(rx,ry));
       const CX=-Ff*fx/fl-Fr*rx/rl,CY=-Ff*fy_/fl-Fr*ry/rl,CM=-CG_F*Ff*fy_/fl+CG_R*Fr*ry/rl;
@@ -1933,12 +1950,12 @@ function tempGrip(c){if(!c.tT)return 1;const t=(c.tT[0]+c.tT[1]+c.tT[2]+c.tT[3])
    that came from the wing. ---- */
 // Only the FRONT WING can be damaged: a hit at the front breaks it (that side, or both halves square on), a side swipe
 // clips the half on that side; a hit at the rear does no damage (the rear wing can't be broken or changed, so it is not
-// in the damage read-out either). No crash ever retires a car. `c.damage` (what costs downforce / grip) is worked out
-// from the two halves; a new front wing in the pits clears it.
+// in the damage read-out either). `c.damage` (what costs downforce / grip; 100 % = both halves gone) is worked out from
+// the two halves; a new front wing in the pits clears it. A heavy crash in the race retires the car (walls / collide).
 // In TIME TRIAL nothing is damaged at all.
 const DMG_PARTS=[['fwL','FRONT WING L'],['fwR','FRONT WING R']];
 const newDmg=()=>({fwL:0,fwR:0});
-const dmgOverall=d=>Math.min(1,0.45*Math.max(d.fwL,d.fwR)+0.25*Math.min(d.fwL,d.fwR));
+const dmgOverall=d=>Math.min(1,0.6*Math.max(d.fwL,d.fwR)+0.4*Math.min(d.fwL,d.fwR));
 function hurt(c,amt,where,side){if(amt<=0||session==='tt')return;const d=c.dm||(c.dm=newDmg()),a=(k,x)=>{d[k]=Math.min(1,d[k]+x);};
   if(where==='F'){if(side>=0)a('fwR',amt*2.6);if(side<=0)a('fwL',amt*2.6);}
   else if(where==='R')return;
@@ -1970,7 +1987,9 @@ function walls(c){
     // 200 km/h at 20°) leaves debris on the track — that brings out the Safety Car (with a yellow just before it)
     const hz=hitZone(c,w.px,w.pz),zone=into>0.45&&hz[0]==='F'?'F':hz[0]==='R'?'R':'S';
     if(vn>7&&phase==='race'&&!c.dnf){hurt(c,(vn-7)*0.03,zone,hz[1]);
-      if(vn>=19)incident(c,'HEAVY IMPACT');
+      // a heavy impact (~70 km/h square on, i.e. 200 km/h at 20°) or a car wrecked by it ends the race: retire() brings
+      // out the Safety Car (or the VSC for a car stopped off the road)
+      if(vn>=19||c.damage>=1)retire(c,'HEAVY IMPACT',vn);
       else if(c.isPlayer&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT · DAMAGE '+Math.round(c.damage*100)+'%');}}
     else if(vn>12&&!c.dnf)hurt(c,(vn-12)*0.02,zone,hz[1]);}
   c.onWall=true;
@@ -2008,8 +2027,10 @@ function collide(){
     if(hitter&&closing>13){const am=(closing-13)*0.012,vic=hitter===A?B:A,zh=hitZone(hitter,h.px,h.pz),zv=hitZone(vic,h.px,h.pz);
       hurt(hitter,am,zh[0],zh[1]);   // mostly the front wing
       hurt(vic,am*0.5,zv[0],zv[1]);} // the car that was hit: a front wing (a hit from behind does no damage)
-    // a big shunt (debris everywhere) brings out the Safety Car; nobody retires from it
-    if(phase==='race'&&closing>24&&!A.pitSide&&!B.pitSide)incident(hitter,'COLLISION');
+    // (a big shunt — ~110 km/h closing — retires the car that caused it, and harder still the one it hit too; retire()
+    // calls the SC / VSC. Lighter contact breaks wings: a nudge at the start or a misjudged pass must not end the race)
+    if(phase==='race'&&closing>30&&!A.pitSide&&!B.pitSide){const vic=hitter===A?B:A;
+      if(!hitter.dnf)retire(hitter,'COLLISION',closing);if(closing>38&&!vic.dnf)retire(vic,'COLLISION',closing);}
     if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT'+(closing>10?' · AERO DAMAGE':''));}}
 }
 let lastContact=-9;
@@ -2102,7 +2123,9 @@ function post(c){
   const ps=c.s;locate(c);
   const sp=spOf(c.s);
   const wasPit=c.pitSide;
-  if(!(sp>PIT_W&&sp<PIT_C))c.pitSide=PS*c.d>PITWALL; // frozen alongside the pit wall
+  // frozen alongside the pit wall; and only where there IS a pit lane — running wide past the track limits anywhere else
+  // on that side of the lap used to count as being in the pit lane ("PIT LANE" deleted the time trial lap)
+  if(!(sp>PIT_W&&sp<PIT_C))c.pitSide=sp>PIT_A-30&&sp<PIT_D+30&&PS*c.d>PITWALL;
   if(wasPit&&!c.pitSide&&sp>PIT_C-20)c.exitUntil=(c.s+240)%L; // just rejoined: stay on the pit side, off the racing line
   walls(c);
   const hw=HWa[c.idx];
@@ -2165,9 +2188,12 @@ function aiDrive(c,dt){
   const sp=spOf(c.s);
   if(!c.pitPlan&&c.pitLap===c.lapCount+1&&sp>-800&&sp<-420&&!c.finished)c.pitPlan=true;
   const look=Math.max(12,6+c.v*0.45+Math.max(0,c.v-50)*0.35),ia=(c.idx+Math.round(look/DS))%N,spa=spI(ia);
-  let vcap=1e9,passT=null,yielding=false,ahead=null,aheadA=1e9,beside=null;
+  let vcap=1e9,passT=null,yielding=false,ahead=null,aheadA=1e9,beside=null,lapper=null,lapperA=-1e9;
   for(const o of cars){if(o===c||o.parked)continue;let a=o.s-c.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L;const lat=o.d-c.d;
-    if(a>0&&a<30+c.v*1.8&&Math.abs(lat)<3.0&&o.pitSide===c.pitSide){
+    // (a car much slower than us is watched further ahead and over a wider strip: a queue braking for a corner, half a
+    // lane over, is where the big rear-enders came from)
+    const slower=o.v<c.v-12;
+    if(a>0&&a<(slower?40+c.v*2.2:30+c.v*1.8)&&Math.abs(lat)<(slower?4.4:3.0)&&o.pitSide===c.pitSide){
       if(a<aheadA){aheadA=a;ahead=o;} // the car directly ahead in our lane (the nearest one, not whichever came last)
       // keep a braking-safe gap (reaction margin + car length) to the car ahead in our lane
       // gap = one car length + margin; 9 m used to freeze the whole grid behind cars 8 m apart
@@ -2176,7 +2202,8 @@ function aiDrive(c,dt){
       // and the player drove round the outside of half the field. The cars can brake at ~25 m/s², so 20 is still safe.)
       vcap=Math.min(vcap,Math.sqrt(o.v*o.v+2*20*Math.max(0,a-7.5-c.v*0.3))+(c.v<8&&o.v<8?2.5:0));}
     if(Math.abs(a)<7&&Math.abs(lat)<3.5&&o.pitSide===c.pitSide&&(!beside||Math.abs(lat)<Math.abs(beside.d-c.d)))beside=o;
-    if(a<0&&a>-45&&o.progress>c.progress+L*0.5)yielding=true;}
+    // blue flag: a car about to lap us, up to ~1 s behind, gets out of the way (not under the SC / VSC, where nobody passes)
+    if(a<0&&a>-(45+o.v*0.6)&&o.progress>c.progress+L*0.5&&o.pitSide===c.pitSide&&!neutralFor(c)&&!o.dnf&&(!lapper||a>lapperA)){yielding=true;lapper=o;lapperA=a;}}
   // ---- lateral plan. Every decision is COMMITTED: the side is picked once and held until the move is over. The old
   // code re-picked the passing side every frame from whichever side looked roomier, so two cars nose to tail swung
   // 7–8 m across the road and back again and again down every straight (and a lapped car's yielding side followed
@@ -2184,38 +2211,45 @@ function aiDrive(c,dt){
   const hwc=HWa[c.idx],edge=hwc-1.4;
   if(c.passCar){let a=c.passCar.s-c.s;if(a<-L/2)a+=L;else if(a>L/2)a-=L; // done (we are past) or dropped back
     if(a<-8||a>70+c.v*0.6||c.passCar.pitSide!==c.pitSide)c.passCar=null;}
-  if(yielding){if(!c.yieldSide)c.yieldSide=c.d>=0?1:-1;passT=c.yieldSide*(hwc-2.2)-RL[c.idx];}
+  // (the side is chosen once: away from the lapping car if it has already picked one, else off the racing line ahead)
+  if(yielding){if(!c.yieldSide){const lat=lapper.d-c.d;c.yieldSide=Math.abs(lat)>1?-Math.sign(lat):RL[ia]>=0?-1:1;}
+    passT=c.yieldSide*(hwc-2.0)-RL[ia];}
   else{c.yieldSide=0;
     // no overtaking under yellow, the SC or the VSC — except past a wreck or a car crawling back to the pits, or when
     // race control lets you by (waved past the safety car, or a lapped car unlapping itself)
     const slowAhead=ahead&&(ahead.dnf||ahead.v<6);
-    if(!c.pitPlan&&((!yellowAt(c.s)&&!scActive())||slowAhead||c.waveBy||c.unlap)){
+    // (…or to take back a place the player took from us illegally: c.regain, see playerRules)
+    if(c.regain&&(c.regain.progress<c.progress||c.regain.dnf))c.regain=null;
+    if(!c.pitPlan&&((!yellowAt(c.s)&&!neutralFor(c))||slowAhead||c.waveBy||c.unlap||(c.regain&&ahead===c.regain))){
       const o=ahead&&c.v>ahead.v-1&&aheadA<40+c.v*0.6?ahead:null;
       if(o&&c.passCar!==o){ // a new pass: choose the roomier side; if it is close, the inside of the next corner
         const lr=o.d+edge,rr=edge-o.d;let side=rr>lr?1:-1;
         if(Math.abs(rr-lr)<1.5){for(let j=0;j<Math.round(400/DS);j++){const kk=K[(c.idx+j)%N];if(Math.abs(kk)>1/300){side=kk>0?1:-1;break;}}}
         c.passCar=o;c.passSide=side;c.passT0=simTime;}
       if(c.passCar){const p=c.passCar,room=c.passSide>0?edge-p.d:p.d+edge,other=c.passSide>0?p.d+edge:edge-p.d;
-        if(room>4.0)passT=clamp(p.d+c.passSide*3.8,-edge,edge)-RL[c.idx];
+        // (going by a much slower car — a closing speed of ~45 km/h or more — with more room: it may drift, and there is no
+        // time to react at that speed)
+        const clr=c.v-p.v>12?4.6:3.8;
+        if(room>clr+0.2)passT=clamp(p.d+c.passSide*clr,-edge,edge)-RL[ia];
         // our side has closed up: wait in line behind; swap sides only if the other is clearly open, and not often
         // (a door slammed shut — room under 2.5 m — may be answered at once)
         else if(other>5.5&&(simTime-c.passT0>1.5||room<2.5)){c.passSide=-c.passSide;c.passT0=simTime;}}
       // a car alongside: keep to the side we are already on (a tiny lateral gap must not flip it)
       if(passT==null&&beside){const lat=beside.d-c.d,side=Math.abs(lat)<0.5?(c.besideSide||1):-Math.sign(lat);
-        c.besideSide=side;passT=clamp(beside.d+side*3.6,-edge,edge)-RL[c.idx];}}
+        c.besideSide=side;passT=clamp(beside.d+side*3.6,-edge,edge)-RL[ia];}}
     else c.passCar=null;} // a pass under way is abandoned when the yellow / SC / VSC comes out
   // rejoining from the pit exit at low speed: keep to the right-hand edge until up to speed, never swing across the
   // racing line in front of cars arriving at full speed
   if(c.exitUntil!=null&&(fwd(c.s,c.exitUntil)<0||c.pitSide))c.exitUntil=null;
-  if(c.exitUntil!=null&&!yielding)passT=PS*(hwc-2.0)-RL[c.idx];
+  if(c.exitUntil!=null&&!yielding)passT=PS*(hwc-2.0)-RL[ia];
   // waved past the safety car: go by on the side it has left open
-  if((c.waveBy||c.unlap)&&scOn()&&sc.wave){const g=fwd(c.s,sc.s);if(g>-12&&g<90)passT=-sc.waveSide*(hwc-2.4)-RL[c.idx];}
+  if((c.waveBy||c.unlap)&&scOn()&&sc.wave){const g=fwd(c.s,sc.s);if(g>-12&&g<90)passT=-sc.waveSide*(hwc-2.4)-RL[ia];}
   // the start: hold your grid column (left or right) down to the first braking zone instead of all funnelling onto the
   // racing line within a couple of seconds and queueing nose to tail — the player could drive round the whole queue
   if(passT==null&&!yielding&&c.lapCount<=0&&c.gridD!=null){const until=c.lapCount<0?-1e9:c.s;
     const w=c.lapCount<0?1:clamp((FIRST_BRAKE-120-until)/350,0,1);if(w>0)passT=w*(clamp(c.gridD,-edge,edge)-RL[c.idx]);}
   // defending: with a car within 20 m behind and a corner coming, cover the inside — ONE move, held to the corner
-  if(passT==null&&!yielding&&!c.pitPlan&&!scActive()&&c.lapCount>=0){
+  if(passT==null&&!yielding&&!c.pitPlan&&!neutralFor(c)&&c.lapCount>=0){
     if(c.defUntil!=null&&fwd(c.s,c.defUntil)<0)c.defUntil=null;
     if(c.defUntil==null){let att=null;for(const o of cars){if(o===c||o.dnf||o.parked||o.pitSide!==c.pitSide)continue;const a=fwd(c.s,o.s);
         // only a car sitting right in our wake (not one already pulling out to pass), and only on the straight —
@@ -2224,13 +2258,17 @@ function aiDrive(c,dt){
       let braking=false;for(let j=0;j<Math.round(150/DS);j++)if(VP[(c.idx+j)%N]<c.v*0.92){braking=true;break;}
       if(att&&!braking){for(let j=Math.round(150/DS);j<Math.round(400/DS);j++){const kk=K[(c.idx+j)%N];if(Math.abs(kk)>1/250){
         c.defSide=kk>0?1:-1;c.defUntil=(c.s+j*DS+60)%L;break;}}}}
-    if(c.defUntil!=null)passT=c.defSide*(edge-0.8)-RL[c.idx];}
+    if(c.defUntil!=null)passT=c.defSide*(edge-0.8)-RL[ia];}
+  // (each lateral target above is a place on the road given against the racing line at the look-ahead point the car
+  // steers for, RL[ia]: taken against the line where the car is, a line swinging across the road before a corner swung
+  // the passing car with it — into the car it was passing)
   if(passT!=null)vcap=Math.max(vcap,4);
   if(passT!=null){c.laneOffT=passT;c.laneHold=1.3;}else if((c.laneHold-=dt)<=0)c.laneOffT=0;
   // lateral moves are slower at speed: a 3.8 m step takes ~2.5 s at 300 km/h instead of a flick
   const lrate=clamp(1.2+28/Math.max(c.v,10),1.2,2.2);
   c.laneOff+=clamp(c.laneOffT-c.laneOff,-lrate*dt,lrate*dt);
-  let off=clamp(RL[ia]+c.laneOff,-(HWa[ia]-1.4),HWa[ia]-1.4);
+  // (the racing line itself may run wider than that where it was learned from the board — see ailearn.js)
+  const lim=HWa[ia]-1.4;let off=clamp(RL[ia]+c.laneOff,-Math.max(lim,-RL[ia]),Math.max(lim,RL[ia]));
   // pitting: keep the normal line into the entry and simply follow the lane as it peels away — never
   // snap across the track (the entry now sits in a corner complex, where that meant the wall)
   if(c.pitPlan){
@@ -2254,9 +2292,13 @@ function aiDrive(c,dt){
   const err=c.d-(RL[c.idx]+c.laneOff+(c.sep||0));
   // …plus yaw-rate damping: steer against any yaw rate beyond what the pursuit arc asks for
   c.deltaCmd=Math.atan(WB*kap)-clamp(err*0.004,-0.02,0.02)-0.5*(c.r-c.v*kap)*WB/Math.max(c.v,10);
-  let vt=1e9;for(let j=0;j<4;j++)vt=Math.min(vt,VP[(c.idx+j)%N]);
+  const P=c.prof||VP;let vt=1e9;for(let j=0;j<4;j++)vt=Math.min(vt,P[(c.idx+j)%N]);
   vt*=c.skill*Math.sqrt(tyreGrip(c)/0.975)*(1-0.12*c.damage);
-  if(yielding)vt*=0.95;if(c.finished)vt*=0.6;vt=Math.min(vt,vcap);
+  // letting a lapping car by: lift a little while it closes, clearly once it is right behind
+  if(yielding)vt*=lapperA>-25?0.86:0.94;if(c.finished)vt*=0.6;const follow=vcap<vt-0.5;vt=Math.min(vt,vcap);
+  // running wide: drifting off its line towards the outside of the corner, a driver lifts (and brakes, the further out
+  // it gets) until the car is back on line — on the limit a little extra speed (tow, cooler tyres) must not end in the wall
+  {const kk=K[(c.idx+4)%N];if(Math.abs(kk)>1/350&&!c.pitPlan){const out=err*(kk>0?-1:1);if(out>1.0)vt=Math.min(vt,c.v*(out>2.2?0.95:0.985));}}
   // yellow: lift for a single, slow down significantly for a double (and no DRS in either). The cut is eased in — it
   // starts with a yellow in the next sectors and the target pace drops by ~8 %/s — so the cars ahead slow down
   // gradually by lifting instead of all stamping on the brakes at the flag post; it comes back off at ~25 %/s
@@ -2276,8 +2318,79 @@ function aiDrive(c,dt){
     if(c.pitSide&&!c.boxDone){const bs=BOX_S[c.team];if(sp<bs&&sp>PIT_L-2)vt=Math.min(vt,PIT_LIMIT-0.4,Math.sqrt(2*7*Math.max(0,bs-sp))+1.2);}}
   if(c.limiter)vt=Math.min(vt,PIT_LIMIT-0.4);
   const dv=vt-c.v;
-  if(dv<-0.3){c.brake=clamp(-dv/1.5,0,1);c.throttle=0;}else{c.brake=0;c.throttle=clamp(dv/0.8+0.1,0,1);}
+  // braking for a corner is sharp; easing off for the car ahead is progressive — full brakes for a 1.5 m/s overspeed
+  // behind a car made every follower brake harder than the one in front, and the pack concertinaed to a crawl
+  if(dv<-0.3){c.brake=clamp(-dv/(follow?6:1.5),0,1);c.throttle=0;}else{c.brake=0;c.throttle=clamp(dv/0.8+0.1,0,1);}
 }
+
+/* ================= AI PACE: learned from the time trial board =================
+   The racing line (and its braking colours) and the AI's speed profile start from the theory (minimum-curvature line,
+   physics speeds) and lean part of the way towards the board's fastest laps (ailearn.js). Each AI level is that
+   profile with its corner speeds (and braking) scaled by a factor, calibrated by driving one AI car round on its own,
+   out of sight, until its lap matches the level's target: SIMULATION = the board's P1, HARD = the mean of the rest of
+   the top 5, MEDIUM / EASY 2.5 / 5 % slower than HARD. Rebuilt whenever the board changes (cached per board). With no
+   laps on the board yet the levels are fixed factors over the theoretical profile. */
+const AI_LV_DEF=[0.95,0.98,1.0,1.03],CAL_VER=4; // (no board laps) corner-speed factors, EASY … SIMULATION
+// the theoretical corner limit is worked out conservatively (the tightest curvature nearby, 98.5 % of the grip): the
+// calibration may go this far past it — a lap that ends up on the walls is backed off again
+const AI_CAP_K=1.04;
+let learnSet=theory(),learnSig=null,learnNew=true,aiF=AI_LV_DEF.slice(),aiLapT=[null,null,null,null],AIP=[],AICAPS=null,calGen=0,calWant=false;
+const aiLevel=()=>{const k=AI_LEVELS.findIndex(([,v])=>Math.abs(v-optAI)<1e-9);return k<0?1:k;};
+// a level's profile: the learned corner speeds × f (never past what the AI's car can hold on the line), then braking
+function aiProfile(f){const cp=learnSet.caps,o=new Float64Array(N);
+  for(let i=0;i<N;i++)o[i]=cp[i]>=VMAX-0.1?VMAX:Math.min(cp[i]*f,AICAPS[i]*AI_CAP_K);
+  return profileFrom(o,{grip:AI_CAR.gk,brake:AI_CAR.bf*Math.min(1,f)**2,power:AI_CAR.pk});}
+// the targets for EASY … SIMULATION (null: no board laps)
+function aiTargets(){const s=learnSet;if(s.top==null)return null;const hard=Math.max(s.rest,s.top*1.003);return [hard*1.05,hard*1.025,hard,s.top];}
+// put the latest learned set into use — never in the middle of a race (it waits for the next session)
+function applyLearn(){if(!learnNew||(session==='race'&&phase!=='menu'))return;learnNew=false;
+  RL.set(learnSet.line);VP.set(learnSet.ref);AICAPS=cornerCaps(RL,AI_CAR.gk);
+  let cache=null;try{cache=JSON.parse(localStorage.getItem('hrc-aical-'+LB_ID)||'null');}catch(e){}
+  if(cache&&cache.sig===learnSig+'|'+CAL_VER){aiF=cache.f;aiLapT=cache.t;}
+  else{aiF=AI_LV_DEF.slice();aiLapT=[null,null,null,null];calWant=true;}
+  AIP=aiF.map(aiProfile);
+  if(calWant&&!$('menu').hidden)calibrateAI();}
+// read the board and its driving lines; learn again if they changed
+async function aiLearn(rows){
+  try{if(!rows)rows=(await lbLoad(LB_ID)).rows;}catch(e){rows=[];}
+  const sig=rows.map(r=>r.at).join(',');if(sig===learnSig)return;
+  const laps=[];for(const r of rows.slice(0,5)){if(!r.at)continue;const g=await lbGhost(LB_ID,r.at);
+    if(g&&g.p)laps.push({t:r.t,g:{...decodePath(g.p),hz:g.hz||GH_HZ}});}
+  learnSig=sig;learnSet=learn(laps)||theory();learnNew=true;applyLearn();}
+// one lap of a lone AI car on profile P (rolling start, fresh softs, DRS in the zones as in the time trial): its time
+// and how long it spent against a wall
+let probe=null;
+function probeLap(P){const c=probe||(probe=carState(99,0,['AI','AI'],false,1,'S',99));
+  Object.assign(c,{prof:P,skill:1,wear:0,damage:0,dm:newDmg(),fuel:12,tT:[90,90,90,90],bT:[400,400,400,400],held:false,dnf:false,
+    pitPlan:false,pitLap:Infinity,finished:false,passCar:null,yieldSide:0,defUntil:null,exitUntil:null,laneOff:0,laneOffT:0,laneHold:0,sep:0,
+    gridD:null,lapCount:5,onWall:false,stuck:0,spin:0,slip:0,surf:1,tow:0,drsOpen:false,pitSide:false,limiter:false,pitStop:0,autoBox:false,gear:7});
+  const i0=idxSp(-straightBack()),off=RL[i0];c.idx=i0;c.x=X[i0]-TZ[i0]*off;c.z=Z[i0]+TX[i0]*off;c.yaw=c.chi=ANG[i0];c.v=P[i0]*0.95;
+  c.delta=0;c.r=0;locate(c);
+  const keepCars=cars,keepSession=session;cars=[];session='probe';
+  let t=0,start=null,res=null,wall=0,prev=c.s;
+  try{for(let k=0;k<Math.round(260/H)&&res==null;k++){
+      aiDrive(c,H);physics(c,H);locate(c);walls(c);if(c.onWall)wall+=H;
+      const ad=Math.abs(c.d),edge=c.d<0?TLL[c.idx]:TLR[c.idx];c.surf=ad<=edge?1:(ad<=edge+KWa[c.idx]&&KB[c.idx])?0.95:0.8;
+      c.zone=drsZoneOf(c.s);let flat=c.zone>=0&&c.brake<0.05;
+      if(flat)for(let j=0;j<Math.round((30+c.v*1.6)/DS);j++)if(Math.abs(K[(c.idx+j)%N])>1/900){flat=false;break;}
+      c.drsOpen=flat;t+=H;
+      if(prev>L-80&&c.s<80){if(start==null)start=t;else res=t-start;}prev=c.s;}}
+  finally{cars=keepCars;session=keepSession;}
+  return {t:res??260,wall};}
+const tick=()=>new Promise(r=>setTimeout(r,0));
+// fit each level's factor to its target lap (a few probe laps each, one per frame so the lobby stays responsive)
+async function calibrateAI(){const gen=++calGen,tg=aiTargets(),sig=learnSig;calWant=false;
+  for(let lv=0;lv<4;lv++){let f=aiF[lv],best=null;
+    for(let it=0;it<(tg?7:1);it++){await tick();if(gen!==calGen)return;if($('menu').hidden){calWant=true;return;} // (a session started: later)
+      const r=probeLap(aiProfile(f)),e=tg?Math.abs(r.t-tg[lv]):0;
+      // (a lap spent on the walls is over the limit: it never counts as the fit)
+      if(!best||(r.wall===0)>(best.wall===0)||((r.wall===0)===(best.wall===0)&&e<best.e))best={f,t:r.t,e,wall:r.wall};
+      if(!tg||(e<0.1&&r.wall===0))break;
+      // too slow → faster corners (and the other way round); on the walls: back off
+      f=clamp(r.wall>0?f*0.985:f*Math.pow(r.t/tg[lv],2.5),0.7,1.3);}
+    aiF[lv]=best.f;aiLapT[lv]=best.t;AIP[lv]=aiProfile(best.f);}
+  try{localStorage.setItem('hrc-aical-'+LB_ID,JSON.stringify({sig:sig+'|'+CAL_VER,f:aiF,t:aiLapT}));}catch(e){}
+  if(gen===calGen)console.info('[HRC ai] calibrated',LB_ID,{targets:tg&&tg.map(x=>+x.toFixed(3)),f:aiF.map(x=>+x.toFixed(4)),lap:aiLapT.map(x=>+x.toFixed(3))});}
 
 /* ================= MAIN STEP ================= */
 function orderCmp(a,b){
@@ -2331,6 +2444,10 @@ const yellowAt=s=>msFlag[msOf(s)]>0;
 const yellowAhead=s=>{const k=msOf(s);return !!(msFlag[(k+1)%MS_N]||msFlag[(k+2)%MS_N]);};
 const scOn=()=>!!sc&&sc.phase!=='pit';           // the safety car is out on track (its period is running)
 const scActive=()=>scOn()||scRestart||!!vsc;      // neutralised: nobody overtakes, no DRS
+// …for one car: the SC boards go up at every marshal post, so a car is neutralised from the next post it passes after
+// the Safety Car is called (c.scPost: the marshal sector it was in then; null once it has reached the next one)
+function scFor(c){if(!scOn())return false;if(c.scPost!=null&&msOf(c.s)!==c.scPost)c.scPost=null;return c.scPost==null;}
+const neutralFor=c=>scRestart||!!vsc||scFor(c);
 // the FIA reference speed for the VSC / SC delta: roughly 40 % slower than racing pace
 const refV=i=>Math.min(VP[i]*0.7,52);
 function updateFlags(dt){
@@ -2343,21 +2460,22 @@ function updateFlags(dt){
 // ---- the player and the rules: overtaking under yellow / SC / VSC, lifting for a double yellow, the delta at each post
 const pRef=new Float32Array(N); // the player's own speed at each point of the track on green-flag laps (what "slowing down" is measured against)
 function playerRules(dt){const p=player;if(!p||p.dnf||session!=='race')return;p.infr=p.infr||[];
-  const fl=p.pitSide?0:flagAt(p.s),neutral=vsc||(scOn()&&!p.waveBy&&!p.unlap)||scRestart;
+  const fl=p.pitSide?0:flagAt(p.s),neutral=vsc||(scFor(p)&&!p.waveBy&&!p.unlap)||scRestart;
   if(!fl&&!neutral&&!p.pitSide)pRef[p.idx]=p.v;
   // 1) overtaking: only a running car counts (not a wreck, not a car crawling with a problem, not one in the pit lane)
-  // (2 s to react after the SC / VSC is called; a car alongside keeps its previous order until 2 m clear)
-  const restricted=!p.pitSide&&(fl>0||(neutral&&simTime-cautionT0>2));
+  // (under the SC from the next marshal post — scFor; 2 s to react to the VSC; a car alongside keeps its previous
+  // order until 2 m clear)
+  const restricted=!p.pitSide&&(fl>0||(neutral&&(!vsc||simTime-cautionT0>2)));
   for(const o of cars){if(o===p||o.dnf||o.parked||o.pitSide||o.finished||p.pitSide){o.pRel=null;continue;}
     const g=fwd(p.s,o.s);if(Math.abs(g)>60){o.pRel=null;continue;}
     const ah=g<-2?true:g>2?false:o.pRel;
     if(o.pRel===false&&ah===true&&restricted&&o.v>8&&!p.infr.some(x=>x.o===o)&&!(o.gaveT>simTime-6)){
       const why=scOn()||scRestart?'OVERTAKING UNDER SAFETY CAR':vsc?'OVERTAKING UNDER VSC':'OVERTAKING UNDER YELLOW';
-      p.infr.push({o,why,until:simTime+12});msg(why,'GIVE THE POSITION BACK TO '+o.code);}
+      p.infr.push({o,why,until:simTime+12});o.regain=p;msg(why,'GIVE THE POSITION BACK TO '+o.code);} // (o goes for it too)
     o.pRel=ah;}
   for(let k=p.infr.length-1;k>=0;k--){const x=p.infr[k];
-    if(x.o.progress>p.progress+2||x.o.dnf||x.o.pitSide){p.infr.splice(k,1);x.o.gaveT=simTime;msg('POSITION RETURNED','NO FURTHER ACTION');}
-    else if(simTime>x.until){p.infr.splice(k,1);p.pen+=5;msg(x.why,'5 SECOND TIME PENALTY');}}
+    if(x.o.progress>p.progress+2||x.o.dnf||x.o.pitSide){p.infr.splice(k,1);x.o.gaveT=simTime;x.o.regain=null;msg('POSITION RETURNED','NO FURTHER ACTION');}
+    else if(simTime>x.until){p.infr.splice(k,1);x.o.regain=null;p.pen+=5;msg(x.why,'5 SECOND TIME PENALTY');}}
   // 2) double yellow: the car has to be clearly slower than the player's own green-flag pace through that stretch
   if(fl===2){const ref=pRef[p.idx]||VP[p.idx]*0.9;p.dyT=(p.dyT||0)+dt;if(p.v>ref*0.9&&p.v>15)p.dyFast=(p.dyFast||0)+dt;
     p.lift=p.v>ref*0.9&&p.v>15;}
@@ -2386,8 +2504,8 @@ function retire(c,why,sp){
   else msg(c.code+' OUT · '+why);
   if(checkered||c.pitSide)return;
   if(onRoad||sp>26||wrecks>=2)deploySC(c);else deployVSC(c);}
-/* ---- incidents: a big shunt (heavy wall impact, a high-speed collision) leaves debris on the track. Nobody retires —
-   only the wings get damaged — but the debris needs the Safety Car: race control shows a DOUBLE YELLOW at the scene for
+/* ---- incidents: debris on the track that needs the Safety Car without anyone retiring (crashes retire the car, see
+   retire() above, and bring the SC / VSC out from there): race control shows a DOUBLE YELLOW at the scene for
    ~5 s (the only time a yellow ever comes out), then the SC is deployed. Marshals need ~35–50 s to clear the debris. ---- */
 let scPending=null,debrisUntil=0;
 function resetRaceControl(){sc=null;scRestart=false;restartGo=false;vsc=null;drsResume=null;hazards=[];msFlag.fill(0);msGreen.fill(-1);
@@ -2438,7 +2556,7 @@ function deploySC(cause){
   cautionT0=simTime;
   Object.assign(sc,{released:false,go:false,hold:0,t0:simTime,cause,lights:'orange',wave:false,waveSide:-1,unlap:false,inAfterLine:false,inDist:0,formed:false});
   scRestart=false;restartGo=false;hazards=[]; // the yellow that announced it is replaced by the SC boards
-  for(const c of cars){c.drsOpen=false;c.waveBy=false;c.unlap=false;}
+  for(const c of cars){c.drsOpen=false;c.waveBy=false;c.unlap=false;c.scPost=msOf(c.s);} // (each is neutralised from its next marshal post)
   pitUnderCaution();
   scMesh.visible=true;msg('SAFETY CAR DEPLOYED',cause?cause.code+' · '+(cause.incWhy||cause.dnfWhy||''):'');}
 // the nearest running car ahead on the road (within 250 m) and the gap to it
@@ -2452,7 +2570,7 @@ function scLeaderAny(){let ld=null;for(const c of cars)if(!c.dnf&&!c.parked&&!c.
 function scCap(c){if(c.pitSide||c.dnf)return 1e9;
   if(vsc)return refV(c.idx)*0.97;
   if(scRestart&&!scOn())return restartGo?1e9:VP[c.idx]*0.6;
-  if(!scOn())return 1e9;
+  if(!scOn()||!scFor(c))return 1e9; // (racing on to the next marshal post, where the SC boards are)
   if(c.waveBy||c.unlap)return VP[c.idx]*0.8; // allowed past: they make their way round to the back of the queue
   // no delta time: every car runs at a brisk ~80 % of racing pace until it has caught the car in front, then sits
   // ~12 m behind it — so the field closes up into a Safety Car train (the leader ~22 m behind the SC)
@@ -2462,7 +2580,8 @@ function scCap(c){if(c.pitSide||c.dnf)return 1e9;
   // crawling SC); inside 22 m it drops back
   if(sc.phase!=='exit'){const g=fwd(c.s,sc.s),gg=g<0?g+L:g;
     if(scLeader()===c||gg<60)cap=Math.min(cap,gg>22?Math.sqrt(sc.v*sc.v+2*5*(gg-22)):sc.v+clamp((gg-22)*0.4,-sc.v,0));}
-  const ah=carAhead(c);if(ah)cap=Math.min(cap,ah.o.v+clamp((ah.gap-12)*0.5,-ah.o.v,15));
+  // (a car taking back the place the player took from it illegally closes up and goes by, a little quicker than it)
+  const ah=carAhead(c);if(ah&&ah.o===c.regain)cap=Math.min(cap,ah.o.v+8);else if(ah)cap=Math.min(cap,ah.o.v+clamp((ah.gap-12)*0.5,-ah.o.v,15));
   return Math.max(cap,0);}
 function updateSafetyCar(dt){
   if(!sc)return;
@@ -2500,8 +2619,9 @@ function updateSafetyCar(dt){
       if(sc.released&&!sc.go){const busy=cars.some(c=>!c.dnf&&!c.parked&&!c.pitSide&&((mS-c.s+L)%L)<160);
         if(!busy||sc.hold>6||sc.v>3)sc.go=true;else sc.hold+=dt;}
       if(!sc.go)vt=0;}}
-  // its pace (~55 % of racing speed) is clearly below the FIA delta (~68 %), so the field always closes up on it
-  else{for(let j=0;j<90;j+=2){const k=(i+j)%N;vt=Math.min(vt,Math.sqrt(Math.min(VP[k]*0.55,50)**2+2*7*j*DS));}
+  // its pace: ~62 % of racing speed through the corners and up to ~230 km/h on the straights (a real SC is a fast car,
+  // ~180 km/h held the field to a crawl down every straight) — still well below the field's, so it always closes up
+  else{for(let j=0;j<90;j+=2){const k=(i+j)%N;vt=Math.min(vt,Math.sqrt(Math.min(VP[k]*0.62,64)**2+2*7*j*DS));}
     // waits for the leader while the field is still strung out behind it
     // (continuous in the gap, and the wave-by slow-down eased in: switching the target between two speeds made the
     // car surge back and forth whenever the gap hovered around the threshold)
@@ -3590,9 +3710,10 @@ onMusicChange(buildMusicSel);
  addEventListener('pointerdown',first,true);addEventListener('keydown',first,true);}
 $('trkSub').textContent=TR.label+' · '+(TR.len/1000).toFixed(3)+' km';
 loadOpts();if(!LAP_CHOICES.includes(optLaps)&&optLaps!==TR.fullLaps)optLaps=5;buildLobby();
+aiLearn(); // the AI and the racing line learn from this circuit's time trial board
 // the lobby shows this circuit's time trial top 5 (reloaded whenever the lobby comes back)
 $('lobbyLbTrk').textContent=TR.label;fillBoard('lobbyLb','lobbyLbSrc','lobbySec');
-new MutationObserver(()=>{if(!$('menu').hidden)fillBoard('lobbyLb','lobbyLbSrc','lobbySec');}).observe($('menu'),{attributes:true,attributeFilter:['hidden']});
+new MutationObserver(()=>{if(!$('menu').hidden){fillBoard('lobbyLb','lobbyLbSrc','lobbySec');aiLearn();if(calWant)calibrateAI();}}).observe($('menu'),{attributes:true,attributeFilter:['hidden']});
 
 // every session opens with the circuit intro (skippable); the lobby can replay it on its own
 $('startBtn').onclick=()=>{document.activeElement.blur();audioInit();
