@@ -46,10 +46,10 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .prox i{position:absolute;inset:0;background:currentColor}
 #proxL{left:calc(50% - 250px)} #proxL i{clip-path:polygon(100% 0,0 50%,100% 100%,62% 50%)}
 #proxR{right:calc(50% - 250px)} #proxR i{clip-path:polygon(0 0,100% 50%,0 100%,38% 50%)}
-#topc{position:absolute;right:16px;top:16px;display:flex;gap:8px;align-items:stretch}
-#topc .panel{padding:4px 12px;text-align:center}
-#topc small{display:block;font:700 9px var(--f-disp);letter-spacing:.14em;color:var(--mute)}
-#topc b{font:700 17px var(--f-disp);font-variant-numeric:tabular-nums}
+/* the lap counter heads the timing tower (top left); the music strip has the top-right corner */
+#topc b{font-size:13px;font-variant-numeric:tabular-nums}
+#hud.lite #topc b{font-size:11px}
+body.music-on #timing.tt{top:64px}
 #flags{position:absolute;left:50%;top:calc(12px + min(440px,46vw)/3.6 + 80px);transform:translateX(-50%);display:flex;gap:6px}
 /* race control strip: a flag / board icon and the call, F1 TV style */
 #flags{flex-wrap:wrap;justify-content:center;max-width:min(640px,92vw)}
@@ -310,3 +310,12 @@ body.nomirror #mirror{display:none}
 #intro .iprog i{display:block;height:100%;width:0;background:var(--red)}
 @media (max-width:640px){#iMap{width:42vw}#intro .icap{right:16px;left:16px;padding:12px 14px}}
 #iSkip small{font:700 9px var(--f-disp);opacity:.7;margin-left:4px;border:1px solid rgba(255,255,255,.35);border-radius:3px;padding:1px 4px}
+/* music: a slim "now playing" strip in the top-right corner (the YouTube player has to stay visible while it plays) */
+#musicCard{position:fixed;right:16px;top:16px;z-index:60;width:240px;height:38px;display:flex;align-items:center;gap:8px;padding:0 8px 0 0;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+#musicCard[hidden]{display:none}
+#musicCard .yt{flex:0 0 64px;height:36px;background:#000}
+#musicCard .yt iframe{display:block;width:64px;height:36px;border:0}
+#musicCard .nm{min-width:0;line-height:1.15}
+#musicCard .nm b,#musicCard .nm small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#musicCard .nm b{font:700 11px var(--f-disp);letter-spacing:.04em;color:var(--ink)}
+#musicCard .nm small{font:600 9px var(--f-disp);letter-spacing:.06em;color:var(--mute)}

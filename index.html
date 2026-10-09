@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261009q">
+<link rel="stylesheet" href="css/style.css?v=20261009r">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -17,12 +17,9 @@
 <canvas id="gl"></canvas>
 
 <div id="hud" hidden>
-  <div id="tower" class="panel"><div id="rows"></div></div>
+  <div id="tower" class="panel"><div class="hd" id="topc"><span id="lapLbl">LAP</span><b id="lapNum">1 / 5</b></div><div id="rows"></div></div>
   <div id="mirror"></div>
   <div id="proxL" class="prox"><i></i></div><div id="proxR" class="prox"><i></i></div>
-  <div id="topc">
-    <div class="panel"><small>LAP</small><b id="lapNum">1 / 5</b></div>
-  </div>
   <div id="flags"></div>
   <div id="lights" hidden><i></i><i></i><i></i><i></i><i></i></div>
   <div id="msg"></div>
@@ -182,6 +179,6 @@
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261009q"></script>
+<script type="module" src="src/main.js?v=20261009r"></script>
 </body>
 </html>

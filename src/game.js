@@ -6,22 +6,22 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009q';
-import {perf} from './perf.js?v=20261009q';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261009q';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009q';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009q';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261009q';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009q';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261009r';
+import {perf} from './perf.js?v=20261009r';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261009r';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261009r';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261009r';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261009r';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261009r';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009q';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009q';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261009q';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261009r';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261009r';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261009r';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009q'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009q'):import('./data/osm-songdo.js?v=20261009q')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261009r'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261009r'):import('./data/osm-songdo.js?v=20261009r')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1931,16 +1931,17 @@ function tempGrip(c){if(!c.tT)return 1;const t=(c.tT[0]+c.tT[1]+c.tT[2]+c.tT[3])
 /* ---- part damage (0..1) for the MFD: where a car is hit decides which parts take it. `c.damage` stays the overall
    figure that costs grip / downforce and retires a car at 100 %; a new front wing in the pits takes the share of it
    that came from the wing. ---- */
-// Only the WINGS can be damaged: a hit at the front breaks the front wing (that side, or both square on), a hit at the
-// rear the rear wing, a side swipe clips the front wing on that side. No crash ever retires a car. `c.damage` (what
-// costs downforce / grip) is worked out from the three; a new front wing in the pits clears the front part of it.
+// Only the FRONT WING can be damaged: a hit at the front breaks it (that side, or both halves square on), a side swipe
+// clips the half on that side; a hit at the rear does no damage (the rear wing can't be broken or changed, so it is not
+// in the damage read-out either). No crash ever retires a car. `c.damage` (what costs downforce / grip) is worked out
+// from the two halves; a new front wing in the pits clears it.
 // In TIME TRIAL nothing is damaged at all.
-const DMG_PARTS=[['fwL','FRONT WING L'],['fwR','FRONT WING R'],['rw','REAR WING']];
-const newDmg=()=>({fwL:0,fwR:0,rw:0});
-const dmgOverall=d=>Math.min(1,0.45*Math.max(d.fwL,d.fwR)+0.25*Math.min(d.fwL,d.fwR)+0.3*d.rw);
+const DMG_PARTS=[['fwL','FRONT WING L'],['fwR','FRONT WING R']];
+const newDmg=()=>({fwL:0,fwR:0});
+const dmgOverall=d=>Math.min(1,0.45*Math.max(d.fwL,d.fwR)+0.25*Math.min(d.fwL,d.fwR));
 function hurt(c,amt,where,side){if(amt<=0||session==='tt')return;const d=c.dm||(c.dm=newDmg()),a=(k,x)=>{d[k]=Math.min(1,d[k]+x);};
   if(where==='F'){if(side>=0)a('fwR',amt*2.6);if(side<=0)a('fwL',amt*2.6);}
-  else if(where==='R')a('rw',amt*2.2);
+  else if(where==='R')return;
   else a(side>0?'fwR':'fwL',amt*1.2);
   c.damage=dmgOverall(d);}
 // where a contact point sits on a car: 'F' / 'R' / 'S' and the side (+1 right, -1 left)
@@ -2006,7 +2007,7 @@ function collide(){
     jolt(A,-h.nx,-h.nz,h.px,h.pz,closing);jolt(B,h.nx,h.nz,h.px,h.pz,closing);
     if(hitter&&closing>13){const am=(closing-13)*0.012,vic=hitter===A?B:A,zh=hitZone(hitter,h.px,h.pz),zv=hitZone(vic,h.px,h.pz);
       hurt(hitter,am,zh[0],zh[1]);   // mostly the front wing
-      hurt(vic,am*0.5,zv[0],zv[1]);} // the car that was hit: its rear wing / a front wing
+      hurt(vic,am*0.5,zv[0],zv[1]);} // the car that was hit: a front wing (a hit from behind does no damage)
     // a big shunt (debris everywhere) brings out the Safety Car; nobody retires from it
     if(phase==='race'&&closing>24&&!A.pitSide&&!B.pitSide)incident(hitter,'COLLISION');
     if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT'+(closing>10?' · AERO DAMAGE':''));}}
@@ -2783,7 +2784,7 @@ function updateInfo(){
   if(session==='quali'){updateQualiInfo();return;}
   // (no gap-ahead read-out in the race; tyres, fuel, damage, track limits and penalties live in the MFD)
   elSty(el('gapA').parentElement,'display','none');
-  const lap=Math.max(1,Math.min(totalLaps,c.lapCount+1));elTxt(el('lapNum'),lap+' / '+targetLaps);
+  const lap=Math.max(1,Math.min(totalLaps,c.lapCount+1));elTxt(el('lapLbl'),'LAP');elTxt(el('lapNum'),lap+' / '+targetLaps);
   elTxt(el('curLap'),c.lapCount>=0&&phase==='race'&&!c.finished?fmt(simTime-c.lapStart):'—');elTxt(el('lastLap'),fmt(c.lastLap));elTxt(el('bestLap'),fmt(c.bestLap));
   infoTyres(c);
   // race control strip: [label, style] — the style draws the flag / board icon (see .flag.* in style.css)
@@ -2815,7 +2816,7 @@ function infoTyres(c){
 function updateQualiInfo(){
   const c=player,rivals=[...qTimes.entries()].filter(([k,v])=>k!==c&&v!=null).map(([,v])=>v),best=rivals.length?Math.min(...rivals):null;
   const stage=qStage==='flying'&&c.lapInvalid?'LAP DELETED':qStage==='done'?'QUALIFYING':'FLYING LAP';
-  elTxt(el('lapNum'),stage);
+  elTxt(el('lapLbl'),'QUALI');elTxt(el('lapNum'),stage);
   elSty(el('gapA').parentElement,'display','');elTxt(el('gapALbl'),'DELTA TO POLE');
   const ref=best!=null&&qStage==='flying'&&!c.lapInvalid?best*CUMT[c.idx]/CUMT[N]:null;
   const dl=ref==null?null:(simTime-c.lapStart)-ref;
@@ -2868,7 +2869,7 @@ function renderMfd(force){if(mfdPage<0||!player)return;const c=player,body=el('m
       '<rect x="47" y="16" width="16" height="64" rx="7" fill="#5a6274"/>'+
       '<rect x="16" y="78" width="26" height="56" rx="9" fill="#3a4150"/><rect x="68" y="78" width="26" height="56" rx="9" fill="#3a4150"/>'+
       '<rect x="42" y="90" width="26" height="40" rx="5" fill="#3a4150"/><rect x="46" y="132" width="18" height="26" rx="4" fill="#3a4150"/>'+
-      '<rect x="28" y="160" width="54" height="12" rx="3" fill="#3a4150"/><rect data-k="rw" x="18" y="176" width="74" height="14" rx="3" fill="'+f('rw')+'"/></svg>'+
+      '<rect x="28" y="160" width="54" height="12" rx="3" fill="#3a4150"/><rect x="18" y="176" width="74" height="14" rx="3" fill="#3a4150"/></svg>'+
       '<div class="lst">'+DMG_PARTS.map(([k,n])=>'<div><span>'+n+'</span><b style="color:'+dmgCol(d[k])+'">'+Math.round(d[k]*100)+'%</b></div>').join('')+
       '<div style="margin-top:4px"><span>OVERALL</span><b style="color:'+dmgCol(c.damage)+'">'+Math.round(c.damage*100)+'%</b></div></div></div>';}
   else if(mfdPage===2){const t=c.tT||[80,80,80,80],b=c.bT||[300,300,300,300],o=T_OPT[c.comp],nm=['FL','FR','RL','RR'];

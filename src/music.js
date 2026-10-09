@@ -1,23 +1,25 @@
 // In-game music, streamed from the official YouTube uploads through the YouTube IFrame Player API (nothing is hosted
 // here): the playlist plays in order and starts again from the first track after the last. It is separate from the
 // engine/tyre sound (N mutes those, B turns the music on/off). YouTube's terms want the player visible while it plays,
-// so it sits in a small "now playing" card in the bottom-right corner; it is hidden while the music is off.
-// Browsers only let it start after a user gesture, so the first click or key press starts it (see game.js).
+// so it sits in a slim "now playing" strip in the top-right corner (a small player and the track name); it is hidden
+// while the music is off. Browsers only let it start after a user gesture, so the first click or key press starts it.
 export const PLAYLIST=[
   {title:'F1',artist:'Hans Zimmer',yt:'YhX_Woa3kVA'},                             // Hans Zimmer - Topic (F1 The Album)
   {title:'Lose My Mind',artist:'Don Toliver feat. Doja Cat',yt:'VJxppgsHjF8'},   // F1 The Album (official audio)
 ];
+// the circuit intro film plays to the official Formula 1 broadcast theme (the full 3-minute release); when it ends the
+// playlist starts from its first track
+export const INTRO_TRACK={title:'Formula 1 Theme',artist:'Brian Tyler',yt:'_QmiNC9d788'}; // Brian Tyler - Topic (℗ 2018 Formula 1)
 const KEY='hrc-music',VOL=35;
-let player=null,ready=false,cur=0,on=true,failed=new Set(),card=null,onChange=()=>{};
+let player=null,ready=false,cur=0,intro=false,on=true,failed=new Set(),card=null,onChange=()=>{};
 try{const o=JSON.parse(localStorage.getItem(KEY)||'{}');if(o.on===false)on=false;}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({on}));}catch(e){}};
-const changed=()=>{if(card){card.hidden=!on||failed.size>=PLAYLIST.length;card.querySelector('b').textContent='♪ '+PLAYLIST[cur].title+' · '+PLAYLIST[cur].artist;}onChange();};
+const now=()=>intro?INTRO_TRACK:PLAYLIST[cur];
+const changed=()=>{const show=on&&failed.size<PLAYLIST.length;document.body.classList.toggle('music-on',!!card&&show);
+  if(card){card.hidden=!show;card.querySelector('b').textContent=now().title;card.querySelector('small').textContent=now().artist;}onChange();};
 
 function makeCard(){if(card)return;card=document.createElement('div');card.id='musicCard';card.hidden=true;
-  card.innerHTML='<div id="musicYT"></div><b></b>';
-  card.style.cssText='position:fixed;right:16px;bottom:16px;z-index:60;width:200px;background:rgba(9,13,24,.9);border:1px solid rgba(255,255,255,.12);'+
-    'border-radius:8px;overflow:hidden;font:700 10px/1.3 var(--f-disp,system-ui);letter-spacing:.04em;color:#cfd6e6';
-  card.querySelector('b').style.cssText='display:block;padding:5px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+  card.innerHTML='<div class="yt"><div id="musicYT"></div></div><div class="nm"><b></b><small></small></div>';
   document.body.appendChild(card);}
 // load the IFrame API once; resolves with the YT namespace
 let apiP=null;
@@ -26,23 +28,25 @@ function api(){if(apiP)return apiP;apiP=new Promise(res=>{if(window.YT&&window.Y
     const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';s.async=true;document.head.appendChild(s);});
   return apiP;}
 function create(){if(player)return;makeCard();
-  api().then(YT=>{player=new YT.Player('musicYT',{width:200,height:113,videoId:PLAYLIST[cur].yt,
-    playerVars:{autoplay:on?1:0,controls:1,rel:0,playsinline:1,modestbranding:1},
+  api().then(YT=>{player=new YT.Player('musicYT',{width:64,height:36,videoId:now().yt,
+    playerVars:{autoplay:on?1:0,controls:0,rel:0,playsinline:1,modestbranding:1,disablekb:1},
     events:{
       onReady:()=>{ready=true;player.setVolume(VOL);if(on)player.playVideo();changed();},
       onStateChange:e=>{if(e.data===YT.PlayerState.ENDED)advance();},
       // the video can't be played here (removed, region-locked, embedding turned off): skip it
-      onError:()=>{failed.add(cur);if(failed.size>=PLAYLIST.length){changed();return;}advance();}}});});
+      onError:()=>{if(intro){advance();return;}failed.add(cur);if(failed.size>=PLAYLIST.length){changed();return;}advance();}}});});
   changed();}
-// the next track in playlist order that has not failed
-function advance(){let i=cur;for(let k=0;k<PLAYLIST.length;k++){i=(i+1)%PLAYLIST.length;if(!failed.has(i))break;}
+// the next track in playlist order that has not failed (after the intro theme: the first one)
+function advance(){let i=cur;
+  if(intro){intro=false;i=failed.has(0)?cur:0;}
+  else for(let k=0;k<PLAYLIST.length;k++){i=(i+1)%PLAYLIST.length;if(!failed.has(i))break;}
   cur=i;if(ready){on?player.loadVideoById(PLAYLIST[cur].yt):player.cueVideoById(PLAYLIST[cur].yt);}changed();}
 // start (or resume) the music — call from a click / key handler
 export function musicStart(){if(!on)return;if(!player){create();return;}if(ready)player.playVideo();}
 export function musicSet(v){on=v;save();if(on){failed.clear();if(!player)create();else if(ready)player.playVideo();}else if(ready)player.pauseVideo();changed();return on;}
 export const musicToggle=()=>musicSet(!on);
-// the circuit intro film plays to the F1 theme (the first track) from its start; the playlist carries on from there
-export function musicIntro(){if(!on)return;cur=0;failed.delete(0);if(!player){create();return;}if(ready)player.loadVideoById(PLAYLIST[0].yt,0);changed();}
+// the circuit intro film: the official F1 theme from its start
+export function musicIntro(){if(!on)return;intro=true;if(!player){create();return;}if(ready)player.loadVideoById(INTRO_TRACK.yt,0);changed();}
 // (yt: the YouTube player state, 1 = playing; t: seconds into the track)
-export const musicState=()=>({on,track:PLAYLIST[cur],allFailed:failed.size>=PLAYLIST.length,failed:[...failed],yt:ready?player.getPlayerState():-2,t:ready?player.getCurrentTime():0});
+export const musicState=()=>({on,track:now(),intro,allFailed:failed.size>=PLAYLIST.length,yt:ready?player.getPlayerState():-2,t:ready?player.getCurrentTime():0});
 export function onMusicChange(fn){onChange=fn;}
