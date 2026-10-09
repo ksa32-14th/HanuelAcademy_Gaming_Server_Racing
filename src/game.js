@@ -6,23 +6,23 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010n';
-import {perf} from './perf.js?v=20261010n';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261010n';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010n';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010n';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261010n';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261010n';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010o';
+import {perf} from './perf.js?v=20261010o';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261010o';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010o';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010o';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261010o';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261010o';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010n';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010n';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010n';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010n';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010o';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010o';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010o';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010o';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010n'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010n'):import('./data/osm-songdo.js?v=20261010n')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010o'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010o'):import('./data/osm-songdo.js?v=20261010o')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1403,24 +1403,30 @@ function makeCrew(){
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,2.6,6),mat({color:0x2a2e36}));pole.position.set(4.9,1.3,0);g.add(pole);
   g.userData={lolMat,guns,wheels};return g;}
 
-/* ---- the player's own pit box: a hologram plate in the team colour, the size of the box, hovering a little above it —
-   see-through, a brighter edge and faint scan lines, breathing gently. Rebuilt whenever a session starts (the team can
-   change). ---- */
+/* ---- the player's own pit box: a hologram cuboid in the team colour standing on it — the box's footprint, ~2 m tall,
+   lifted a little off the ground: see-through faces with faint scan lines, bright edges, breathing gently. Rebuilt
+   whenever a session starts (the team can change). ---- */
 let boxMarker=null;
+const HOLO_W=7.5,HOLO_D=3.6,HOLO_H=2.0,HOLO_Y=0.15;
 function buildBoxMarker(team){
   if(boxMarker){scene.remove(boxMarker);boxMarker.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose();}});}
   const t=TEAMS[team],i=idxSp(BOX_S[team]),g=new THREE.Group(),col=hex(t.c===0x1b1d21?t.a:t.c); // (a near-black livery uses its accent)
   g.position.set(X[i]-TZ[i]*PS*(PIT_OFF+BOX_D),0,Z[i]+TX[i]*PS*(PIT_OFF+BOX_D));g.rotation.y=-ANG[i];
-  const tex=canvasTex(512,256,(x)=>{x.clearRect(0,0,512,256);x.fillStyle=col;x.globalAlpha=0.28;x.fillRect(0,0,512,256);
-    x.globalAlpha=0.18;for(let y=0;y<256;y+=8)x.fillRect(0,y,512,3);                    // scan lines
-    x.globalAlpha=1;x.lineWidth=12;x.strokeStyle=col;x.strokeRect(6,6,500,244);          // the edge
-    x.globalAlpha=0.5;x.lineWidth=4;x.strokeRect(22,22,468,212);});
+  // faces: a light wash of the colour, scan lines, a slightly stronger rim; drawn from both sides, never writing depth
+  const tex=canvasTex(256,256,(x)=>{x.clearRect(0,0,256,256);x.fillStyle=col;x.globalAlpha=0.16;x.fillRect(0,0,256,256);
+    x.globalAlpha=0.14;for(let y=0;y<256;y+=8)x.fillRect(0,y,256,3);
+    x.globalAlpha=0.35;x.lineWidth=10;x.strokeStyle=col;x.strokeRect(5,5,246,246);});
   const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,toneMapped:false});
-  const plate=new THREE.Mesh(new THREE.PlaneGeometry(7.5,3.6).rotateX(-Math.PI/2),mat);plate.position.y=0.9;g.add(plate);
-  g.userData={mat,plate};scene.add(g);boxMarker=g;}
-function animBoxMarker(){if(!boxMarker)return;const u=boxMarker.userData,t=performance.now()/1000;
+  const geo=new THREE.BoxGeometry(HOLO_W,HOLO_H,HOLO_D).translate(0,HOLO_H/2,0);
+  const body=new THREE.Mesh(geo,mat);
+  // the edges: the twelve lines of the cuboid, bright
+  const edgeM=new THREE.LineBasicMaterial({color:col,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false});
+  const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geo),edgeM);
+  const holo=new THREE.Group();holo.position.y=HOLO_Y;holo.add(body,edges);g.add(holo);
+  g.userData={mat,edgeM,holo};scene.add(g);boxMarker=g;}
+function animBoxMarker(){if(!boxMarker)return;const u=boxMarker.userData,t=performance.now()/1000,p=0.5+0.5*Math.sin(t*2.2);
   boxMarker.visible=phase!=='menu'&&session!=='tt';
-  u.mat.opacity=0.75+0.25*Math.sin(t*2.2);u.plate.position.y=0.9+0.06*Math.sin(t*1.6);}
+  u.mat.opacity=0.6+0.4*p;u.edgeM.opacity=0.7+0.3*p;u.holo.position.y=HOLO_Y+0.05*Math.sin(t*1.6);}
 
 /* ================= RACE STATE ================= */
 let cars=[],player=null,phase='menu',simTime=0,raceStart=null,gridT0=0,lightsOutAt=0,lightsOn=-1;
