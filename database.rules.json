@@ -3,20 +3,20 @@
     "top5": {
       "$track": {
         ".read": true,
-        ".write": "newData.exists() && newData.numChildren() <= 5"
+        ".write": "newData.exists() && !newData.child('5').exists()"
       }
     },
     "sec3": {
       "$track": {
         ".read": true,
-        ".write": "newData.exists() && newData.child('s1').numChildren() <= 3 && newData.child('s2').numChildren() <= 3 && newData.child('s3').numChildren() <= 3"
+        ".write": "newData.exists() && !newData.child('s1').child('3').exists() && !newData.child('s2').child('3').exists() && !newData.child('s3').child('3').exists()"
       }
     },
     "ai": {
       "$track": {
         ".read": true,
         ".write": true,
-        ".validate": "newData.hasChildren(['sig', 'f', 't', 'at']) && newData.child('f').numChildren() == 4 && newData.child('t').numChildren() <= 4"
+        ".validate": "newData.hasChildren(['sig', 'f', 't', 'at']) && newData.child('f').child('3').exists() && !newData.child('f').child('4').exists() && !newData.child('t').child('4').exists()"
       }
     },
     "ghost": {
