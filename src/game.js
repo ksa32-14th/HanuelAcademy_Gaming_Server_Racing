@@ -6,23 +6,23 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010m';
-import {perf} from './perf.js?v=20261010m';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261010m';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010m';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010m';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261010m';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261010m';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010n';
+import {perf} from './perf.js?v=20261010n';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261010n';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010n';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010n';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261010n';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,checkName} from './leaderboard.js?v=20261010n';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010m';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010m';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010m';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010m';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010n';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010n';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010n';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010n';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010m'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010m'):import('./data/osm-songdo.js?v=20261010m')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010n'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010n'):import('./data/osm-songdo.js?v=20261010n')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1811,7 +1811,12 @@ function physics(c,dt){
   // sliding (player): steering INTO the slide (countersteer: towards the direction of travel) gets the slip angle as
   // extra lock, so there is enough of it to catch the car; steering further into the spin gets none
   // (a car still sliding sideways stays in it down to walking pace, so a spin skids to a stop instead of snapping straight)
-  const slideOn=c.isPlayer&&!c.auto&&SLIDE>0&&(v>6||v>1&&Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.3||v>1.5&&c.throttle>0.9&&Math.abs(c.steerIn)>0.8),bTr=slideOn?wrapA((c.chi??c.yaw)-c.yaw):0;
+  // a spin turn is armed only at a standstill: the wheel turned (≥ 80 %) BEFORE the throttle goes down. It stays armed
+  // while both are held and is gone the moment either is let go — on the move it can never happen (spinGo: under way)
+  if(c.isPlayer){if(v<0.5&&Math.abs(c.steerIn)>0.8&&c.throttle<0.2)c.spinArm=true;
+    else if(Math.abs(c.steerIn)<0.8||(c.spinGo&&c.throttle<0.9))c.spinArm=false;
+    c.spinGo=!!c.spinArm&&c.throttle>0.9;}
+  const slideOn=c.isPlayer&&!c.auto&&SLIDE>0&&(v>6||v>1&&Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.3||c.spinGo&&v>0.5),bTr=slideOn?wrapA((c.chi??c.yaw)-c.yaw):0;
   // the skid has run out at walking pace: the car comes to rest where it points (no snap back to the old heading)
   if(c.isPlayer&&!c.auto&&SLIDE>0&&!slideOn&&Math.abs(wrapA(c.yaw-(c.chi??c.yaw)))>0.3){c.v=0;c.chi=c.yaw;c.r=0;afterMove(c,dt,thr,0,0);return;}
   const bSl=c.steerIn*bTr>0?Math.min(0.35,Math.abs(bTr)):0; // at most ~20° of extra lock
@@ -1878,12 +1883,10 @@ function slideStep(c,dt,m,mu,Nn,Fdem,Fb,Fdrag){
   const LONG=1.3;Fdem*=1.15; // and the engine's torque is ~15 % up on the AI's
   // the traction control lets ~85 % of the rears' grip go to drive in a straight line and less (TC_P) the harder the
   // car is cornering — it only steps aside a little, so a big throttle mid-corner still eats the rears' cornering grip
-  // …except when the driver asks for it: near-full lock (over ~80 %) and the throttle nailed below ~160 km/h, held
-  // together for ~0.4 s (a brief overlap at a hairpin exit does nothing), the TC lets the rears flare (agg 0…1).
-  // Overspun, they keep the drive but lose nearly all their side grip, and the car swings round — held, through 180°
-  // and on to 270° and beyond, as an F1 car does when it's provoked
-  const want=Math.abs(c.steerIn||0)>0.8&&c.throttle>0.9&&v0<45;
-  c.aggT=want?Math.min(1,(c.aggT||0)+dt/0.4):Math.max(0,(c.aggT||0)-dt/0.2);
+  // …except for a spin turn (spinGo, see physics: from a standstill, the wheel turned first, then the throttle nailed):
+  // the TC lets the rears flare (agg 0…1). Overspun, they keep the drive but lose nearly all their side grip, and the car
+  // swings round — held, through 180° and on to 270° and beyond, as an F1 car does. Never once the car is moving
+  c.aggT=c.spinGo?Math.min(1,(c.aggT||0)+dt/0.15):Math.max(0,(c.aggT||0)-dt/0.2);
   const agg=smooth(c.aggT)*clamp((45-v0)/20,0,1);
   const tcL=Fr*LONG*((0.85-(0.85-TC_P)*Math.min(1,Math.abs(c.aLat||0)/(0.5*mu*Nn/m)))*(1-agg)+1.4*agg);
   let Fdrv=Math.min(Fdem,tcL);const over=Fdrv>Fr*LONG*0.95;if(over)Fdrv=Fr*LONG*0.95;
