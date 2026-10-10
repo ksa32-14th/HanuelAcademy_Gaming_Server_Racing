@@ -6,24 +6,24 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261011c';
-import {perf} from './perf.js?v=20261011c';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261011c';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS} from './config.js?v=20261011c';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261011c';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261011c';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261011c';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261011d';
+import {perf} from './perf.js?v=20261011d';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261011d';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS} from './config.js?v=20261011d';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261011d';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261011d';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261011d';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261011c';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261011c';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261011c';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261011c';
-import {radioSay,radioClear,radioAudio,radioMuted,radioHush} from './radio.js?v=20261011c';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261011d';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261011d';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261011d';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261011d';
+import {radioSay,radioClear,radioAudio,radioMuted,radioHush} from './radio.js?v=20261011d';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261011c'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261011c'):import('./data/osm-songdo.js?v=20261011c')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261011d'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261011d'):import('./data/osm-songdo.js?v=20261011d')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1237,12 +1237,10 @@ function setFar(car,far){if(car.isFar===far)return;car.isFar=far;car.far.visible
 // buffers (on the GPU too): a car's own data is the colour buffer of the painted parts, its number texture and its
 // tail/band materials.
 const SENT_B=0xff0000,SENT_A=0x00ff00,SENT_C=0x0000ff;let carTpl=null;
-// shared textures: the steering-wheel display and the sponsor lettering on the chassis top
+// shared texture: the steering-wheel display
 const swScreenMat=new THREE.MeshBasicMaterial({map:canvasTex(160,96,(x)=>{x.fillStyle='#05070b';x.fillRect(0,0,160,96);
   x.fillStyle='#1be26b';x.fillRect(8,8,144,6);x.font='900 46px "HRC F1", Titillium Web, sans-serif';x.textAlign='center';x.fillStyle='#fff';x.fillText('8',80,62);
   x.font='700 14px "HRC F1", Titillium Web, sans-serif';x.fillStyle='#ffd200';x.fillText('DELTA +0.12',80,86);x.fillStyle='#8fd3ff';x.textAlign='left';x.fillText('BB 56',8,40);x.textAlign='right';x.fillText('ERS',152,40);})});
-const noseTxtMat=new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,map:canvasTex(512,128,(x)=>{x.clearRect(0,0,512,128);
-  x.font='900 76px "HRC F1", Titillium Web, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='rgba(255,255,255,.92)';x.fillText('HANEUL',256,68);})});
 function carTemplate(){if(carTpl)return carTpl;
   const car=buildCar(SENT_B,SENT_A,0),recol=new Map();
   car.root.traverse(o=>{if(!o.isMesh)return;if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();
@@ -1301,8 +1299,6 @@ function buildCar(col,acc,num){
    for(const s of [-1,1])add(new THREE.BoxGeometry(.05,.15,.05),mK,0,-.01,s*.125,sw,false);
    for(let k=0;k<10;k++)add(new THREE.BoxGeometry(.012,.012,.012),k<4?mLG:k<7?mLR:mLB,-.02,.052,(k-4.5)*.016,sw,false);
    const scr=new THREE.Mesh(new THREE.PlaneGeometry(.1,.06).rotateY(-Math.PI/2),swScreenMat);scr.position.set(-.019,-.005,0);sw.add(scr);}
-  // sponsor lettering on the top of the chassis in front of the cockpit (one texture shared by every car)
-  {const p=new THREE.Mesh(new THREE.PlaneGeometry(.5,.12).rotateX(-Math.PI/2).rotateY(-Math.PI/2),noseTxtMat);p.position.set(1.18,.612,0);g.add(p);}
   // roll hoop / airbox and engine cover, with the T-camera on top and the intake below it
   add(loft([{x:-2.2,y:.38,w:.05,h:.04,b:.04,n:2},{x:-1.7,y:.47,w:.10,h:.07,b:.1,n:2},{x:-1.15,y:.58,w:.15,h:.10,b:.15,n:2.2},
     {x:-.7,y:.70,w:.16,h:.15,b:.2,n:2.2},{x:-.38,y:.80,w:.12,h:.17,b:.2,n:2},{x:-.2,y:.80,w:.09,h:.13,b:.16,n:2},{x:-.12,y:.77,w:.06,h:.06,b:.1,n:2}],18),mB);
