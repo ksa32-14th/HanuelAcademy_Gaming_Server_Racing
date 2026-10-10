@@ -3,14 +3,14 @@
 // the team colour, the team's left-aligned in white.
 // The lines come from sounds/radio/lines.json (id -> [who, text]; who: e = race engineer, d = driver) and are spoken from
 // voice files, sounds/radio/<id>.mp3 (tools/radio-voices.ps1 makes them; voices.json lists the ones that exist): the
-// engineer and the driver are different voices, and each goes through its own radio — the pit wall's cleaner, the car's
-// narrower and harder-driven, with the engine roaring under it. A line without a file is text only.
+// engineer and the driver are different voices, and each goes through its own radio — the pit wall's clearer, the car's
+// muffled, with a low engine rumble under it. A line without a file is text only.
 // Sound of the channel: the radio sound (RADIO_SFX, config.js) as it opens, then the static of a real team radio under
 // the words — band-limited hiss that flutters, crackles and clicks, now and then breaking up — and a squelch as it closes.
 // One call shows at a time: the next waits (urgent ones jump the queue; a low-priority one is dropped if the channel is
 // busy), and a call that waited too long is dropped.
-import {$,clamp} from './util.js?v=20261011d';
-import {RADIO_SFX} from './config.js?v=20261011d';
+import {$,clamp} from './util.js?v=20261011e';
+import {RADIO_SFX} from './config.js?v=20261011e';
 
 const VOICE_DIR='sounds/radio/';
 // the lines (id -> [who, text]): loaded before the game starts
@@ -38,20 +38,22 @@ function preload(ac){if(preloaded)return;preloaded=true;haveP.then(()=>{for(cons
 const F=(ac,type,f,q,gain)=>{const b=ac.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q;if(gain!=null)b.gain.value=gain;return b;};
 const shaper=(ac,k)=>{const sh=ac.createWaveShaper(),cv=new Float32Array(1024);for(let i=0;i<1024;i++){const x=i/511.5-1;cv[i]=Math.tanh(k*x)/Math.tanh(k);}sh.curve=cv;return sh;};
 // a radio: the voice squeezed into a narrow band, driven into the grit and compressed hard, as team radio sounds on TV.
-// The pit wall's (engineer) is a little wider and cleaner; the car's (driver) narrower, harder, with the engine under it
+// The pit wall's (engineer) is the clearer one. The car's (driver) is muffled — the helmet mic's dull, boxy band, the top
+// rolled off — with the low rumble of the engine running under it (engineBed)
 function voiceChain(ac,dest,who){const drv=who==='driver';
-  const hp=F(ac,'highpass',drv?470:320,0.8),lp=F(ac,'lowpass',drv?2900:3400,0.9),pk=F(ac,'peaking',drv?1500:1800,1,drv?7:5),sh=shaper(ac,drv?3.6:2.0);
+  const hp=F(ac,'highpass',drv?260:320,0.7),lp=F(ac,'lowpass',drv?1900:3400,drv?0.6:0.9),pk=F(ac,'peaking',drv?700:1800,drv?0.8:1,drv?4:5),sh=shaper(ac,drv?2.4:2.0);
   const cp=ac.createDynamicsCompressor();cp.threshold.value=-28;cp.ratio.value=8;cp.attack.value=0.002;cp.release.value=0.12;
-  const g=ac.createGain();g.gain.value=drv?0.95:1.1;hp.connect(lp).connect(pk).connect(sh).connect(cp).connect(g).connect(dest);return hp;}
-// the car around the driver's microphone: the engine's drone (two harmonics, wavering) and the rush of air, under his words
-function engineBed(ac,inp,t0,t1){const out=ac.createGain();out.gain.setValueAtTime(0,t0);out.gain.linearRampToValueAtTime(0.11,t0+0.08);
-  out.gain.setValueAtTime(0.11,Math.max(t0+0.09,t1-0.1));out.gain.linearRampToValueAtTime(0,t1);out.connect(inp);
-  const lp=F(ac,'lowpass',1400,0.7);lp.connect(out);
-  for(const [f,v] of [[190,0.5],[285,0.35],[570,0.18]]){const o=ac.createOscillator(),gv=ac.createGain(),w=ac.createOscillator(),wg=ac.createGain();
-    o.type='sawtooth';o.frequency.value=f*(0.97+Math.random()*0.06);w.frequency.value=5+Math.random()*3;wg.gain.value=f*0.012;
-    w.connect(wg).connect(o.frequency);gv.gain.value=v;o.connect(gv).connect(lp);o.start(t0);w.start(t0);o.stop(t1+0.05);w.stop(t1+0.05);}
-  const n=ac.createBufferSource();n.buffer=noiseBuf(ac);n.loop=true;const ng=ac.createGain();ng.gain.value=0.35;n.connect(F(ac,'bandpass',900,0.6)).connect(ng).connect(out);
-  n.start(t0,Math.random()*2);n.stop(t1+0.05);}
+  const g=ac.createGain();g.gain.value=drv?1.0:1.1;hp.connect(lp).connect(pk).connect(sh).connect(cp).connect(g).connect(dest);return hp;}
+// the car behind the driver's words: a low, dull engine rumble — no whine, no wobble — that sits just over the bottom of
+// the voice: deep noise rolled off below ~260 Hz plus a soft low hum, a touch saturated, straight to the output (the
+// voice's high-pass would strip it)
+function engineBed(ac,dest,t0,t1){const out=ac.createGain(),L=0.22;
+  out.gain.setValueAtTime(0,t0);out.gain.linearRampToValueAtTime(L,t0+0.12);out.gain.setValueAtTime(L,Math.max(t0+0.13,t1-0.15));out.gain.linearRampToValueAtTime(0,t1+0.05);
+  const sh=shaper(ac,1.6),lp=F(ac,'lowpass',260,0.5);lp.connect(sh).connect(out).connect(dest);
+  const n=ac.createBufferSource();n.buffer=noiseBuf(ac);n.loop=true;n.playbackRate.value=0.5;const ng=ac.createGain();ng.gain.value=0.9;
+  n.connect(F(ac,'lowpass',180,0.5)).connect(ng).connect(lp);n.start(t0,Math.random()*2);n.stop(t1+0.1);
+  for(const [f,v] of [[62,0.35],[124,0.22]]){const o=ac.createOscillator(),gv=ac.createGain();o.type='triangle';o.frequency.value=f*(0.98+Math.random()*0.04);
+    gv.gain.value=v;o.connect(gv).connect(lp);o.start(t0);o.stop(t1+0.1);}}
 let voiceNow=[];
 // sound off / paused mid-sentence: stop the voice now (the line's text stays up)
 export function radioHush(){for(const s of voiceNow){try{s.stop();}catch(e){}}voiceNow=[];}
@@ -60,17 +62,28 @@ async function sayClips(ids,who,maxMs){ids=ids.filter(Boolean);const a=ctx();if(
   const bufs=await Promise.all(ids.map(id=>clip(ac,id)));if(bufs.some(b=>!b)||isMuted())return;
   const inp=voiceChain(ac,dest,who),t0=ac.currentTime+0.03;let t=t0;voiceNow=[];
   for(const b of bufs){const s=ac.createBufferSource();s.buffer=b;s.connect(inp);s.start(t);voiceNow.push(s);t+=b.duration+0.05;}
-  if(who==='driver')engineBed(ac,inp,t0,t);
+  if(who==='driver')engineBed(ac,dest,t0,t);
   await wait(Math.min(maxMs,(t-ac.currentTime)*1000));}
 
 /* ---- the calls ---- */
-// a line: an id from lines.json; [id, {placeholder: value}] for one with {placeholders} (no voice); or
-// ['team' | 'driver', text, voice] for one made up in the game (voice: a file id or a list of them, e.g. ['p5', '007'])
+// a value read out: a lap time "1:32.456" → one, thirty-two, point, four, five, six ("1:05.2": one, oh five, point, two);
+// seconds "28.4"; a whole number up to 59 (a position, "P5" too). Each word its own file (n0 … n59, oh, point)
+function sayValue(v){v=String(v).trim().replace(/^P/i,'');let m;const dig=s=>[...s].map(d=>'n'+d);
+  if((m=v.match(/^(\d+):(\d{2})\.(\d+)$/))){const s=+m[2];return ['n'+(+m[1]),...(s<10?['oh','n'+s]:['n'+s]),'point',...dig(m[3])];}
+  if((m=v.match(/^(\d+)\.(\d+)$/))&&+m[1]<60)return ['n'+(+m[1]),'point',...dig(m[2])];
+  if(/^\d+$/.test(v)&&+v<60)return ['n'+(+v)];
+  return null;}
+// a line: an id from lines.json; [id, {placeholder: value}] for one with {placeholders} — its words are the files id_a,
+// id_b … (the text between the placeholders) with the values read out between them; or ['team' | 'driver', text, voice]
 function resolve(x){
   if(typeof x==='string'||(Array.isArray(x)&&x.length===2&&typeof x[1]==='object'&&x[1]&&!Array.isArray(x[1]))){
-    const id=Array.isArray(x)?x[0]:x,vars=Array.isArray(x)?x[1]:null,l=LINES[id];if(!l)return null;
-    const text=vars?l[1].replace(/\{(\w+)\}/g,(m,k)=>vars[k]??m):l[1];
-    return [l[0]==='d'?'driver':'team',text,/\{/.test(l[1])?null:id];}
+    const id=Array.isArray(x)?x[0]:x,vars=Array.isArray(x)?x[1]:{},l=LINES[id];if(!l)return null;
+    if(!/\{/.test(l[1]))return [l[0]==='d'?'driver':'team',l[1],id];
+    const text=l[1].replace(/\{(\w+)\}/g,(m,k)=>vars[k]??m),parts=l[1].split(/\{(\w+)\}/);let voice=[],n=0;
+    for(let i=0;i<parts.length;i++){
+      if(i%2){const w=sayValue(vars[parts[i]]);if(!w){voice=null;break;}voice.push(...w);}
+      else if(/[a-z]/i.test(parts[i]))voice.push(id+'_'+'abcdefgh'[n++]);else n++;}
+    return [l[0]==='d'?'driver':'team',text,voice];}
   return x;}
 // lines: a list of lines (see resolve); opt: {name, num, color, team, prio} — prio 2 urgent (jumps the queue), 1 normal,
 // 0 low (only when the channel is free)
