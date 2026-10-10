@@ -9,8 +9,8 @@
 // the words — band-limited hiss that flutters, crackles and clicks, now and then breaking up — and a squelch as it closes.
 // One call shows at a time: the next waits (urgent ones jump the queue; a low-priority one is dropped if the channel is
 // busy), and a call that waited too long is dropped.
-import {$,clamp} from './util.js?v=20261011f';
-import {RADIO_SFX} from './config.js?v=20261011f';
+import {$,clamp} from './util.js?v=20261011g';
+import {RADIO_SFX} from './config.js?v=20261011g';
 
 const VOICE_DIR='sounds/radio/';
 // the lines (id -> [who, text]): loaded before the game starts
@@ -35,8 +35,8 @@ function clip(ac,id){if(!have.has(id))return Promise.resolve(null);
 // a voice file without the silence the speech engine leaves before and after the words (so pieces of one sentence — the
 // words and a time read out — follow each other as one sentence would)
 function trimVoice(b){const d=b.getChannelData(0);let pk=0;for(let i=0;i<d.length;i++)pk=Math.max(pk,Math.abs(d[i]));
-  const th=pk*0.03,sr=b.sampleRate;let a=0,e=d.length-1;while(a<e&&Math.abs(d[a])<th)a++;while(e>a&&Math.abs(d[e])<th)e--;
-  a=Math.max(0,a-Math.round(sr*0.015));e=Math.min(d.length-1,e+Math.round(sr*0.04));return {buf:b,start:a/sr,duration:(e-a+1)/sr};}
+  const th=pk*0.05,sr=b.sampleRate;let a=0,e=d.length-1;while(a<e&&Math.abs(d[a])<th)a++;while(e>a&&Math.abs(d[e])<th)e--;
+  a=Math.max(0,a-Math.round(sr*0.015));e=Math.min(d.length-1,e+Math.round(sr*0.025));return {buf:b,start:a/sr,duration:(e-a+1)/sr};}
 // all the lines, fetched in the background the first time the radio opens (so later calls start without a delay)
 let preloaded=false;
 function preload(ac){if(preloaded)return;preloaded=true;haveP.then(()=>{for(const id of have)clip(ac,id);});}
@@ -66,15 +66,19 @@ export function radioHush(){for(const s of voiceNow){try{s.stop();}catch(e){}}vo
 async function sayClips(ids,who,maxMs){ids=ids.filter(Boolean);const a=ctx();if(!a||isMuted()||!ids.length)return;const {ac,dest}=a;
   const bufs=await Promise.all(ids.map(id=>clip(ac,id)));if(bufs.some(b=>!b)||isMuted())return;
   const inp=voiceChain(ac,dest,who),t0=ac.currentTime+0.03;let t=t0;voiceNow=[];
-  for(const b of bufs){const s=ac.createBufferSource();s.buffer=b.buf;s.connect(inp);s.start(t,b.start,b.duration);voiceNow.push(s);t+=b.duration+(bufs.length>1?0.02:0);}
+  // a time is read out quickly, the way an engineer rattles it off: the number words a quarter faster and run into each
+  // other; the line's own words at their pace
+  bufs.forEach((b,i)=>{const num=/^(n\d+|oh)$/.test(ids[i]),nextNum=/^(n\d+|oh)$/.test(ids[i+1]||''),rate=num?1.25:1;
+    const s=ac.createBufferSource();s.buffer=b.buf;s.playbackRate.value=rate;s.connect(inp);s.start(t,b.start,b.duration);voiceNow.push(s);
+    t+=b.duration/rate+(i===bufs.length-1?0:num&&nextNum?-0.03:0.04);});
   if(who==='driver')engineBed(ac,dest,t0,t);
   await wait(Math.min(maxMs,(t-ac.currentTime)*1000));}
 
 /* ---- the calls ---- */
-// a value read out: a lap time "1:32.456" → one, thirty-two, point, four, five, six ("1:05.2": one, oh five, point, two);
+// a value read out: a lap time "1:32.456" → one, thirty-two, four, five, six ("1:05.2": one, oh five, two);
 // seconds "28.4"; a whole number up to 59 (a position, "P5" too). Each word its own file (n0 … n59, oh, point)
 function sayValue(v){v=String(v).trim().replace(/^P/i,'');let m;const dig=s=>[...s].map(d=>'n'+d);
-  if((m=v.match(/^(\d+):(\d{2})\.(\d+)$/))){const s=+m[2];return ['n'+(+m[1]),...(s<10?['oh','n'+s]:['n'+s]),'point',...dig(m[3])];}
+  if((m=v.match(/^(\d+):(\d{2})\.(\d+)$/))){const s=+m[2];return ['n'+(+m[1]),...(s<10?['oh','n'+s]:['n'+s]),...dig(m[3])];} // no "point": one thirty-two four five six
   if((m=v.match(/^(\d+)\.(\d+)$/))&&+m[1]<60)return ['n'+(+m[1]),'point',...dig(m[2])];
   if(/^\d+$/.test(v)&&+v<60)return ['n'+(+v)];
   return null;}
