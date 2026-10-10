@@ -7,8 +7,8 @@
 // has it); the driver's are text only. The next line comes once the voice has finished and the text has been up long
 // enough to read.
 // One call shows at a time: the next waits (urgent ones jump the queue), and a call that waited too long is dropped.
-import {$,clamp} from './util.js?v=20261010y';
-import {RADIO_SFX} from './config.js?v=20261010y';
+import {$,clamp} from './util.js?v=20261010z';
+import {RADIO_SFX} from './config.js?v=20261010z';
 
 let audio=()=>null,isMuted=()=>false,sfx=null,hiss=null;
 let queue=[],cur=null,timers=[],waveT=0,gen=0;
@@ -23,8 +23,12 @@ export function radioMuted(fn){isMuted=fn;}
 /* ---- the team's voice ---- */
 const TTS=typeof window!=='undefined'&&window.speechSynthesis&&window.SpeechSynthesisUtterance?window.speechSynthesis:null;
 let voice=null;
-function pickVoice(){const en=TTS.getVoices().filter(v=>/^en[-_]/i.test(v.lang)),male=v=>/male|george|daniel|ryan|arthur|oliver|david|guy|mark/i.test(v.name)&&!/female/i.test(v.name);
-  voice=en.find(v=>/en[-_]GB/i.test(v.lang)&&male(v))||en.find(v=>/en[-_]GB/i.test(v.lang))||en.find(male)||en[0]||null;}
+// the most human voice on offer: the neural ("Natural" / "Online") voices first — Edge has them, e.g. Ryan / Thomas (UK)
+// or Guy / Andrew / Brian / Christopher (US) — then the older system voices; a man's voice, British before American
+function pickVoice(){const en=TTS.getVoices().filter(v=>/^en[-_]/i.test(v.lang));
+  const male=v=>/\bmale\b|ryan|thomas|george|daniel|arthur|oliver|guy|andrew|brian|christopher|eric|roger|steffan|david|mark/i.test(v.name)&&!/female/i.test(v.name);
+  const neural=v=>/natural|online|neural/i.test(v.name),gb=v=>/en[-_]GB/i.test(v.lang);
+  voice=en.find(v=>neural(v)&&male(v)&&gb(v))||en.find(v=>neural(v)&&male(v))||en.find(v=>male(v)&&gb(v))||en.find(male)||en.find(gb)||en[0]||null;}
 if(TTS){pickVoice();TTS.addEventListener?TTS.addEventListener('voiceschanged',pickVoice):(TTS.onvoiceschanged=pickVoice);}
 // sound off / paused mid-sentence: stop the voice now (the line's text stays up)
 export function radioHush(){if(TTS)TTS.cancel();}
@@ -32,7 +36,7 @@ export function radioHush(){if(TTS)TTS.cancel();}
 function speak(txt,maxMs){if(!TTS||isMuted())return Promise.resolve();
   if(!voice)pickVoice();if(!voice)return Promise.resolve(); // no English voice on this system: text only
   return new Promise(res=>{let done=false;const fin=()=>{if(!done){done=true;res();}};
-    const u=new SpeechSynthesisUtterance(txt);u.voice=voice;u.lang=voice.lang;u.rate=1.06;u.pitch=0.9;u.volume=1;
+    const u=new SpeechSynthesisUtterance(txt);u.voice=voice;u.lang=voice.lang;u.rate=1.08;u.pitch=1;u.volume=1; // (a shifted pitch makes a neural voice sound more synthetic, not less)
     u.onend=fin;u.onerror=fin;timers.push(setTimeout(fin,maxMs));TTS.speak(u);});}
 
 // lines: [['team' | 'driver', text], …]; opt: {name, num, color, team, prio} (prio 2 = urgent: jumps the queue)

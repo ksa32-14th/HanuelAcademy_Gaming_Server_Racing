@@ -97,26 +97,26 @@ body.music-on #timing.tt{top:64px}
    top right; the car number large in the team colour over a waveform band that moves while the channel is open, the
    team badge at the right end; then the transcript in capitals — the driver's words right-aligned in the team colour,
    the team's left-aligned in white */
-#radio{position:absolute;right:16px;top:calc(50% - 60px);width:280px;background:linear-gradient(180deg,#2a2a2f,#1e1e22);border-radius:2px;overflow:hidden;
-  box-shadow:0 8px 26px rgba(0,0,0,.55);opacity:0;transform:translateX(24px);transition:opacity .22s,transform .22s;--tc:#fff;padding:10px 0 12px}
+#radio{position:absolute;right:16px;top:calc(50% - 30px);width:200px;background:linear-gradient(180deg,#2a2a2f,#1e1e22);border-radius:2px;overflow:hidden;
+  box-shadow:0 8px 26px rgba(0,0,0,.55);opacity:0;transform:translateX(24px);transition:opacity .22s,transform .22s;--tc:#fff;padding:7px 0 8px}
 #radio.on{opacity:1;transform:none}
 #radio.off{opacity:0;transform:translateX(24px)}
-#radio .rd-id{display:flex;flex-direction:column;align-items:flex-end;padding:0 14px;line-height:1}
-#radio .rd-id b{font:900 25px var(--f-disp);color:var(--tc);letter-spacing:.01em;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-#radio .rd-id span{font:900 21px var(--f-disp);color:#fff;margin-top:1px}
-#radio .rd-mid{position:relative;height:44px;margin-top:2px}
-#radio .rd-wave{position:absolute;left:0;right:46px;bottom:4px;height:22px;display:flex;align-items:center;gap:1px}
+#radio .rd-id{display:flex;flex-direction:column;align-items:flex-end;padding:0 10px;line-height:1}
+#radio .rd-id b{font:900 17px var(--f-disp);color:var(--tc);letter-spacing:.01em;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#radio .rd-id span{font:900 14px var(--f-disp);color:#fff;margin-top:1px}
+#radio .rd-mid{position:relative;height:30px;margin-top:1px}
+#radio .rd-wave{position:absolute;left:0;right:32px;bottom:3px;height:15px;display:flex;align-items:center;gap:1px}
 #radio .rd-wave i{flex:1;height:18%;background:var(--tc);opacity:.42}
-#radio #rdNum{position:absolute;left:12px;bottom:0;font:900 42px/1 var(--f-disp);color:var(--tc);text-shadow:0 2px 6px rgba(0,0,0,.45)}
-#radio .rd-logo{position:absolute;right:14px;bottom:4px;width:24px;height:28px;background:var(--tc);color:#111;font:900 13px/26px var(--f-disp);
+#radio #rdNum{position:absolute;left:9px;bottom:0;font:900 29px/1 var(--f-disp);color:var(--tc);text-shadow:0 2px 6px rgba(0,0,0,.45)}
+#radio .rd-logo{position:absolute;right:10px;bottom:3px;width:16px;height:19px;background:var(--tc);color:#111;font:900 9px/17px var(--f-disp);
   text-align:center;font-style:normal;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
-#rdBody{padding:10px 14px 0;display:grid;gap:6px}
-#rdBody p{margin:0;font:400 13px/1.25 var(--f-body);color:#fff;text-transform:uppercase;letter-spacing:.02em;animation:rdLine .25s ease-out}
+#rdBody{padding:6px 10px 0;display:grid;gap:4px}
+#rdBody p{margin:0;font:400 10px/1.25 var(--f-body);color:#fff;text-transform:uppercase;letter-spacing:.02em;animation:rdLine .25s ease-out}
 #rdBody p::before{content:'"'} #rdBody p::after{content:'"'}
-#rdBody p.rd-d{color:var(--tc);text-align:right;padding-left:22px}
-#rdBody p.rd-t{padding-right:22px}
+#rdBody p.rd-d{color:var(--tc);text-align:right;padding-left:16px}
+#rdBody p.rd-t{padding-right:16px}
 @keyframes rdLine{from{opacity:0;transform:translateY(4px)}}
-@media (max-width:560px){#radio{top:auto;bottom:160px;width:calc(100% - 32px)}}
+@media (max-width:560px){#radio{top:auto;bottom:160px}}
 /* dash */
 /* dash: the F1-game cluster under the car — DRS gauge, gear, speed/rpm gauge */
 #dash{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);width:min(380px,92vw)}
