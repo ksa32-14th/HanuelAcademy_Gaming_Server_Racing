@@ -1,30 +1,33 @@
 // Team radio, as the broadcast's radio graphic: on the right, SURNAME (team colour) / RADIO, the car number over a waveform
 // band that moves while the channel is open and the team badge, then the transcript — the driver's words right-aligned in
-// the team colour, the team's left-aligned in white. Each call opens with the radio sound: RADIO_SFX (config.js), an
-// audio file, when it is there — otherwise a beep and a burst of static synthesised here; a faint hiss runs under the
-// call and it closes with a shorter beep (the synthesised one only).
-// The team's lines are spoken from recorded voice files, sounds/radio/<id>.mp3 (made by tools/radio-voices.ps1 from
-// sounds/radio/lines.json), played through a radio filter: narrow band, a little grit, hard compression. A line can be
-// several files in a row (e.g. "P5." + "Good job! Keep pushing."). The driver's lines are text only, and so is a team line
-// whose file isn't there yet. The next line comes once the voice has finished and the text has been up long enough to read.
-// One call shows at a time: the next waits (urgent ones jump the queue), and a call that waited too long is dropped.
-import {$,clamp} from './util.js?v=20261011b';
-import {RADIO_SFX} from './config.js?v=20261011b';
+// the team colour, the team's left-aligned in white.
+// The lines come from sounds/radio/lines.json (id -> [who, text]; who: e = race engineer, d = driver) and are spoken from
+// voice files, sounds/radio/<id>.mp3 (tools/radio-voices.ps1 makes them; voices.json lists the ones that exist): the
+// engineer and the driver are different voices, and each goes through its own radio — the pit wall's cleaner, the car's
+// narrower and harder-driven, with the engine roaring under it. A line without a file is text only.
+// Sound of the channel: the radio sound (RADIO_SFX, config.js) as it opens, then the static of a real team radio under
+// the words — band-limited hiss that flutters, crackles and clicks, now and then breaking up — and a squelch as it closes.
+// One call shows at a time: the next waits (urgent ones jump the queue; a low-priority one is dropped if the channel is
+// busy), and a call that waited too long is dropped.
+import {$,clamp} from './util.js?v=20261011c';
+import {RADIO_SFX} from './config.js?v=20261011c';
 
+const VOICE_DIR='sounds/radio/';
+// the lines (id -> [who, text]): loaded before the game starts
+export const LINES=await fetch(VOICE_DIR+'lines.json').then(r=>r.ok?r.json():{}).catch(()=>({}));
 let audio=()=>null,isMuted=()=>false,sfx=null,hiss=null;
 let queue=[],cur=null,timers=[],waveT=0,gen=0;
 const MAX_WAIT=12000; // ms a waiting call stays relevant
 const WAVE_N=46;      // bars in the waveform band
-const VOICE_DIR='sounds/radio/';
 
 // get: () => {ac, dest} | null — the game's audio context and its master bus (muted / paused with the game)
 export function radioAudio(get){audio=get;}
 // fn: () => true while the game's sound is off (N) or paused — no voice then (the text only)
 export function radioMuted(fn){isMuted=fn;}
 
-/* ---- the team's voice: recorded files ---- */
+/* ---- the voices: recorded files ---- */
 const clips=new Map(); // id -> Promise<AudioBuffer | null>
-// sounds/radio/voices.json: the ids that have a file (tools/radio-voices.ps1 writes it) — no request for a line without one
+// sounds/radio/voices.json: the ids that have a file — no request for a line without one
 let have=new Set();const haveP=fetch(VOICE_DIR+'voices.json').then(r=>r.ok?r.json():[]).then(a=>{have=new Set(a);}).catch(()=>{});
 function clip(ac,id){if(!have.has(id))return Promise.resolve(null);
   if(!clips.has(id))clips.set(id,fetch(VOICE_DIR+id+'.mp3').then(r=>r.ok?r.arrayBuffer():null)
@@ -32,37 +35,61 @@ function clip(ac,id){if(!have.has(id))return Promise.resolve(null);
 // all the lines, fetched in the background the first time the radio opens (so later calls start without a delay)
 let preloaded=false;
 function preload(ac){if(preloaded)return;preloaded=true;haveP.then(()=>{for(const id of have)clip(ac,id);});}
-// the radio: the voice squeezed into a narrow band with a bit of grit and heavy compression, as team radio sounds on TV
-function voiceChain(ac,dest){const F=(type,f,q,gain)=>{const b=ac.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q;if(gain!=null)b.gain.value=gain;return b;};
-  const hp=F('highpass',330,0.8),lp=F('lowpass',3300,0.8),pk=F('peaking',1700,1,5),sh=ac.createWaveShaper(),cv=new Float32Array(1024);
-  for(let i=0;i<1024;i++){const x=i/511.5-1;cv[i]=Math.tanh(2.2*x)/Math.tanh(2.2);}sh.curve=cv;
-  const cp=ac.createDynamicsCompressor();cp.threshold.value=-26;cp.ratio.value=6;cp.attack.value=0.003;cp.release.value=0.15;
-  const g=ac.createGain();g.gain.value=1.1;hp.connect(lp).connect(pk).connect(sh).connect(cp).connect(g).connect(dest);return hp;}
+const F=(ac,type,f,q,gain)=>{const b=ac.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q;if(gain!=null)b.gain.value=gain;return b;};
+const shaper=(ac,k)=>{const sh=ac.createWaveShaper(),cv=new Float32Array(1024);for(let i=0;i<1024;i++){const x=i/511.5-1;cv[i]=Math.tanh(k*x)/Math.tanh(k);}sh.curve=cv;return sh;};
+// a radio: the voice squeezed into a narrow band, driven into the grit and compressed hard, as team radio sounds on TV.
+// The pit wall's (engineer) is a little wider and cleaner; the car's (driver) narrower, harder, with the engine under it
+function voiceChain(ac,dest,who){const drv=who==='driver';
+  const hp=F(ac,'highpass',drv?470:320,0.8),lp=F(ac,'lowpass',drv?2900:3400,0.9),pk=F(ac,'peaking',drv?1500:1800,1,drv?7:5),sh=shaper(ac,drv?3.6:2.0);
+  const cp=ac.createDynamicsCompressor();cp.threshold.value=-28;cp.ratio.value=8;cp.attack.value=0.002;cp.release.value=0.12;
+  const g=ac.createGain();g.gain.value=drv?0.95:1.1;hp.connect(lp).connect(pk).connect(sh).connect(cp).connect(g).connect(dest);return hp;}
+// the car around the driver's microphone: the engine's drone (two harmonics, wavering) and the rush of air, under his words
+function engineBed(ac,inp,t0,t1){const out=ac.createGain();out.gain.setValueAtTime(0,t0);out.gain.linearRampToValueAtTime(0.11,t0+0.08);
+  out.gain.setValueAtTime(0.11,Math.max(t0+0.09,t1-0.1));out.gain.linearRampToValueAtTime(0,t1);out.connect(inp);
+  const lp=F(ac,'lowpass',1400,0.7);lp.connect(out);
+  for(const [f,v] of [[190,0.5],[285,0.35],[570,0.18]]){const o=ac.createOscillator(),gv=ac.createGain(),w=ac.createOscillator(),wg=ac.createGain();
+    o.type='sawtooth';o.frequency.value=f*(0.97+Math.random()*0.06);w.frequency.value=5+Math.random()*3;wg.gain.value=f*0.012;
+    w.connect(wg).connect(o.frequency);gv.gain.value=v;o.connect(gv).connect(lp);o.start(t0);w.start(t0);o.stop(t1+0.05);w.stop(t1+0.05);}
+  const n=ac.createBufferSource();n.buffer=noiseBuf(ac);n.loop=true;const ng=ac.createGain();ng.gain.value=0.35;n.connect(F(ac,'bandpass',900,0.6)).connect(ng).connect(out);
+  n.start(t0,Math.random()*2);n.stop(t1+0.05);}
 let voiceNow=[];
 // sound off / paused mid-sentence: stop the voice now (the line's text stays up)
 export function radioHush(){for(const s of voiceNow){try{s.stop();}catch(e){}}voiceNow=[];}
 // play a line's files one after another; resolves when they have been said (at once with no sound, or a file missing)
-async function sayClips(ids,maxMs){ids=ids.filter(Boolean);const a=ctx();if(!a||isMuted()||!ids.length)return;const {ac,dest}=a;
+async function sayClips(ids,who,maxMs){ids=ids.filter(Boolean);const a=ctx();if(!a||isMuted()||!ids.length)return;const {ac,dest}=a;
   const bufs=await Promise.all(ids.map(id=>clip(ac,id)));if(bufs.some(b=>!b)||isMuted())return;
-  const inp=voiceChain(ac,dest);let t=ac.currentTime+0.03;voiceNow=[];
+  const inp=voiceChain(ac,dest,who),t0=ac.currentTime+0.03;let t=t0;voiceNow=[];
   for(const b of bufs){const s=ac.createBufferSource();s.buffer=b;s.connect(inp);s.start(t);voiceNow.push(s);t+=b.duration+0.05;}
+  if(who==='driver')engineBed(ac,inp,t0,t);
   await wait(Math.min(maxMs,(t-ac.currentTime)*1000));}
 
-// lines: [['team' | 'driver', text, voice], …] — voice: a file id or a list of them (team lines); opt: {name, num, color,
-// team, prio} (prio 2 = urgent: jumps the queue)
+/* ---- the calls ---- */
+// a line: an id from lines.json; [id, {placeholder: value}] for one with {placeholders} (no voice); or
+// ['team' | 'driver', text, voice] for one made up in the game (voice: a file id or a list of them, e.g. ['p5', '007'])
+function resolve(x){
+  if(typeof x==='string'||(Array.isArray(x)&&x.length===2&&typeof x[1]==='object'&&x[1]&&!Array.isArray(x[1]))){
+    const id=Array.isArray(x)?x[0]:x,vars=Array.isArray(x)?x[1]:null,l=LINES[id];if(!l)return null;
+    const text=vars?l[1].replace(/\{(\w+)\}/g,(m,k)=>vars[k]??m):l[1];
+    return [l[0]==='d'?'driver':'team',text,/\{/.test(l[1])?null:id];}
+  return x;}
+// lines: a list of lines (see resolve); opt: {name, num, color, team, prio} — prio 2 urgent (jumps the queue), 1 normal,
+// 0 low (only when the channel is free)
 export function radioSay(lines,opt={}){
-  if(!lines||!lines.length)return;
-  const item={lines,name:opt.name||'',num:opt.num??'',color:opt.color||'#fff',team:opt.team||'',prio:opt.prio||1,at:performance.now()};
-  if(cur){if(item.prio>=2){const i=queue.findIndex(q=>q.prio<2);queue.splice(i<0?queue.length:i,0,item);}else queue.push(item);
+  lines=(lines||[]).map(resolve).filter(Boolean);if(!lines.length)return;
+  const item={lines,name:opt.name||'',num:opt.num??'',color:opt.color||'#fff',team:opt.team||'',prio:opt.prio??1,at:performance.now()};
+  if(cur){if(item.prio===0)return;
+    if(item.prio>=2){const i=queue.findIndex(q=>q.prio<2);queue.splice(i<0?queue.length:i,0,item);}else queue.push(item);
     if(queue.length>3)queue.splice(3);return;}
   play(item);}
+// is anything on the radio now (or waiting)?
+export const radioBusy=()=>!!cur||queue.length>0;
 
 // session over / back to the menu: close the channel and forget what was waiting
 export function radioClear(){gen++;queue=[];timers.forEach(clearTimeout);timers=[];cur=null;radioHush();stopHiss();wave(false);
   const r=$('radio');if(r)r.className='';}
 
-// how long a line stays up before the next one: reading time, at least ~2.4 s
-const lineMs=s=>clamp(1400+s.length*75,2400,6500);
+// how long a line stays up before the next one: reading time, at least ~2 s
+const lineMs=s=>clamp(1300+s.length*70,2000,6500);
 const wait=ms=>new Promise(r=>timers.push(setTimeout(r,ms)));
 
 async function play(item){const g=++gen;cur=item;timers.forEach(clearTimeout);timers=[];
@@ -71,13 +98,13 @@ async function play(item){const g=++gen;cur=item;timers.forEach(clearTimeout);ti
   // the team badge: its initial (no logos of real teams)
   const lg=$('rdLogo');lg.textContent=(item.team.trim()[0]||'').toUpperCase();lg.title=item.team;
   body.innerHTML='';r.className='on';beepOpen();startHiss();wave(true);
-  await wait(sfx?Math.min(900,sfx.duration*1000):450); // the radio sound first, then the words
+  await wait(sfx?Math.min(900,sfx.duration*1000)+60:450); // the radio sound first, then the words
   for(let k=0;k<item.lines.length;k++){if(g!==gen)return;const [who,txt,vo]=item.lines[k];
     const p=document.createElement('p');p.className=who==='driver'?'rd-d':'rd-t';p.textContent=txt;body.appendChild(p);
     if(k>0)crackle();
-    const t0=performance.now();if(who!=='driver'&&vo)await sayClips(Array.isArray(vo)?vo:[vo],lineMs(txt)+4000);if(g!==gen)return;
+    const t0=performance.now();if(vo)await sayClips(Array.isArray(vo)?vo:[vo],who,lineMs(txt)+4000);if(g!==gen)return;
     // after the voice: what is left of the reading time (a short pause at least)
-    await wait(Math.max(who!=='driver'?350:0,lineMs(txt)-(performance.now()-t0)));}
+    await wait(Math.max(vo?300:0,lineMs(txt)-(performance.now()-t0)));}
   if(g!==gen)return;
   beepClose();stopHiss();wave(false);r.classList.add('off');
   await wait(380);if(g!==gen)return;
@@ -93,7 +120,7 @@ function wave(on){const w=$('rdWave');if(!w)return;
 
 function next(){const now=performance.now();queue=queue.filter(q=>now-q.at<MAX_WAIT);const q=queue.shift();if(q)play(q);}
 
-/* ---- sound ---- */
+/* ---- sound of the channel ---- */
 function ctx(){try{return audio();}catch(e){return null;}}
 // the radio sound file (RADIO_SFX): fetched as the page loads, decoded once the game's audio has started. No file there
 // (or one the browser can't decode): the synthesised beep below
@@ -108,31 +135,53 @@ function trimSfx(b){let pk=0;const chs=[];for(let c=0;c<b.numberOfChannels;c++){
   let a=0,e=b.length-1;while(a<e&&!loud(a))a++;while(e>a&&!loud(e))e--;
   const sr=b.sampleRate,pad=Math.round(sr*0.01);a=Math.max(0,a-pad);e=Math.min(b.length-1,e+pad);
   return {buf:b,start:a/sr,duration:(e-a+1)/sr,gain:Math.min(4,0.8/pk)};}
-// the radio's narrow band: everything goes through a telephone-like band-pass and a little grit
-function band(ac,dest,gain){const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=380;
-  const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3200;
-  const sh=ac.createWaveShaper(),cv=new Float32Array(512);for(let i=0;i<512;i++){const x=i/255.5-1;cv[i]=Math.tanh(3*x);}sh.curve=cv;
-  const g=ac.createGain();g.gain.value=gain;hp.connect(lp).connect(sh).connect(g).connect(dest);return hp;}
-function noise(ac,sec){const b=ac.createBuffer(1,Math.round(ac.sampleRate*sec),ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
+// the radio's band for the static and the clicks: telephone-narrow and driven into grit
+function band(ac,dest,gain){const hp=F(ac,'highpass',450,0.7),lp=F(ac,'lowpass',3000,0.7),pk=F(ac,'peaking',2200,1.2,4),sh=shaper(ac,3);
+  const g=ac.createGain();g.gain.value=gain;hp.connect(lp).connect(pk).connect(sh).connect(g).connect(dest);return hp;}
+let _noise=null;
+function noiseBuf(ac){if(_noise&&_noise.sampleRate===ac.sampleRate)return _noise;
+  const b=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return (_noise=b);}
+// the static of an open team-radio channel, 4 s that loop: hiss whose level flutters (a slow random wobble and a fast
+// one), sharp clicks and crackles scattered through it, short bursts where the signal frays, and the odd dropout
+let _static=null;
+function staticBuf(ac){if(_static&&_static.sampleRate===ac.sampleRate)return _static;
+  const sr=ac.sampleRate,n=sr*4,b=ac.createBuffer(1,n,sr),d=b.getChannelData(0);
+  let slow=0.7,fast=1,ts=0.7,tf=1;
+  for(let i=0;i<n;i++){if(i%Math.round(sr*0.09)===0)ts=0.45+Math.random()*0.5;if(i%Math.round(sr*0.012)===0)tf=0.6+Math.random()*0.8;
+    slow+=(ts-slow)*0.0006;fast+=(tf-fast)*0.02;d[i]=(Math.random()*2-1)*0.35*slow*fast;}
+  const ev=(rate,f)=>{let t=Math.random()/rate;while(t<4){f(Math.floor(t*sr));t+=-Math.log(1-Math.random())/rate;}};
+  // clicks: single sharp spikes with a short ring
+  ev(14,i=>{const a=(Math.random()<0.5?-1:1)*(0.8+Math.random()*1.2),L=Math.round(sr*(0.0008+Math.random()*0.002));
+    for(let j=0;j<L&&i+j<n;j++)d[i+j]+=a*Math.exp(-j/(L*0.25))*(j%2?-1:1);});
+  // crackle: little clusters of pops
+  ev(5,i=>{const L=Math.round(sr*(0.01+Math.random()*0.03));for(let j=0;j<L&&i+j<n;j++)if(Math.random()<0.06)d[i+j]+=(Math.random()*2-1)*1.4;});
+  // fraying: a louder, rougher burst
+  ev(1.6,i=>{const L=Math.round(sr*(0.02+Math.random()*0.07)),g=1.5+Math.random()*1.5;for(let j=0;j<L&&i+j<n;j++)d[i+j]*=g*Math.sin(Math.PI*j/L)+1;});
+  // dropouts: the signal all but gone for a moment
+  ev(0.7,i=>{const L=Math.round(sr*(0.015+Math.random()*0.04));for(let j=0;j<L&&i+j<n;j++)d[i+j]*=0.12;});
+  for(let i=0;i<n;i++)d[i]=Math.max(-1,Math.min(1,d[i]));
+  return (_static=b);}
+function burst(ac,inp,t0,dur,vol,f0,f1){const s=ac.createBufferSource();s.buffer=noiseBuf(ac);const bp=F(ac,'bandpass',f0||2000,0.9),g=ac.createGain();
+  if(f1)bp.frequency.exponentialRampToValueAtTime(f1,t0+dur);
+  g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+dur);s.connect(bp).connect(g).connect(inp);s.start(t0,Math.random());s.stop(t0+dur+0.05);}
 function tone(ac,inp,f,t0,dur,vol){const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=f;
   g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(vol,t0+0.004);g.gain.setValueAtTime(vol,t0+dur-0.01);g.gain.linearRampToValueAtTime(0,t0+dur);
   o.connect(g).connect(inp);o.start(t0);o.stop(t0+dur+0.02);}
-function burst(ac,inp,t0,dur,vol){const s=ac.createBufferSource();s.buffer=noise(ac,dur+0.05);const g=ac.createGain();
-  g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+dur);s.connect(g).connect(inp);s.start(t0);}
-// opening: a squelch of static, then the two-note digital beep
+// opening: the radio sound (file), or a squelch and the two-note digital beep
 function beepOpen(){const a=ctx();if(!a)return;const {ac,dest}=a;const t=ac.currentTime+0.01;
   const f=getSfx(ac);
   if(f){f.then(x=>{if(!x)return;const s=ac.createBufferSource(),g=ac.createGain();g.gain.value=x.gain*0.8;s.buffer=x.buf;s.connect(g).connect(dest);
     s.start(ac.currentTime+0.005,x.start,x.duration);});return;}
   const inp=band(ac,dest,0.16);burst(ac,inp,t,0.09,0.9);tone(ac,inp,1180,t+0.05,0.07,0.5);tone(ac,inp,1580,t+0.13,0.11,0.5);burst(ac,inp,t+0.24,0.12,0.35);}
-// closing: the beep the other way round, shorter
-function beepClose(){const a=ctx();if(!a)return;const {ac,dest}=a;const t=ac.currentTime+0.01;
-  if(sfx||sfxBytes)return; // the radio sound file plays at the start only
-  const inp=band(ac,dest,0.12);tone(ac,inp,1580,t,0.05,0.45);tone(ac,inp,1180,t+0.06,0.07,0.45);burst(ac,inp,t+0.12,0.1,0.4);}
-// a click of static between two speakers
-function crackle(){const a=ctx();if(!a)return;const {ac,dest}=a;const t=ac.currentTime+0.01;burst(ac,band(ac,dest,0.12),t,0.07,0.8);}
-// the open channel: a faint band-limited hiss
+// closing: the key let go — a short rush of static that drops away ("kssht"), plus the reverse beep without a sound file
+function beepClose(){const a=ctx();if(!a)return;const {ac,dest}=a;const t=ac.currentTime+0.01,inp=band(ac,dest,0.14);
+  burst(ac,inp,t,0.16,1.0,3200,900);
+  if(!(sfx||sfxBytes)){tone(ac,inp,1580,t+0.04,0.05,0.4);tone(ac,inp,1180,t+0.1,0.07,0.4);}}
+// a click of static between two speakers (the other side keying the radio)
+function crackle(){const a=ctx();if(!a)return;const {ac,dest}=a;const t=ac.currentTime+0.01,inp=band(ac,dest,0.13);
+  burst(ac,inp,t,0.05,1.0,2600);burst(ac,inp,t+0.06,0.08,0.6,1800,1100);}
+// the open channel: the static under everything
 function startHiss(){const a=ctx();if(!a||hiss)return;const {ac,dest}=a;
-  const s=ac.createBufferSource();s.buffer=noise(ac,2);s.loop=true;const g=ac.createGain();g.gain.value=0;
-  s.connect(g).connect(band(ac,dest,0.05));s.start();g.gain.setTargetAtTime(0.5,ac.currentTime,0.05);hiss={s,g,ac};}
-function stopHiss(){if(!hiss)return;const {s,g,ac}=hiss;hiss=null;try{g.gain.setTargetAtTime(0,ac.currentTime,0.03);s.stop(ac.currentTime+0.2);}catch(e){}}
+  const s=ac.createBufferSource();s.buffer=staticBuf(ac);s.loop=true;const g=ac.createGain();g.gain.value=0;
+  s.connect(g).connect(band(ac,dest,0.07));s.start(0,Math.random()*4);g.gain.setTargetAtTime(1,ac.currentTime,0.03);hiss={s,g,ac};}
+function stopHiss(){if(!hiss)return;const {s,g,ac}=hiss;hiss=null;try{g.gain.setTargetAtTime(0,ac.currentTime,0.025);s.stop(ac.currentTime+0.2);}catch(e){}}

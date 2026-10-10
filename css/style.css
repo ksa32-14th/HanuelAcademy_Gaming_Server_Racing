@@ -201,6 +201,13 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--yellow);outlin
 .btn{pointer-events:auto;font:900 14px var(--f-disp);letter-spacing:.1em;background:var(--red);color:#fff;border:0;border-radius:6px;padding:11px 16px;cursor:pointer;width:100%;margin-top:12px}
 .btn:hover{filter:brightness(1.15)}
 .btn.ghost{background:#1a2138}
+/* the driver's name in the lobby: given name and surname side by side */
+.namerow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.namerow label{display:grid;gap:4px;font:700 9px var(--f-disp);letter-spacing:.14em;color:var(--mute)}
+.nm-in{width:100%;box-sizing:border-box;font:700 16px var(--f-body);background:#141a2e;color:var(--ink);border:1px solid #2a3350;border-radius:6px;padding:10px 12px;text-transform:uppercase}
+.nm-in:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
+.nm-in.bad{border-color:var(--red)}
+@media (max-width:560px){.namerow{grid-template-columns:1fr}}
 #ttName{width:100%;box-sizing:border-box;font:700 16px var(--f-body);background:#141a2e;color:var(--ink);border:1px solid #2a3350;border-radius:6px;padding:10px 12px}
 #ttName:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
 #ttName.bad{border-color:var(--red)}

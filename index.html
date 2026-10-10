@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261011b">
+<link rel="stylesheet" href="css/style.css?v=20261011c">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -103,6 +103,12 @@
     <div class="sec" id="todSec" hidden><h3>TIME OF DAY</h3><div class="chips" id="todSel"></div></div>
     <div class="sec"><h3>GRAPHICS QUALITY <span id="qInfo" style="color:var(--mute);font-weight:400;letter-spacing:0"></span></h3><div class="chips" id="qSel"></div></div>
     <div class="sec"><h3>MUSIC <span id="musInfo" style="color:var(--mute);font-weight:400;letter-spacing:0"></span></h3><div class="chips" id="musSel"></div></div>
+    <!-- the driver: given name and surname (English capitals). The timing tower shows the three-letter code made from them,
+         the team radio the full surname -->
+    <div class="sec"><h3>DRIVER <span id="drvCode" style="color:var(--mute);font-weight:400;letter-spacing:0"></span></h3>
+      <div class="namerow"><label>GIVEN NAME<input id="drvGiven" class="nm-in" maxlength="20" autocomplete="given-name" autocapitalize="characters" spellcheck="false" placeholder="GILDONG"></label>
+        <label>SURNAME<input id="drvSur" class="nm-in" maxlength="20" autocomplete="family-name" autocapitalize="characters" spellcheck="false" placeholder="HONG"></label></div>
+      <div id="drvMsg" class="namemsg">영어 대문자로 이름과 성을 입력하세요. 순위표에는 이니셜(성 앞 세 글자, 예: HON), 팀 라디오에서는 성 전체로 불립니다.</div></div>
     <div class="sec"><h3>TEAM / LIVERY</h3><div class="teams" id="teamSel"></div></div>
     <div class="keyl"><span><kbd>W</kbd> Throttle</span><span><kbd>A</kbd><kbd>D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>M</kbd> Clutch</span><span><kbd>SPACE</kbd>+<kbd>S</kbd> Reverse</span><span><kbd>E</kbd> DRS</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Pit tyre S/M/H</span><span><kbd>F</kbd> MFD (<kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>)</span><span><kbd>C</kbd> Camera</span><span><kbd>L</kbd> Racing line</span><span><kbd>G</kbd> Ghost (time trial)</span><span><kbd>H</kbd> HUD</span><span><kbd>R</kbd> Recover</span><span><kbd>P</kbd> Pause</span><span><kbd>0</kbd> Replay</span><span><kbd>B</kbd> Music</span></div>
     <button class="btn ghost" id="introBtn">▶ CIRCUIT INTRO</button>
@@ -184,6 +190,6 @@
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261011b"></script>
+<script type="module" src="src/main.js?v=20261011c"></script>
 </body>
 </html>
