@@ -9,8 +9,8 @@
 // the words — band-limited hiss that flutters, crackles and clicks, now and then breaking up — and a squelch as it closes.
 // One call shows at a time: the next waits (urgent ones jump the queue; a low-priority one is dropped if the channel is
 // busy), and a call that waited too long is dropped.
-import {$,clamp} from './util.js?v=20261011e';
-import {RADIO_SFX} from './config.js?v=20261011e';
+import {$,clamp} from './util.js?v=20261011f';
+import {RADIO_SFX} from './config.js?v=20261011f';
 
 const VOICE_DIR='sounds/radio/';
 // the lines (id -> [who, text]): loaded before the game starts
@@ -31,7 +31,12 @@ const clips=new Map(); // id -> Promise<AudioBuffer | null>
 let have=new Set();const haveP=fetch(VOICE_DIR+'voices.json').then(r=>r.ok?r.json():[]).then(a=>{have=new Set(a);}).catch(()=>{});
 function clip(ac,id){if(!have.has(id))return Promise.resolve(null);
   if(!clips.has(id))clips.set(id,fetch(VOICE_DIR+id+'.mp3').then(r=>r.ok?r.arrayBuffer():null)
-    .then(b=>b?ac.decodeAudioData(b):null).catch(()=>null));return clips.get(id);}
+    .then(b=>b?ac.decodeAudioData(b):null).then(b=>b&&trimVoice(b)).catch(()=>null));return clips.get(id);}
+// a voice file without the silence the speech engine leaves before and after the words (so pieces of one sentence — the
+// words and a time read out — follow each other as one sentence would)
+function trimVoice(b){const d=b.getChannelData(0);let pk=0;for(let i=0;i<d.length;i++)pk=Math.max(pk,Math.abs(d[i]));
+  const th=pk*0.03,sr=b.sampleRate;let a=0,e=d.length-1;while(a<e&&Math.abs(d[a])<th)a++;while(e>a&&Math.abs(d[e])<th)e--;
+  a=Math.max(0,a-Math.round(sr*0.015));e=Math.min(d.length-1,e+Math.round(sr*0.04));return {buf:b,start:a/sr,duration:(e-a+1)/sr};}
 // all the lines, fetched in the background the first time the radio opens (so later calls start without a delay)
 let preloaded=false;
 function preload(ac){if(preloaded)return;preloaded=true;haveP.then(()=>{for(const id of have)clip(ac,id);});}
@@ -61,7 +66,7 @@ export function radioHush(){for(const s of voiceNow){try{s.stop();}catch(e){}}vo
 async function sayClips(ids,who,maxMs){ids=ids.filter(Boolean);const a=ctx();if(!a||isMuted()||!ids.length)return;const {ac,dest}=a;
   const bufs=await Promise.all(ids.map(id=>clip(ac,id)));if(bufs.some(b=>!b)||isMuted())return;
   const inp=voiceChain(ac,dest,who),t0=ac.currentTime+0.03;let t=t0;voiceNow=[];
-  for(const b of bufs){const s=ac.createBufferSource();s.buffer=b;s.connect(inp);s.start(t);voiceNow.push(s);t+=b.duration+0.05;}
+  for(const b of bufs){const s=ac.createBufferSource();s.buffer=b.buf;s.connect(inp);s.start(t,b.start,b.duration);voiceNow.push(s);t+=b.duration+(bufs.length>1?0.02:0);}
   if(who==='driver')engineBed(ac,dest,t0,t);
   await wait(Math.min(maxMs,(t-ac.currentTime)*1000));}
 
@@ -85,20 +90,24 @@ function resolve(x){
       else if(/[a-z]/i.test(parts[i]))voice.push(id+'_'+'abcdefgh'[n++]);else n++;}
     return [l[0]==='d'?'driver':'team',text,voice];}
   return x;}
-// lines: a list of lines (see resolve); opt: {name, num, color, team, prio} — prio 2 urgent (jumps the queue), 1 normal,
-// 0 low (only when the channel is free)
+// lines: a list of lines (see resolve); opt: {name, num, color, team, prio} — prio 2 urgent, 1 normal.
+// The radio is not chatter: a normal call comes at most once every GAP; what comes up while a call has just opened goes
+// into that same call (two lines at most); anything else meanwhile is let go. Only urgent calls (flags, the Safety Car,
+// penalties, the box) wait for the channel, one at a time.
+const GAP=15000;let lastEnd=-1e9;
 export function radioSay(lines,opt={}){
   lines=(lines||[]).map(resolve).filter(Boolean);if(!lines.length)return;
-  const item={lines,name:opt.name||'',num:opt.num??'',color:opt.color||'#fff',team:opt.team||'',prio:opt.prio??1,at:performance.now()};
-  if(cur){if(item.prio===0)return;
-    if(item.prio>=2){const i=queue.findIndex(q=>q.prio<2);queue.splice(i<0?queue.length:i,0,item);}else queue.push(item);
-    if(queue.length>3)queue.splice(3);return;}
+  const now=performance.now(),prio=opt.prio??1;
+  const item={lines:lines.slice(0,2),name:opt.name||'',num:opt.num??'',color:opt.color||'#fff',team:opt.team||'',prio,at:now};
+  if(cur){if(!cur.done&&cur.lines.length<2&&now-cur.at<2500){cur.lines.push(...lines.slice(0,2-cur.lines.length));return;}
+    if(prio>=2&&!queue.length)queue.push(item);return;}
+  if(prio<2&&now-lastEnd<GAP)return;
   play(item);}
 // is anything on the radio now (or waiting)?
 export const radioBusy=()=>!!cur||queue.length>0;
 
 // session over / back to the menu: close the channel and forget what was waiting
-export function radioClear(){gen++;queue=[];timers.forEach(clearTimeout);timers=[];cur=null;radioHush();stopHiss();wave(false);
+export function radioClear(){gen++;queue=[];lastEnd=-1e9;timers.forEach(clearTimeout);timers=[];cur=null;radioHush();stopHiss();wave(false);
   const r=$('radio');if(r)r.className='';}
 
 // how long a line stays up before the next one: reading time, at least ~2 s
@@ -118,10 +127,10 @@ async function play(item){const g=++gen;cur=item;timers.forEach(clearTimeout);ti
     const t0=performance.now();if(vo)await sayClips(Array.isArray(vo)?vo:[vo],who,lineMs(txt)+4000);if(g!==gen)return;
     // after the voice: what is left of the reading time (a short pause at least)
     await wait(Math.max(vo?300:0,lineMs(txt)-(performance.now()-t0)));}
-  if(g!==gen)return;
+  if(g!==gen)return;item.done=true;
   beepClose();stopHiss();wave(false);r.classList.add('off');
   await wait(380);if(g!==gen)return;
-  r.className='';cur=null;next();}
+  r.className='';cur=null;lastEnd=performance.now();next();}
 
 // the waveform band: bars of random height ~12 times a second while the channel is open, flat when it closes
 function wave(on){const w=$('rdWave');if(!w)return;

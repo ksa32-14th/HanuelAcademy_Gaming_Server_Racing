@@ -3,7 +3,7 @@
 const txt = document.getElementById('loadTxt');
 await new Promise(r => { requestAnimationFrame(() => setTimeout(r, 0)); setTimeout(r, 80); });
 try {
-  await import('./game.js?v=20261011e');
+  await import('./game.js?v=20261011f');
 } catch (e) {
   console.error(e);
   if (txt) { txt.textContent = 'Failed to start: ' + (e && e.message || e); txt.style.color = '#ff6a5a'; }
