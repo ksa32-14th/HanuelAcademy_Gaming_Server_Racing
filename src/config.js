@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261010z';
-import {clamp} from './util.js?v=20261010z';
+import {TRACKS} from './data/tracks.js?v=20261011b';
+import {clamp} from './util.js?v=20261011b';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -68,13 +68,19 @@ export const RADIO_SFX='sounds/team-radio.mp3';
 export const GEARS=[75,115,155,195,235,270,305,360];
 export const FUEL_PER_LAP=1.72*TRACK_LEN/5063;
 
+// the 2026 Formula 1 grid without Audi: ten teams, twenty cars. In 2025 constructors' order (Cadillac, new, last) — the
+// AI's pace follows this order (setupSession). c: the car's main livery colour, a: its second colour; ui: the team colour
+// of the TV graphics (timing tower, minimap, radio, results) — readable on a dark panel where the livery is navy or black.
+// d: the two race drivers [code, name, car number]; the player takes the first seat of the chosen team (and its number).
 export const TEAMS=[
- {name:'Spica Motors Racing Team',c:0xd90008,a:0xf6f6f6},{name:'Felis Racing Team',c:0x12379e,a:0xffd400},
- {name:'Marfic Racing Team',c:0xb9c0c9,a:0x35e0be},{name:'Papaya Motors Racing Team',c:0xff7a00,a:0x1e88ff},
- {name:'Emeralian Racing Team',c:0x0b7a4b,a:0xc3ed3a},{name:'Alphecca Motors Racing Team',c:0x8c0f22,a:0xffd400},
- {name:'Capella Racing Team',c:0xff4fa3,a:0x0e2456},{name:'Obsidman Racing Team',c:0x1b1d21,a:0xe8322a},
- {name:'Forza Motors Racing Team',c:0x7b3fe4,a:0xffd23f},{name:'Vega Racing Team',c:0xffcf00,a:0x141414}];
-export const DRIVERS=[['ARN','A. Arnaud'],['BEL','B. Bellamy'],['CRS','C. Carsten'],['DMN','D. Damon'],['EVR','E. Everly'],['FAL','F. Falk'],
- ['GRT','G. Grant'],['HOL','H. Holm'],['IVN','I. Ivanov'],['JNS','J. Jansen'],['KOV','K. Kovac'],['LRS','L. Lars'],['MRT','M. Moretti'],
- ['NKS','N. Nakasone'],['OKA','O. Okafor'],['PRZ','P. Perez-Ruiz'],['QIN','Q. Qin'],['RYD','R. Ryder'],['STN','S. Stone'],['TAV','T. Tavares']];
+ {name:'McLaren F1 Team',c:0xff8000,a:0x1c1c20,ui:0xff8000,d:[['NOR','L. Norris',1],['PIA','O. Piastri',81]]},
+ {name:'Mercedes-AMG F1 Team',c:0xc4c9cf,a:0x00d2be,ui:0x27f4d2,d:[['RUS','G. Russell',63],['ANT','K. Antonelli',12]]},
+ {name:'Red Bull Racing',c:0x1e2a58,a:0xffc906,ui:0x3671c6,d:[['VER','M. Verstappen',3],['HAD','I. Hadjar',6]]},
+ {name:'Scuderia Ferrari',c:0xdc0000,a:0xf5f5f5,ui:0xe8002d,d:[['LEC','C. Leclerc',16],['HAM','L. Hamilton',44]]},
+ {name:'Williams Racing',c:0x0b2a6f,a:0x64c4ff,ui:0x64c4ff,d:[['ALB','A. Albon',23],['SAI','C. Sainz',55]]},
+ {name:'Racing Bulls',c:0xf2f4f8,a:0x1d3fcf,ui:0x6692ff,d:[['LAW','L. Lawson',30],['LIN','A. Lindblad',41]]},
+ {name:'Aston Martin F1 Team',c:0x00594f,a:0xcedc00,ui:0x229971,d:[['ALO','F. Alonso',14],['STR','L. Stroll',18]]},
+ {name:'Haas F1 Team',c:0xe9e9e9,a:0xd0021b,ui:0xb6babd,d:[['OCO','E. Ocon',31],['BEA','O. Bearman',87]]},
+ {name:'Alpine F1 Team',c:0x0067b9,a:0xff87bc,ui:0x0093cc,d:[['GAS','P. Gasly',10],['COL','F. Colapinto',43]]},
+ {name:'Cadillac F1 Team',c:0x161616,a:0xf2f2f2,ui:0xd4d4d4,d:[['PER','S. Perez',11],['BOT','V. Bottas',77]]}];
 
