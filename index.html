@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261010x">
+<link rel="stylesheet" href="css/style.css?v=20261010y">
 <link rel="modulepreload" href="vendor/three/build/three.module.min.js">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
@@ -26,9 +26,11 @@
   <!-- broadcast-style FASTEST SECTOR / FASTEST LAP: the purple title bar builds in, opens to the time + the driver,
        folds back and breaks up -->
   <div id="secB"><div class="sb-l"><b id="sbT">SECTOR 1</b><i id="sbTime"></i></div><div class="sb-r" id="sbName"></div></div>
-  <!-- broadcast-style team radio (right): driver in the team colour, level meter, transcript (team white, driver yellow) -->
-  <div id="radio" aria-live="polite"><div class="rd-hd"><i class="rd-tc"></i><div class="rd-who"><b id="rdName"></b><small id="rdTeam"></small></div>
-    <span class="rd-tag">TEAM RADIO</span><span class="rd-lvl"><i></i><i></i><i></i><i></i><i></i></span></div><div id="rdBody"></div></div>
+  <!-- broadcast-style team radio (right): SURNAME (team colour) / RADIO, the car number over a waveform band and the team
+       badge, then the transcript — the driver's words right-aligned in the team colour, the team's left-aligned in white -->
+  <div id="radio" aria-live="polite"><div class="rd-id"><b id="rdName"></b><span>RADIO</span></div>
+    <div class="rd-mid"><span class="rd-wave" id="rdWave"></span><b id="rdNum"></b><i class="rd-logo" id="rdLogo"></i></div>
+    <div id="rdBody"></div></div>
   <!-- broadcast-style lap box: place · driver · tyre / running time (delta at the splits) · the record / sectors -->
   <div id="lapbox" style="display:none">
     <div class="lb-hd"><span id="lbPos">—</span><b id="lbName"></b><i id="lbTy">S</i></div>
@@ -182,6 +184,6 @@
   </div>
 </div>
 
-<script type="module" src="src/main.js?v=20261010x"></script>
+<script type="module" src="src/main.js?v=20261010y"></script>
 </body>
 </html>

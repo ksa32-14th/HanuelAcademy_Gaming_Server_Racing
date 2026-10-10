@@ -93,30 +93,28 @@ body.music-on #timing.tt{top:64px}
 #timing.tt .lbl{letter-spacing:.06em;white-space:nowrap}
 #timing.tt .nott{display:none}
 #timing.tt .kv{grid-column:1/-1;border-top:1px solid var(--line);padding-top:5px}
-/* team radio (right, under the timing panel), broadcast style: the driver in the team colour, a level meter that moves
-   while the channel is open, the transcript under it — the team's words in white, the driver's in yellow */
-#radio{position:absolute;right:16px;top:calc(50% - 30px);width:300px;background:rgba(8,10,16,.93);border-radius:6px;overflow:hidden;
-  box-shadow:0 8px 26px rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.1);opacity:0;transform:translateX(24px);
-  transition:opacity .22s,transform .22s;--tc:#fff}
+/* team radio (right), as the broadcast's radio graphic: a dark panel; SURNAME in the team colour over RADIO in white,
+   top right; the car number large in the team colour over a waveform band that moves while the channel is open, the
+   team badge at the right end; then the transcript in capitals — the driver's words right-aligned in the team colour,
+   the team's left-aligned in white */
+#radio{position:absolute;right:16px;top:calc(50% - 60px);width:280px;background:linear-gradient(180deg,#2a2a2f,#1e1e22);border-radius:2px;overflow:hidden;
+  box-shadow:0 8px 26px rgba(0,0,0,.55);opacity:0;transform:translateX(24px);transition:opacity .22s,transform .22s;--tc:#fff;padding:10px 0 12px}
 #radio.on{opacity:1;transform:none}
 #radio.off{opacity:0;transform:translateX(24px)}
-#radio .rd-hd{display:flex;align-items:center;gap:9px;padding:7px 10px 7px 0;border-bottom:1px solid rgba(255,255,255,.1)}
-#radio .rd-tc{width:6px;align-self:stretch;background:var(--tc);flex:none}
-#radio .rd-who{display:flex;flex-direction:column;min-width:0;flex:1}
-#radio .rd-who b{font:900 15px var(--f-disp);letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#radio .rd-who small{font:700 9px var(--f-disp);letter-spacing:.1em;color:var(--mute);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#radio .rd-tag{font:800 9px var(--f-disp);letter-spacing:.14em;color:var(--mute);white-space:nowrap}
-#radio .rd-lvl{display:flex;align-items:center;gap:2px;height:18px}
-#radio .rd-lvl i{width:3px;height:30%;border-radius:1px;background:#fff;animation:rdLvl .5s ease-in-out infinite alternate}
-#radio.drv .rd-lvl i{background:var(--yellow)}
-#radio .rd-lvl i:nth-child(2){animation-delay:-.2s;animation-duration:.42s} #radio .rd-lvl i:nth-child(3){animation-delay:-.35s;animation-duration:.55s}
-#radio .rd-lvl i:nth-child(4){animation-delay:-.1s;animation-duration:.38s} #radio .rd-lvl i:nth-child(5){animation-delay:-.27s;animation-duration:.6s}
-@keyframes rdLvl{from{height:20%}to{height:100%}}
-@media (prefers-reduced-motion:reduce){#radio .rd-lvl i{animation:none;height:60%}}
-#rdBody{padding:7px 12px 9px 16px;display:grid;gap:5px}
-#rdBody p{margin:0;font:600 13px/1.4 var(--f-body);color:#fff;animation:rdLine .25s ease-out}
-#rdBody p::before{content:'“'} #rdBody p::after{content:'”'}
-#rdBody p.rd-d{color:var(--yellow)}
+#radio .rd-id{display:flex;flex-direction:column;align-items:flex-end;padding:0 14px;line-height:1}
+#radio .rd-id b{font:900 25px var(--f-disp);color:var(--tc);letter-spacing:.01em;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#radio .rd-id span{font:900 21px var(--f-disp);color:#fff;margin-top:1px}
+#radio .rd-mid{position:relative;height:44px;margin-top:2px}
+#radio .rd-wave{position:absolute;left:0;right:46px;bottom:4px;height:22px;display:flex;align-items:center;gap:1px}
+#radio .rd-wave i{flex:1;height:18%;background:var(--tc);opacity:.42}
+#radio #rdNum{position:absolute;left:12px;bottom:0;font:900 42px/1 var(--f-disp);color:var(--tc);text-shadow:0 2px 6px rgba(0,0,0,.45)}
+#radio .rd-logo{position:absolute;right:14px;bottom:4px;width:24px;height:28px;background:var(--tc);color:#111;font:900 13px/26px var(--f-disp);
+  text-align:center;font-style:normal;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
+#rdBody{padding:10px 14px 0;display:grid;gap:6px}
+#rdBody p{margin:0;font:400 13px/1.25 var(--f-body);color:#fff;text-transform:uppercase;letter-spacing:.02em;animation:rdLine .25s ease-out}
+#rdBody p::before{content:'"'} #rdBody p::after{content:'"'}
+#rdBody p.rd-d{color:var(--tc);text-align:right;padding-left:22px}
+#rdBody p.rd-t{padding-right:22px}
 @keyframes rdLine{from{opacity:0;transform:translateY(4px)}}
 @media (max-width:560px){#radio{top:auto;bottom:160px;width:calc(100% - 32px)}}
 /* dash */

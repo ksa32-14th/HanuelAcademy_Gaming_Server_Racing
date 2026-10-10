@@ -3,8 +3,8 @@
 // board are a REFERENCE, not a copy: the line moves only part of the way towards theirs (and keeps a margin from the
 // track limits), and the corner speeds part of the way towards what they carried. Everything is rebuilt whenever the
 // board changes, so the line, its braking colours and the AI keep improving as people set faster laps.
-import {MU,RHO,CLA,CDA,POWER,G,BRK,brakeK,VMAX,gripV,TRACTION} from './config.js?v=20261010x';
-import {N,DS,X,Z,TX,TZ,HWa,TLL,TLR,RL,VP} from './track.js?v=20261010x';
+import {MU,RHO,CLA,CDA,POWER,G,BRK,brakeK,VMAX,gripV,TRACTION} from './config.js?v=20261010y';
+import {N,DS,X,Z,TX,TZ,HWa,TLL,TLR,RL,VP} from './track.js?v=20261010y';
 
 export const RL0=RL.slice(),VP0=VP.slice(); // the theoretical line and its profile, as track.js built them
 const LINE_W=0.5,SPEED_W=0.5,EDGE_M=0.8;    // how far towards the drivers' line / corner speeds, and the margin inside the edge

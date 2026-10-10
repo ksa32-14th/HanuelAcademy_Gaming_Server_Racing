@@ -1,6 +1,6 @@
 // Circuit selection, regulation / vehicle constants, teams and drivers.
-import {TRACKS} from './data/tracks.js?v=20261010x';
-import {clamp} from './util.js?v=20261010x';
+import {TRACKS} from './data/tracks.js?v=20261010y';
+import {clamp} from './util.js?v=20261010y';
 export let TRACK_ID='singapore';
 try{const h=location.hash.slice(1);const o=JSON.parse(localStorage.getItem('hrc-opts')||'{}');if(TRACKS[h])TRACK_ID=h;else if(TRACKS[o.optTrack])TRACK_ID=o.optTrack;}catch(e){}
 export const TR=TRACKS[TRACK_ID];
@@ -60,9 +60,9 @@ export const POINTS=[25,18,15,12,10,8,6,4,2,1];
 // firebasedatabase.app'). Empty = the board is kept in each browser only. Setup: README → Time Trial.
 export const LB_URL='https://hrc-racing-leader-board-default-rtdb.asia-southeast1.firebasedatabase.app';
 export const DRS_GAP=3.0, DRS_FROM_LAP=1; // house rule: DRS within 3 s, available from lap 1
-// team radio sound: '' = the beep synthesised in radio.js; or the path of an audio file of your own (one you have the
-// rights to), e.g. 'sounds/team-radio.mp3', played instead each time the radio opens
-export const RADIO_SFX='';
+// team radio sound: the audio file played each time the radio opens (one you have the rights to use). While the file
+// isn't there (or RADIO_SFX is ''), radio.js plays a synthesised beep instead
+export const RADIO_SFX='sounds/team-radio.mp3';
 // speed of each gear at 18 000 rpm, the engine's maximum (km/h). The gearbox shifts on the engine revs (see updateGear
 // in game.js): up at 17 250 rpm, down when the revs fall below ~11 400. 1st and 2nd are short so the car is out of them quickly
 export const GEARS=[75,115,155,195,235,270,305,360];
