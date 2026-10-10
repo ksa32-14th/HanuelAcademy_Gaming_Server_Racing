@@ -6,23 +6,23 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010v';
-import {perf} from './perf.js?v=20261010v';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261010v';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010v';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010v';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261010v';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261010v';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261010w';
+import {perf} from './perf.js?v=20261010w';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261010w';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS,DRIVERS} from './config.js?v=20261010w';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261010w';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261010w';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261010w';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010v';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010v';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010v';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010v';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261010w';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261010w';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261010w';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261010w';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010v'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010v'):import('./data/osm-songdo.js?v=20261010v')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261010w'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261010w'):import('./data/osm-songdo.js?v=20261010w')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -2928,13 +2928,16 @@ function drawMinimap(dt){mmAcc+=dt;if(mmAcc<1/15)return;mmAcc=0;
 
 // gearbox: the engine revs follow the road speed in the selected gear, and the gear is changed on the REVS — up at
 // RPM_UP, down when they drop below RPM_DOWN (with the lower gear landing safely under the limit). A short lock-out
-// after each change stops it hunting between two gears.
-const RPM_IDLE=4000,RPM_UP=11500,RPM_DOWN=7600;
-const engRpm=(kmh,g)=>12000*kmh/GEARS[g];
+// after each change stops it hunting between two gears. The revs only drive the cluster, the shift points and the
+// sound — the drive force does not depend on them (GEARS gives each gear's speed at RPM_MAX).
+const RPM_MAX=18000,RPM_LIM=18300,RPM_IDLE=6000,RPM_UP=17250,RPM_DOWN=11400;
+const engRpm=(kmh,g)=>RPM_MAX*kmh/GEARS[g];
+const freeRpm=thr=>RPM_IDLE+thr*11250; // clutch in / on the grid: the engine revs freely
+const rpmK=rpm=>(rpm-RPM_IDLE)/(RPM_LIM-RPM_IDLE); // 0 at idle … 1 at the limiter (rev gauge and engine sound)
 function updateGear(c,dt){let g=c.gear||0;c.shiftT=Math.max(0,(c.shiftT||0)-dt);const kmh=c.v*3.6;
   if(c.shiftT<=0){
     if(g<7&&engRpm(kmh,g)>=RPM_UP){g++;c.shiftT=0.15;}
-    else if(g>0&&engRpm(kmh,g)<RPM_DOWN&&engRpm(kmh,g-1)<RPM_UP-500){g--;c.shiftT=0.15;}}
+    else if(g>0&&engRpm(kmh,g)<RPM_DOWN&&engRpm(kmh,g-1)<RPM_UP-750){g--;c.shiftT=0.15;}}
   c.gear=g;}
 const gearOf=c=>c.gear||0;
 // HUD writes are guarded: touching the DOM every frame with an unchanged value still dirties style/layout next to a WebGL canvas
@@ -2943,10 +2946,10 @@ function setTxt(id,v){if(_hc[id]!==v){_hc[id]=v;$(id).textContent=v;}}
 function setW(id,p){const v=Math.round(p);if(_hc['w'+id]!==v){_hc['w'+id]=v;$(id).style.width=v+'%';}}
 function updateHud(){
   const c=player,kmh=c.v*3.6,g=gearOf(c);
-  const rev=reversing(c),rpm=rev?revRpm(c):c.held?4000+c.throttle*7500:rpmOf(c);
+  const rev=reversing(c),rpm=rev?revRpm(c):c.held?freeRpm(c.throttle):rpmOf(c);
   setTxt('spd',rev?Math.round(c.revV*3.6):Math.round(kmh));setTxt('gear',rev?'R':c.v<0.3&&c.held?'N':(g+1));setTxt('rpmTxt',Math.round(rpm/10)*10);
   // the arcs are pathLength=100, so the dash length is a percentage; bars are 60 px wide
-  const rp=Math.round(clamp((rpm-4000)/8200,0,1)*100);if(_hc.rp!==rp){_hc.rp=rp;$('rpmArc').style.strokeDasharray=rp+' 100';}
+  const rp=Math.round(clamp(rpmK(rpm),0,1)*100);if(_hc.rp!==rp){_hc.rp=rp;$('rpmArc').style.strokeDasharray=rp+' 100';}
   // pedal bars beside the gear (brake left, throttle right), 76 px tall, filling up from y=112
   const th=Math.round(c.throttle*76),bh=Math.round(c.brake*76);
   if(_hc.th!==th){_hc.th=th;const e=$('thr');e.setAttribute('height',th);e.setAttribute('y',112-th);}
@@ -3113,7 +3116,7 @@ function engineVoice(ac,dest,buf,vol,cyc){
   let cutUntil=0,blipUntil=0;
   return{out,vol,
     cut(t){cutUntil=t+0.05;},blip(t){blipUntil=t+0.1;},
-    set(rpm,thr,t,v){const ar=1500+clamp((rpm-4000)/8200,0,1.05)*7800+(t<blipUntil?900:0),rate=ar/ENG_R0;
+    set(rpm,thr,t,v){const ar=1500+clamp(rpmK(rpm),0,1.05)*7800+(t<blipUntil?900:0),rate=ar/ENG_R0;
       s1.playbackRate.setTargetAtTime(rate,t,.015);s2.playbackRate.setTargetAtTime(rate*1.003,t,.015);
       const th=t<blipUntil?1:thr;
       // on throttle the top opens right up; off it the note goes dull and hollow
@@ -3163,7 +3166,7 @@ function workletVoice(ac,dest,nbuf,vol){
   const ns=ac.createBufferSource();ns.buffer=nbuf;ns.loop=true;const ig=G(0),ibp=F('bandpass',500,1.4);ns.connect(ibp).connect(ig).connect(out);ns.start(0,Math.random()*1.5);
   const rpmP=node.parameters.get('rpm'),loadP=node.parameters.get('load');let cutUntil=0,blipUntil=0;
   return{out,vol,node,cut(t){cutUntil=t+.05;},blip(t){blipUntil=t+.1;},
-    set(rpm,thr,t,v){const ar=1500+clamp((rpm-4000)/8200,0,1.05)*7800+(t<blipUntil?900:0),th=t<blipUntil?1:thr;
+    set(rpm,thr,t,v){const ar=1500+clamp(rpmK(rpm),0,1.05)*7800+(t<blipUntil?900:0),th=t<blipUntil?1:thr;
       rpmP.setTargetAtTime(ar,t,.012);loadP.setTargetAtTime(t<cutUntil?.04:th,t,t<cutUntil?.004:.025);
       lp.frequency.setTargetAtTime(th>.05?1300+ar*.5*(.35+.65*th):600+ar*.05,t,.04);
       pre.gain.setTargetAtTime(.14+.1*th,t,.03);ibp.frequency.setTargetAtTime(ar/10,t,.05);ig.gain.setTargetAtTime(th*clamp(ar/9000,0,1)*.08,t,.05);
@@ -3185,29 +3188,29 @@ function pop(t){const ac=au.ac,s=ac.createBufferSource();s.buffer=au.buf;const f
 // the string of pops down the exhaust after a lift: unburnt fuel lighting off in the pipes
 function crackle(t,rpm){const n=2+Math.floor(Math.random()*4);
   for(let k=0;k<n;k++)pop(t+0.04+k*rand(0.03,0.11));}
-// engine revs: road speed × gear. Pulling away in 1st the clutch slips and holds the revs at ~8 000 until the road
+// engine revs: road speed × gear. Pulling away in 1st the clutch slips and holds the revs at ~12 000 until the road
 // speed catches up (~50 km/h), and wheelspin flares them a little — never up to the shift point, so the rev counter
 // never sits high while the gearbox refuses to change
 // The revs rise in a straight line with the road speed through each gear; on the throttle they never sit below
-// ~8 000 (the moment it goes down they are there — the clutch slips until the road speed catches up), and wheelspin
-// adds a few hundred on top
-function rpmOf(c){if(c.clutch)return RPM_IDLE+c.throttle*7500; // clutch in: the engine revs freely
-  const kmh=c.v*3.6,g=gearOf(c);let r=clamp(engRpm(kmh,g),RPM_IDLE,12200);
-  r=Math.max(r,RPM_IDLE+c.throttle*4000);
-  if(c.spin>0)r=Math.min(12200,r+c.spin*800);
+// ~12 000 (the moment it goes down they are there — the clutch slips until the road speed catches up), and wheelspin
+// adds several hundred on top
+function rpmOf(c){if(c.clutch)return freeRpm(c.throttle); // clutch in: the engine revs freely
+  const kmh=c.v*3.6,g=gearOf(c);let r=clamp(engRpm(kmh,g),RPM_IDLE,RPM_LIM);
+  r=Math.max(r,RPM_IDLE+c.throttle*6000);
+  if(c.spin>0)r=Math.min(RPM_LIM,r+c.spin*1200);
   return r;}
 function audioUpdate(rpm,g){if(!au||replay)return;const t=au.ac.currentTime,c=player; // (the replay has its own sound)
   au.master.gain.setTargetAtTime(paused||muted?0:.55,t,.05);
   if(g>lastGear&&c.throttle>.3)au.me.cut(t);else if(g<lastGear){au.me.blip(t);crackle(t,rpm);}lastGear=g;
   // slamming the throttle shut at high revs: the exhaust crackles on the overrun
-  if(lastThr>0.55&&c.throttle<0.12&&rpm>4200)crackle(t,rpm);lastThr=c.throttle;
+  if(lastThr>0.55&&c.throttle<0.12&&rpm>6300)crackle(t,rpm);lastThr=c.throttle;
   // reversing: the same engine pulling away on a part throttle (the player's throttle is off meanwhile)
   au.me.set(rpm,reversing(c)?REV_THR:c.throttle,t);
-  if(c.throttle<.05&&rpm>5200&&c.v>15&&Math.random()<.05)pop(t);
+  if(c.throttle<.05&&rpm>7800&&c.v>15&&Math.random()<.05)pop(t);
   // nearest rival: distance attenuation + doppler
   let o=null,bd=150;for(const x of cars){if(x===c||x.parked)continue;const d=Math.hypot(x.x-c.x,x.z-c.z);if(d<bd){bd=d;o=x;}}
   if(o){const dx=o.x-c.x,dz=o.z-c.z,d=Math.max(bd,1),vr=((Math.cos(o.yaw)*o.v-Math.cos(c.yaw)*c.v)*dx+(Math.sin(o.yaw)*o.v-Math.sin(c.yaw)*c.v)*dz)/d;
-    au.opp.set(rpmOf(o)*clamp(343/(343+vr),0.7,1.4),o.throttle,t,clamp(9/d,0,1)*0.28);}else au.opp.set(4000,0,t,0);
+    au.opp.set(rpmOf(o)*clamp(343/(343+vr),0.7,1.4),o.throttle,t,clamp(9/d,0,1)*0.28);}else au.opp.set(RPM_IDLE,0,t,0);
   au.sq.gain.setTargetAtTime(Math.min(.25,(c.slip+(c.spin||0)*.5)*.6)*(c.v>3?1:0),t,.05);
   au.wn.gain.setTargetAtTime(Math.min(.3,(c.v/85)**2*.3),t,.1);
   // against the wall: the scrape, louder and higher-pitched with speed; dies away the moment the car is off it
@@ -3234,7 +3237,7 @@ function scrapeVoice(ac,master,buf){
 // reversing (SPACE + S, or S in the pit lane): it sounds like the car pulling away in 1st on a part throttle — the same
 // exhaust voice, revs and load as going forwards (the reverse gear is about as short as 1st), with no extra gear whine
 const REV_THR=0.45,reversing=c=>c.revT!=null&&simTime-c.revT<0.1;
-const revRpm=c=>Math.max(engRpm(c.revV*3.6,0),RPM_IDLE+REV_THR*4000);
+const revRpm=c=>Math.max(engRpm(c.revV*3.6,0),RPM_IDLE+REV_THR*6000);
 // riding a kerb: the "드르르르르" of the tyres hammering over its ridges — not a tone but a fast train of separate hits.
 // Each hit is a burst of noise (the rattle) over a low thump (the body), switched on and off by a square wave at the
 // ridge rate: speed / ridge spacing, kept in the 12–38 hits a second the ear hears as a rattle rather than a buzz.
@@ -3466,7 +3469,7 @@ function recFrame(){if(!recBuf||recBuf.length!==REC_N*cars.length*REC_F)recReset
   const o=recHead*cars.length*REC_F;
   cars.forEach((c,k)=>{const p=o+k*REC_F;recBuf[p]=c.x;recBuf[p+1]=c.z;recBuf[p+2]=c.yaw;recBuf[p+3]=c.v;
     recBuf[p+4]=c.delta||0;recBuf[p+5]=c.brake||0;recBuf[p+6]=c.drsOpen?1:0;recBuf[p+7]=c.pitStop>0?1:0;
-    recBuf[p+8]=c.parked?0:c.held?4000+c.throttle*7500:rpmOf(c);recBuf[p+9]=c.throttle||0;});
+    recBuf[p+8]=c.parked?0:c.held?freeRpm(c.throttle):rpmOf(c);recBuf[p+9]=c.throttle||0;});
   recHead=(recHead+1)%REC_N;recLen=Math.min(REC_N,recLen+1);}
 // broadcast camera positions: every ~200 m, on the outside of the bend, 2 m behind the fence, 8 m up
 const TVC=[];{const step=Math.round(200/DS);
@@ -3499,7 +3502,7 @@ function replayAudio(C){if(!au)return;const t=au.ac.currentTime;
     return {rpm:r.rpm*clamp(343/(343+vr),0.7,1.4),thr:r.thr,vol:clamp(14/d,0,1),d};};
   const me=hear(player);if(me)au.me.set(me.rpm,me.thr,t,me.vol*0.42);
   let o=null;for(const c of cars){if(c===player||c.parked)continue;const h=hear(c);if(h&&(!o||h.d<o.d))o=h;}
-  if(o)au.opp.set(o.rpm,o.thr,t,o.vol*0.3);else au.opp.set(4000,0,t,0);
+  if(o)au.opp.set(o.rpm,o.thr,t,o.vol*0.3);else au.opp.set(RPM_IDLE,0,t,0);
   for(const g of [au.sq.gain,au.wn.gain,au.scrape.g.gain,au.kerb.g.gain])g.setTargetAtTime(0,t,.05);}
 function replayFrame(dt){
   const R=replay;R.t+=dt;const dur=(R.n-1)/REC_HZ;if(R.t>=dur){endReplay();return;}
