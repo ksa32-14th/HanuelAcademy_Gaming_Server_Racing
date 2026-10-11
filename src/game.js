@@ -2013,15 +2013,15 @@ function walls(c){
   if(!c.onWall){const vn=c.v*into;if(vn>1)jolt(c,w.nx,w.nz,c.x+fx*HX*0.8-w.nx*HZ,c.z+fz*HX*0.8-w.nz*HZ,vn);
     // time trial: any touch of the barrier deletes the lap
     if(session==='tt'&&c.isPlayer)ttInvalidate('WALL CONTACT');
-    // the barrier breaks a wing (harder the faster the car goes INTO it); a big shunt (~70 km/h square on, i.e.
-    // 200 km/h at 20°) leaves debris on the track — that brings out the Safety Car (with a yellow just before it)
+    // the barrier breaks a wing (from ~36 km/h INTO it, harder the faster); a big shunt (~90 km/h square on, i.e.
+    // 260 km/h at 20°) leaves debris on the track — that brings out the Safety Car (with a yellow just before it)
     const hz=hitZone(c,w.px,w.pz),zone=into>0.45&&hz[0]==='F'?'F':hz[0]==='R'?'R':'S';
-    if(vn>7&&phase==='race'&&!c.dnf){hurt(c,(vn-7)*0.03,zone,hz[1]);
-      // a heavy impact (~70 km/h square on, i.e. 200 km/h at 20°) or a car wrecked by it ends the race: retire() brings
+    if(vn>10&&phase==='race'&&!c.dnf){hurt(c,(vn-10)*0.018,zone,hz[1]);
+      // a heavy impact (~90 km/h square on, i.e. 260 km/h at 20°) or a car wrecked by it ends the race: retire() brings
       // out the Safety Car (or the VSC for a car stopped off the road)
-      if(vn>=19||c.damage>=1)retire(c,'HEAVY IMPACT',vn);
+      if(vn>=25||c.damage>=1)retire(c,'HEAVY IMPACT',vn);
       else if(c.isPlayer&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT · DAMAGE '+Math.round(c.damage*100)+'%');radioDamage(c,true);}}
-    else if(vn>12&&!c.dnf)hurt(c,(vn-12)*0.02,zone,hz[1]);}
+    else if(vn>14&&!c.dnf)hurt(c,(vn-14)*0.012,zone,hz[1]);}
   c.onWall=true;
   // scraping the barrier costs speed: a brush barely hurts, but the longer the car stays against it
   // the harder it drags (bodywork, then tyre, biting into the wall)
@@ -2054,15 +2054,16 @@ function collide(){
     contactPush(A,h.nx,h.nz,dA);contactPush(B,h.nx,h.nz,-dB);
     const hitter=sa>=0.5?A:B;
     jolt(A,-h.nx,-h.nz,h.px,h.pz,closing);jolt(B,h.nx,h.nz,h.px,h.pz,closing);
-    if(hitter&&closing>13){const am=(closing-13)*0.012,vic=hitter===A?B:A,zh=hitZone(hitter,h.px,h.pz),zv=hitZone(vic,h.px,h.pz);
+    // (a wing breaks from ~58 km/h closing)
+    if(hitter&&closing>16){const am=(closing-16)*0.008,vic=hitter===A?B:A,zh=hitZone(hitter,h.px,h.pz),zv=hitZone(vic,h.px,h.pz);
       hurt(hitter,am,zh[0],zh[1]);   // mostly the front wing
       hurt(vic,am*0.5,zv[0],zv[1]);} // the car that was hit: a front wing (a hit from behind does no damage)
-    // (a big shunt — ~110 km/h closing — retires the car that caused it, and harder still the one it hit too; retire()
+    // (a big shunt — ~140 km/h closing — retires the car that caused it, and harder still the one it hit too; retire()
     // calls the SC / VSC. Lighter contact breaks wings: a nudge at the start or a misjudged pass must not end the race)
-    if(phase==='race'&&closing>30&&!A.pitSide&&!B.pitSide){const vic=hitter===A?B:A;
-      if(!hitter.dnf)retire(hitter,'COLLISION',closing);if(closing>38&&!vic.dnf)retire(vic,'COLLISION',closing);}
-    if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT'+(closing>10?' · AERO DAMAGE':''));
-      if(closing>10)radioDamage(player);}}
+    if(phase==='race'&&closing>38&&!A.pitSide&&!B.pitSide){const vic=hitter===A?B:A;
+      if(!hitter.dnf)retire(hitter,'COLLISION',closing);if(closing>46&&!vic.dnf)retire(vic,'COLLISION',closing);}
+    if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT'+(closing>16?' · AERO DAMAGE':''));
+      if(closing>16)radioDamage(player);}}
 }
 let lastContact=-9;
 // the team after a hit (wall: the barrier, else another car): critical damage, the wall, damage, or only a touch — one line.
