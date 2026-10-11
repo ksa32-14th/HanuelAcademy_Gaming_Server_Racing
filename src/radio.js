@@ -3,14 +3,14 @@
 // the team colour, the team's left-aligned in white.
 // The lines come from sounds/radio/lines.json (id -> [who, text]; who: e = race engineer, d = driver) and are spoken from
 // voice files, sounds/radio/<id>.mp3 (tools/radio-voices.ps1 makes them; voices.json lists the ones that exist): the
-// engineer and the driver are different voices, and each goes through its own radio — the pit wall's clearer, the car's
-// muffled, with a low engine rumble under it. A line without a file is text only.
+// engineer and the driver are different voices, and each goes through its own radio, EQ'd to match the real team radio
+// archive — the car's with a low engine rumble under it. A line without a file is text only.
 // Sound of the channel: the radio sound (RADIO_SFX, config.js) as it opens, then the static of a real team radio under
 // the words — band-limited hiss that flutters, crackles and clicks, now and then breaking up — and a squelch as it closes.
 // One call shows at a time: the next waits (urgent ones jump the queue; a low-priority one is dropped if the channel is
 // busy), and a call that waited too long is dropped.
-import {$,clamp} from './util.js?v=20261011h';
-import {RADIO_SFX} from './config.js?v=20261011h';
+import {$,clamp} from './util.js?v=20261011i';
+import {RADIO_SFX} from './config.js?v=20261011i';
 
 const VOICE_DIR='sounds/radio/';
 // the lines (id -> [who, text]): loaded before the game starts
@@ -42,13 +42,17 @@ let preloaded=false;
 function preload(ac){if(preloaded)return;preloaded=true;haveP.then(()=>{for(const id of have)clip(ac,id);});}
 const F=(ac,type,f,q,gain)=>{const b=ac.createBiquadFilter();b.type=type;b.frequency.value=f;b.Q.value=q;if(gain!=null)b.gain.value=gain;return b;};
 const shaper=(ac,k)=>{const sh=ac.createWaveShaper(),cv=new Float32Array(1024);for(let i=0;i<1024;i++){const x=i/511.5-1;cv[i]=Math.tanh(k*x)/Math.tanh(k);}sh.curve=cv;return sh;};
-// a radio: the voice squeezed into a narrow band, driven into the grit and compressed hard, as team radio sounds on TV.
-// The pit wall's (engineer) is the clearer one. The car's (driver) is muffled — the helmet mic's dull, boxy band, the top
-// rolled off — with the low rumble of the engine running under it (engineBed)
+// a radio: the voice band-limited, driven into the grit and compressed hard, as team radio sounds on TV. The EQ is fitted
+// to the average spectrum of the F1 team radio archive's clips (formuladream.app, 2021–2024 race clips, driver and engineer
+// measured apart): both sides are wider than a telephone — the pit wall's (engineer) flat to ~3 kHz and falling past 4–5
+// kHz, the car's (driver) with more low-mid body (the helmet mic) and a top that falls slowly rather than cut off — with
+// the low rumble of the engine running under the driver (engineBed)
+const EQ={driver:[['highpass',180,0.7],['lowpass',6500,0.6],['peaking',450,0.9,3],['highshelf',3000,0.7,5]],
+  team:[['highpass',240,0.7],['lowpass',4400,0.8],['peaking',2600,0.9,3],['peaking',1200,1,-2]]};
 function voiceChain(ac,dest,who){const drv=who==='driver';
-  const hp=F(ac,'highpass',drv?260:320,0.7),lp=F(ac,'lowpass',drv?1900:3400,drv?0.6:0.9),pk=F(ac,'peaking',drv?700:1800,drv?0.8:1,drv?4:5),sh=shaper(ac,drv?2.4:2.0);
+  const fs=EQ[drv?'driver':'team'].map(([t,f,q,g])=>F(ac,t,f,q,g)),sh=shaper(ac,drv?2.4:2.0);
   const cp=ac.createDynamicsCompressor();cp.threshold.value=-28;cp.ratio.value=8;cp.attack.value=0.002;cp.release.value=0.12;
-  const g=ac.createGain();g.gain.value=drv?1.0:1.1;hp.connect(lp).connect(pk).connect(sh).connect(cp).connect(g).connect(dest);return hp;}
+  const g=ac.createGain();g.gain.value=drv?1.0:1.1;fs.reduce((a,b)=>a.connect(b)).connect(sh).connect(cp).connect(g).connect(dest);return fs[0];}
 // the car behind the driver's words: a low, dull engine rumble — no whine, no wobble — that sits just over the bottom of
 // the voice: deep noise rolled off below ~260 Hz plus a soft low hum, a touch saturated, straight to the output (the
 // voice's high-pass would strip it)
@@ -68,15 +72,16 @@ async function sayClips(ids,who,maxMs){ids=ids.filter(Boolean);const a=ctx();if(
   const inp=voiceChain(ac,dest,who),t0=ac.currentTime+0.03;let t=t0;voiceNow=[];
   // a time read out runs its words together, the way an engineer rattles it off (the number files are recorded quick and
   // mid-sentence, so they play at their own speed and pitch); the line's own words keep a breath before the time
-  bufs.forEach((b,i)=>{const num=/^(n\d+|oh)$/.test(ids[i]),nextNum=/^(n\d+|oh)$/.test(ids[i+1]||'');
+  bufs.forEach((b,i)=>{const num=/^(n\d+|oh|point)$/.test(ids[i]),nextNum=/^(n\d+|oh|point)$/.test(ids[i+1]||'');
     const s=ac.createBufferSource();s.buffer=b.buf;s.connect(inp);s.start(t,b.start,b.duration);voiceNow.push(s);
     t+=b.duration+(i===bufs.length-1?0:num&&nextNum?-0.015:0.03);});
   if(who==='driver')engineBed(ac,dest,t0,t);
   await wait(Math.min(maxMs,(t-ac.currentTime)*1000));}
 
 /* ---- the calls ---- */
-// a value read out: a lap time "1:32.456" → one, thirty-two, four, five, six ("1:05.2": one, oh five, two);
-// seconds "28.4"; a whole number up to 59 (a position, "P5" too). Each word its own file (n0 … n59, oh, point)
+// a value read out: seconds "32.4" → thirty-two, point, four (how the game reads a lap time on the radio); a full time
+// "1:32.456" → one, thirty-two, four, five, six ("1:05.2": one, oh five, two);
+// a whole number up to 59 (a position, "P5" too). Each word its own file (n0 … n59, oh, point)
 function sayValue(v){v=String(v).trim().replace(/^P/i,'');let m;const dig=s=>[...s].map(d=>'n'+d);
   if((m=v.match(/^(\d+):(\d{2})\.(\d+)$/))){const s=+m[2];return ['n'+(+m[1]),...(s<10?['oh','n'+s]:['n'+s]),...dig(m[3])];} // no "point": one thirty-two four five six
   if((m=v.match(/^(\d+)\.(\d+)$/))&&+m[1]<60)return ['n'+(+m[1]),'point',...dig(m[2])];

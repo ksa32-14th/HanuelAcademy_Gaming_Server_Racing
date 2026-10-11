@@ -6,24 +6,24 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261011h';
-import {perf} from './perf.js?v=20261011h';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261011h';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS} from './config.js?v=20261011h';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261011h';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261011h';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261011h';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261011i';
+import {perf} from './perf.js?v=20261011i';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261011i';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS} from './config.js?v=20261011i';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261011i';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261011i';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261011i';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261011h';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261011h';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261011h';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261011h';
-import {radioSay,radioClear,radioAudio,radioMuted,radioHush} from './radio.js?v=20261011h';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261011i';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261011i';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261011i';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261011i';
+import {radioSay,radioClear,radioAudio,radioMuted,radioHush} from './radio.js?v=20261011i';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261011h'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261011h'):import('./data/osm-songdo.js?v=20261011h')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261011i'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261011i'):import('./data/osm-songdo.js?v=20261011i')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -1564,7 +1564,7 @@ function handBack(c){if(c.autoUntil==null)return;c.auto=false;c.autoUntil=null;c
 function qualiCross(c){
   if(c.pitSide)return; // crossing the line inside the pit lane is not a lap of the circuit
   if(qStage==='out'){handBack(c);qStage='flying';c.lapStart=simTime;c.secStart=simTime;c.lapInvalid=false;
-    msg('FLYING LAP');return;}
+    msg('FLYING LAP');teamRadio(['x09','341']);return;}
   if(qStage!=='flying')return;
   const lt=simTime-c.lapStart;
   if(c.lapInvalid){finishQuali(null);return;}
@@ -1586,7 +1586,7 @@ function finishQuali(t){
     :'P'+(p+1)+' · '+fmt(pt)+(p===0?' · POLE POSITION':' · +'+(pt-pole).toFixed(3)+'s to pole');
   $('qres').hidden=false;
   msg(pt==null?'NO TIME':'P'+(p+1)+' · '+fmt(pt));
-  teamRadio(pt==null?['198','035']:[['192',{current_lap_time:fmt(pt)}],'266'],2);
+  teamRadio(pt==null?['198','035']:p===0?['x08','033']:[['192',{current_lap_time:rdT(pt)}],'266'],2);
 }
 
 /* ================= TIME TRIAL =================
@@ -1631,7 +1631,7 @@ function ttCross(c){
         if(c.bestSec[k]==null||st<c.bestSec[k])c.bestSec[k]=st;if(bestSecAll[k]==null||st<bestSecAll[k])bestSecAll[k]=st;}
       if(tt.path)tt.path.push(c.x,c.z,c.yaw); // the line itself as the last sample
       // the team on the lap, with the time: a record, a personal best, or just the lap
-      teamRadio(lt<rec-0.0005&&rec<Infinity?['032','033']:pb?[['189',{best_lap_time:fmt(lt)}],'028']:[['026',{current_lap_time:fmt(lt)}]],pb?2:1);
+      teamRadio(lt<rec-0.0005&&rec<Infinity?['032','033']:pb?[['189',{best_lap_time:rdT(lt)}],'028']:[['026',{current_lap_time:rdT(lt)}]],pb?2:1);
       if(lt<rec-0.0005)banner('FASTEST LAP',fmt(lt));
       else if(tt.sec3Fast)secBanner(2,c.sec[2]);
       msg(pb?'PERSONAL BEST':'LAP TIME',fmt(lt));ttSubmit(lt,c.sec.slice(),tt.path&&tt.path.length>=6?encodePath(tt.path):null);}}
@@ -1788,9 +1788,9 @@ function startRace(){
   drsEnabled=false;checkered=false;timeLimitHit=false;fastest=null;raceLeader=null;leadCand=null;bestSecAll.fill(null);resultsShown=false;
   camYaw=null;recReset();
   $('tower').hidden=false;buildTower();$('lights').hidden=false;setLights(0);
-  msg('FORMATION COMPLETE · LIGHTS OUT WHEN ALL FIVE GO OUT');
+  msg('FORMATION COMPLETE · LIGHTS OUT WHEN ALL FIVE GO OUT');teamRadio(['x01','x02']);
   rdPos=rdPosSaid=qGrid.indexOf(player)+1;rdPosAt=0;rdDmgAt=-99;player.wearSaid=false;player.pitOutAt=null;player.towAt=null;
-  Object.assign(rdW,{tow:0,towOn:false,towOff:0,reach:false,side:0,off:0,spin:false,cold:false,coldSaid:false,pit:false,blue:false});
+  Object.assign(rdW,{tow:0,towOn:false,towOff:0,reach:false,side:0,off:0,spin:false,cold:false,coldSaid:false,pit:false,blue:false,lim:false});
 }
 
 /* ================= PHYSICS ================= */
@@ -2164,12 +2164,13 @@ function lapCross(c){
   // the radio at the line: the fastest lap, or the place and the gaps (not on the lap that finishes the race)
   if(c.isPlayer&&!checkered&&c.lapCount<targetLaps){
     if(fastest&&fastest.car===c&&fastest.t===c.lastLap&&c.lapCount>=2)
-      teamRadio(c.lapCount===targetLaps-1?['009','010']:[['038',{best_lap_time:fmt(lt)}],'028']);
+      teamRadio(c.lapCount===targetLaps-1?['009','010']:[['038',{best_lap_time:rdT(lt)}],'028']);
     else radioLap(c);}
   if(!checkered&&c.lapCount>=targetLaps){checkered=true;if(!c.isPlayer){msg('CHEQUERED FLAG · '+c.code+' WINS');
     }}
   if(checkered&&!c.finished){c.finished=true;c.finishT=t-raceStart;if(c.isPlayer){const p=order().indexOf(c)+1;msg('FINISH · P'+p);setTimeout(showResults,3000);
-    teamRadio([p===1?'212':p<=3?'213':['216',{position:p}]],2);}}
+    teamRadio([p===1?'212':p<=3?'213':['216',{position:p}]],2);
+    setTimeout(()=>{if(phase==='race'&&c.finished)teamRadio(['x10'],2);},9000);}}
 }
 function detect(c,k){const t=simTime;let ok=false;for(const o of cars){if(o===c)continue;const ot=o.detT[k];if(ot!=null&&t-ot>=0&&t-ot<=DRS_GAP)ok=true;}
   c.detT[k]=t;c.drsElig[k]=phase==='quali'?true:(ok&&drsEnabled&&phase==='race');}
@@ -2557,7 +2558,7 @@ function playerRules(dt){const p=player;if(!p||p.dnf||session!=='race')return;p.
     const ah=g<-2?true:g>2?false:o.pRel;
     if(o.pRel===false&&ah===true&&restricted&&o.v>8&&!p.infr.some(x=>x.o===o)&&!(o.gaveT>simTime-6)){
       const why=scOn()||scRestart?'OVERTAKING UNDER SAFETY CAR':vsc?'OVERTAKING UNDER VSC':'OVERTAKING UNDER YELLOW';
-      p.infr.push({o,why,until:simTime+12});o.regain=p;msg(why,'GIVE THE POSITION BACK TO '+o.code); // (o goes for it too)
+      p.infr.push({o,why,until:simTime+12});o.regain=p;msg(why,'GIVE THE POSITION BACK TO '+o.code);teamRadio(['x06','341'],2); // (o goes for it too)
       }
     o.pRel=ah;}
   for(let k=p.infr.length-1;k>=0;k--){const x=p.infr[k];
@@ -2593,7 +2594,7 @@ function retire(c,why,sp){
   c.clearAt=simTime+(onRoad?40:25)+rand(0,10);
   hazard(c.s,2,c.clearAt-simTime+4);
   const wrecks=cars.filter(o=>o.dnf&&!o.parked).length;
-  if(c.isPlayer){msg('RETIRED · '+why,'Your race is over');setTimeout(showResults,3500);
+  if(c.isPlayer){msg('RETIRED · '+why,'Your race is over');setTimeout(showResults,3500);teamRadio(['x07','342'],2);
     }
   else msg(c.code+' OUT · '+why);
   if(checkered||c.pitSide)return;
@@ -2621,9 +2622,9 @@ function deployVSC(cause){if(scOn()||vsc||phase!=='race'||raceStart==null)return
   teamRadio(['327','342'],2);}
 // under the SC / VSC a stop costs less: the team says so if the player still has one to make
 function updateVSC(){if(!vsc)return;
-  if(vsc.phase==='on'&&simTime-vsc.t0>20&&!cars.some(c=>c.dnf&&!c.parked&&!c.isPlayer)){vsc.phase='ending';vsc.endAt=simTime+rand(10,15);msg('VSC ENDING','GREEN FLAG IN 10–15 SECONDS');
+  if(vsc.phase==='on'&&simTime-vsc.t0>20&&!cars.some(c=>c.dnf&&!c.parked&&!c.isPlayer)){vsc.phase='ending';vsc.endAt=simTime+rand(10,15);msg('VSC ENDING','GREEN FLAG IN 10–15 SECONDS');teamRadio(['x05','342'],2);
     }
-  if(vsc.phase==='ending'&&simTime>=vsc.endAt){vsc=null;greenAll();restartDRS();msg('GREEN FLAG','VSC PERIOD OVER');}}
+  if(vsc.phase==='ending'&&simTime>=vsc.endAt){vsc=null;greenAll();restartDRS();msg('GREEN FLAG','VSC PERIOD OVER');teamRadio(['x04','341'],2);}}
 function restartDRS(){let ld=null;for(const c of cars)if(!c.dnf&&!c.parked&&(!ld||c.progress>ld.progress))ld=c;drsResume=ld?ld.progress+L:null;}
 
 /* ---- Safety Car: a road-going GT with a roof light bar (orange: SC out; green: cars may pass it). It is driven, not
@@ -2860,7 +2861,7 @@ function step(dt){
       // the AI's reaction to the lights is as sharp as a good human's (it used to sit 0.1–0.3 s longer, which handed
       // the player two or three places off the line every time)
       for(const c of cars){c.releaseAt=c.isPlayer?simTime:simTime+rand(.02,.12);if(c.shortLap){c.lapStart=c.secStart=raceStart;}}
-      msg('LIGHTS OUT','AND AWAY WE GO!');teamRadio(['004','005']);}}
+      msg('LIGHTS OUT','AND AWAY WE GO!');teamRadio(['004','005'],2);}}
   if(phase==='race')for(const c of cars)if(c.held&&simTime>=c.releaseAt)c.held=false;
   const pt0=perf.on?performance.now():0;
   playerControl(dt);
@@ -2882,13 +2883,13 @@ function step(dt){
          if(was&&!checkered&&simTime-raceStart>5)banner('NEW RACE LEADER','',ld,'lead');}}
      else leadCand=null;}
     // DRS: off under the SC / VSC, back one lap after the green flag
-    if(!drsEnabled&&!scActive()&&lead.lapCount>=DRS_FROM_LAP-1&&(drsResume==null||lead.progress>=drsResume)){drsEnabled=true;drsResume=null;msg('DRS ENABLED');}
+    if(!drsEnabled&&!scActive()&&lead.lapCount>=DRS_FROM_LAP-1&&(drsResume==null||lead.progress>=drsResume)){drsEnabled=true;drsResume=null;msg('DRS ENABLED');teamRadio(['x03']);}
     if((scOn()||vsc)&&drsEnabled){drsEnabled=false;for(const c of cars)c.drsOpen=false;}
     // restart: the leader sets the pace once the safety car has peeled off, picks the moment to go, and racing
     // resumes as the field crosses the control line
     if(scRestart&&!scOn()){const ld=scLeaderAny();
       if(ld&&!restartGo&&spOf(ld.s)>goSp&&spOf(ld.s)<0){restartGo=true;if(!ld.isPlayer)msg('RESTART',ld.code+' GOES');}
-      if(ld&&ld.s<60&&(ld.prevSc??ld.s)>L-60){scRestart=false;restartGo=false;greenAll();restartDRS();msg('GREEN FLAG','RACING RESUMES');}if(ld)ld.prevSc=ld.s;}
+      if(ld&&ld.s<60&&(ld.prevSc??ld.s)>L-60){scRestart=false;restartGo=false;greenAll();restartDRS();msg('GREEN FLAG','RACING RESUMES');teamRadio(['x04','341'],2);}if(ld)ld.prevSc=ld.s;}
     clearWrecks();
     // the player cannot drive through the safety car: you close up to it and no further (unless waved by)
     if(scOn()&&sc.phase!=='exit'&&player&&!player.dnf&&!player.pitSide&&!player.waveBy&&!player.unlap){const p=player,g=fwd(p.s,sc.s);if(g>0&&g<8&&p.v>sc.v)p.v=sc.v;}
@@ -2938,6 +2939,8 @@ const secBanner=(k,st,car)=>banner('SECTOR '+(k+1),st<60?st.toFixed(3):fmt(st),c
 // radio library (sounds/radio/lines.json, by id) wherever the game has the event. prio 2 urgent (flags, the Safety Car,
 // penalties, BOX: before calls still waiting), 1 normal, 0 low (only when the channel is free: menus, toggles, chatter).
 // A line: an id, or [id, {placeholder: value}] for one with a value (a lap time, a position). Only the library's lines.
+// A lap time on the radio is seconds and tenths, the minute left out, as race engineers read it (1:32.456 → "32.5")
+const rdT=t=>(Math.round(t*10)%600/10).toFixed(1);
 function teamRadio(lines,prio=1){if(!player||replay)return;const t=TEAMS[player.team];
   radioSay(lines,{name:playerSurname(),num:player.num,team:t.name,color:hex(t.ui),prio});}
 // the same, at most once every `cd` seconds for a given key (events that can repeat: toggles, clicks, contact …)
@@ -2960,10 +2963,10 @@ function radioLap(c){
   if(c.planLap!=null&&c.planLap===c.lapCount+1&&!c.boxDone){teamRadio(['135','149'],2);return;}
   if(c.wear>0.6&&c.planLap==null&&!c.wearSaid){c.wearSaid=true;teamRadio(['124','253']);return;}
   // every few laps the driver asks for the time (the timing the team reads back: last lap and best lap)
-  if(c.lastLap!=null&&c.bestLap!=null&&c.lapCount>=2&&c.lapCount%3===2)teamRadio(['343',['344',{last_lap_time:fmt(c.lastLap),best_lap_time:fmt(c.bestLap)}]]);}
+  if(c.lastLap!=null&&c.bestLap!=null&&c.lapCount>=2&&c.lapCount%3===2)teamRadio(['343',['344',{last_lap_time:rdT(c.lastLap),best_lap_time:rdT(c.bestLap)}]]);}
 // what the team watches all the time (race and practice runs): the tow, the car ahead coming into reach, a car alongside,
 // leaving the track, a spin, hot brakes, cold tyres, the pit lane, a blue flag. Each says its piece once, then rests
-const rdW={tow:0,towOn:false,towOff:0,reach:false,side:0,off:0,spin:false,cold:false,coldSaid:false,pit:false,blue:false,acc:0};
+const rdW={tow:0,towOn:false,towOff:0,reach:false,side:0,off:0,spin:false,cold:false,coldSaid:false,pit:false,blue:false,lim:false,acc:0};
 function radioWatch(dt){const p=player;if(!p||replay||p.dnf||(phase!=='race'&&phase!=='quali')||p.held)return;
   rdW.acc+=dt;if(rdW.acc<0.1)return;dt=rdW.acc;rdW.acc=0; // ten looks a second are plenty
   const race=session==='race'&&phase==='race',kmh=p.v*3.6;
@@ -2996,7 +2999,9 @@ function radioWatch(dt){const p=player;if(!p||replay||p.dnf||(phase!=='race'&&ph
       if(avg<o-12&&!rdW.cold&&!rdW.coldSaid){rdW.cold=true;rdW.coldSaid=true;teamRadioCd('cold',60,['125','341']);}
       else if(rdW.cold&&avg>o-6)rdW.cold=false;}
     // the pit lane: in and out
-    rdW.pit=p.pitSide;}}
+    rdW.pit=p.pitSide;
+    // the pit limiter cutting in at the pit entry
+    if(p.limiter&&!rdW.lim)teamRadio(['x11']);rdW.lim=p.limiter;}}
 function msg(t,sub=''){const m=$('msg');m.classList.toggle('low',performance.now()<fastUntil);m.innerHTML=t+(sub?'<small>'+sub+'</small>':'');m.classList.add('on');clearTimeout(msgTimer);msgTimer=setTimeout(()=>m.classList.remove('on'),2600);}
 function setLights(n){[...$('lights').children].forEach((l,i)=>l.classList.toggle('on',i<n));gantryLamps.forEach((m,i)=>m.color.setHex(i<n?0xff1a0a:0x220404));}
 let rowEls=[];
