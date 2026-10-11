@@ -459,8 +459,11 @@ export function seoulScenery(ctx){C=ctx;const {D,W2,SC}=C;const T=(x,y)=>W2(x,y)
   // Gyeongbokgung's south wall either side of Gwanghwamun (granite footing, plastered wall, tiled coping), returning
   // north along Samcheong-ro and Hyoja-ro; the other palace walls (Deoksugung's stone wall) come from OpenStreetMap.
   // East of the gate it no longer reaches Dongsipjagak: it cuts the corner north-east along the road west of the
-  // rotary and only then turns north up Samcheong-ro (Kakao skyview)
-  const walls=[[[-120,213],[-306,219],[-306,900]],[[-89,214],[85,224.5],[120.5,274],[121,900]]].map(l=>({h:5.2,pts:l.map(p=>T(...p))}));
+  // rotary and only then turns north up Samcheong-ro (Kakao skyview). Since the rotary was opened out (r6) the corner
+  // follows the curve of the circuit's outside barrier, 2.5 m behind it, so it stays whole instead of losing the pieces
+  // that would stand on the track
+  const walls=[[[-120,213],[-306,219],[-306,900]],
+    [[-89,214],[81,224.3],[86.5,234],[89,242],[93,250],[98.5,257.5],[105.5,264],[114,268.5],[121,272],[121,900]]].map(l=>({h:5.2,pts:l.map(p=>T(...p))}));
   for(const w of D.wl||[]){const pts=[];for(let k=1;k<w.length;k+=2)pts.push(T(w[k],w[k+1]));walls.push({h:Math.min(w[0],4.2),pts});}
   // each run is laid in pieces of ≤ 4 m, and a piece is left out where it would reach the circuit (testing only the middle
   // of a long run let its ends cross the track round the Dongsipjagak rotary)

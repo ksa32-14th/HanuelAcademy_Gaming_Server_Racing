@@ -98,17 +98,17 @@ export const TRACKS={
   hills:[[3695,2974,634,1700],[-3276,-995,415,1300],[-5170,-1040,427,1400],[-3040,1725,256,1000],[3367,-830,140,520]],
   tall:()=>true},
  seoul:{title:'Seoul <em>Gwanghwamun</em> GP',label:'Seoul · Gwanghwamun',
-  sub:'Gwanghwamun Street Circuit · clockwise · Gwanghwamun Square pit lane · GPS-traced',len:3549,fullLaps:75,start:[-63.5,-110],
+  sub:'Gwanghwamun Street Circuit · clockwise · Gwanghwamun Square pit lane · GPS-traced',len:3551,fullLaps:75,start:[-63.5,-110],
   simp:2.5,fillet:42,minR:24,
-  // the Dongsipjagak rotary (T2) is driven at ~20 m round the island (opened out from the real ~16 m so it flows and
-  // the watchtower fits inside the inner barrier); the left turn into it off Yulgok-ro is an ordinary ~25 m corner
-  tight:[[125.5,233.5,17,32]],
-  // T3, the sweep across the lot at the Sambong-ro junction, held to a radius of at least 80 m
-  wide:[[71.9,-144.1,80,70]],
+  // the Dongsipjagak rotary (T2) is driven at ~25 m round the island and the left turn into it off Yulgok-ro at ~40 m
+  // (`wide` keeps the fillet from tightening that one); T3, the sweep across the lot at the Sambong-ro junction, is
+  // held to a radius of at least 80 m
+  wide:[[86,198,38,26],[71.9,-144.1,80,70]],
   // a fresh Time Trial board each time the lap changes; the earlier layouts' laps stay under 'seoul' (the hairpin),
-  // 'seoul-r2' (T2 rotary only), 'seoul-r3' (T2 and T3 both rotaries, the narrow ones) and 'seoul-r4' (the wider T2 ring
-  // and the roomier T3 roundabout). r5 (2026-10-11): T3 is a sweeping left across the lot instead of the roundabout
-  board:'seoul-r5',
+  // 'seoul-r2' (T2 rotary only), 'seoul-r3' (T2 and T3 both rotaries, the narrow ones), 'seoul-r4' (the wider T2 ring
+  // and the roomier T3 roundabout) and 'seoul-r5' (T3 a sweeping left across the lot). r6 (2026-10-11): the T2 rotary
+  // opened out — a 40 m entry, a ~25 m ring and a 15 m road from Yulgok-ro to Jong-ro 1-gil
+  board:'seoul-r6',
   times:['day','night'], // a clear autumn afternoon under Bugaksan; at night the LED boards of the Gwanghwamun junction light up
   // traced from the "Seoul_GrandPrix" GPX route (metres from 37.5740 N, 126.9780 E), clockwise: north up Sejong-daero
   // past Gwanghwamun Square, right along Sajik-ro / Yulgok-ro, round the Dongsipjagak rotary, back down Jong-ro 1-gil,
@@ -119,12 +119,14 @@ export const TRACKS={
    // T1: right onto Sajik-ro in front of the Gwanghwamun Woldae, along Yulgok-ro past the Twin Tree Towers
    [-65.6,135],[-62.4,136.8],[-42.9,149.9],[-30.8,159.7],[-22.3,165.6],[-14.4,169.4],[-4.2,173.4],[4.3,175.7],[31.4,180.9],
    [49.4,183.7],
-   // T2: the Dongsipjagak rotary (checked against the Kakao skyview): left off Yulgok-ro up the lanes west of the
-   // watchtower's island, clockwise round its north side (~200°, the island on the right), down the east lanes and
-   // straight across the junction into Jong-ro 1-gil past the Museum of Korean Contemporary History. The ring's corners
-   // sit on a 21.5 m circle round the island (125.5, 233.5), 40° apart; the fillet turns them into a ~20 m radius path
-   // (the corner at 200° is left out: it falls on the straight up the west lanes)
-   [105.5,191],[105.3,240.85],[114.75,252.1],[129.2,254.7],[142,247.3],[147,233.5],[142,219.7],
+   // T2: the Dongsipjagak rotary (checked against the Kakao skyview): a long left off Yulgok-ro across the open tarmac of
+   // the Gyeongbokgung junction (a 40 m arc, centre (61, 226), corners 27° apart) up the lanes west of the watchtower's
+   // island, clockwise round its north side (~200°, the island on the right), down the east lanes and straight across
+   // the junction into Jong-ro 1-gil past the Museum of Korean Contemporary History. The ring's corners sit on a 26.5 m
+   // circle round (128, 230.5) — a little south-east of the island (125.5, 233.5), away from the palace wall — 40° apart,
+   // which makes a ~25 m radius path (the corner at 200° is left out: it falls on the straight up the west lanes)
+   [67.2,186.5],[84.5,193.6],[96.6,207.8],[101,226],
+   [103.1,239.6],[114.75,253.45],[132.6,256.6],[148.3,247.5],[154.5,230.5],[148.3,213.5],
    [130,183.7],[122.5,172.8],[108.1,158.7],[102,150.8],[88.2,133],[74.8,115.1],[60,92.2],[46.1,56.3],[44.4,25.2],[48.5,-41],
    // T3: a long sweeping left from Jong-ro 1-gil onto Sambong-ro, cut across the empty lot (bare ground, no buildings —
    // Kakao skyview) on the inside of the junction instead of round the little Sambong-ro roundabout. An 85 m arc,
@@ -153,10 +155,10 @@ export const TRACKS={
        [[409,-790],[350,-881],[110,-883]]],
   stands:[[-68,-935,1,70]], // on the south half of Seoul Plaza, facing Sejong-daero (City Hall stays in view)
   mainStand:false, // the main straight is lined with buildings on the right
-  // the rotary lanes, the back streets between Yulgok-ro and Jongno, Mugyo-ro and Cheonggyecheon-ro are far narrower
+  // the back streets between Yulgok-ro and Jongno, Mugyo-ro and Cheonggyecheon-ro are far narrower
   // than Sejong-daero — except the sweep across the lot at the Sambong-ro junction (T3), open ground with room for the
   // full 15 m (a later entry overrides an earlier one)
-  narrow:[[[105.5,197],[262,-395],11],[[118,-436],[398,-585],11],[[48,-62],[150,-168],15]],
+  narrow:[[[102,150.8],[262,-395],11],[[118,-436],[398,-585],11],[[48,-62],[150,-168],15]],
   wallGap:1.2,clear:1.0,pitWallGap:2.0,
   // corners get more room than the straights: the inside wall of each kerbed corner 2.2 m further back, the outside wall
   // 2.5 m further back for 60 m past each corner where cars run out wide; only the right-angle (and tighter) corners get
