@@ -9,8 +9,8 @@
 // the words — band-limited hiss that flutters, crackles and clicks, now and then breaking up — and a squelch as it closes.
 // One call shows at a time: the next waits (urgent ones jump the queue; a low-priority one is dropped if the channel is
 // busy), and a call that waited too long is dropped.
-import {$,clamp} from './util.js?v=20261011k';
-import {RADIO_SFX} from './config.js?v=20261011k';
+import {$,clamp} from './util.js?v=20261011l';
+import {RADIO_SFX} from './config.js?v=20261011l';
 
 const VOICE_DIR='sounds/radio/';
 // the lines (id -> [who, text]): loaded before the game starts
