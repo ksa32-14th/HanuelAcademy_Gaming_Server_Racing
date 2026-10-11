@@ -1,7 +1,7 @@
 // Track model: centre-line sampling, walls, kerbs, racing line (minimum curvature) and AI speed profile.
 import * as THREE from 'three';
-import {clamp,wrapA,smooth} from './util.js?v=20261011l';
-import {TR,TRACK_LEN,W,HW,KERB_W,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,brakeK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261011l';
+import {clamp,wrapA,smooth} from './util.js?v=20261011m';
+import {TR,TRACK_LEN,W,HW,KERB_W,PITWALL,PIT_OFF,PIT_HW,TEAMS,MU,RHO,CLA,CDA,POWER,G,BRK,brakeK,VMAX,gripV,PIT_LIMIT,TRACTION} from './config.js?v=20261011m';
 export let PIT_A=-345, PIT_B=-265, PIT_L=-265, PIT_C=205, PIT_D=285;
 /* ================= TRACK GEOMETRY ================= */
 // A GPS trace has a point every few tens of metres, and the fillet below can never use more than
@@ -117,6 +117,16 @@ for(let pass=0;pass<4;pass++){for(const A of [WL,WR]){const c=A.slice();for(let 
 // (WP / TLP: the wall and the track limit on the pit side)
 export const WP=PS>0?WR:WL;
 for(let i=0;i<N;i++){const sp=spI(i),p=pitOffSp(sp);if(p!=null)WP[i]=Math.max(WP[i],Math.abs(p)+PIT_HW+(sp<PIT_B?3.2:1.8));}
+// `wallBack`: [[fromRaw, toRaw, side, m], …] — along a stretch the wall on one side (1 right, -1 left) stands m further
+// back (eased in and out over ~30 m), where there is open ground behind it (Seoul Plaza): a car that runs past the
+// track limits there gets onto the run-off instead of into the barrier. WL0 / WR0 keep the walls as they were without
+// it: the track limits are drawn from those (the white lines don't move out with the wall), and the scenery keeps the
+// extra distance only on the side the wall moved
+export const WL0=WL.slice(),WR0=WR.slice();
+for(const [a,b,side,m] of TR.wallBack||[]){const ia=idxOf(...a),n=((idxOf(...b)-ia)%N+N)%N,E=Math.max(1,Math.round(30/DS)),A=side<0?WL:WR;
+  for(let k=-E;k<=n+E;k++){const i=((ia+k)%N+N)%N,f=k<0?smooth((k+E)/E):k>n?smooth((n+E-k)/E):1;A[i]+=m*f;}}
+// clearance a scenery object at (x, z) needs from sample i: the walls without `wallBack`, or the moved wall on its side
+export const wallClear=(i,x,z)=>{const lat=(x-X[i])*-TZ[i]+(z-Z[i])*TX[i];return Math.max(WL0[i],WR0[i],lat<0?WL[i]:WR[i]);};
 // KWa: kerb width per sample — KERB_W everywhere, except that a circuit may give its right-angle (and tighter) corners a
 // slightly wider kerb (`kerbWide`, m): a kerbed bend that turns ≥ ~70° through a radius under ~45 m
 export const KWa=new Float32Array(N).fill(KERB_W);
@@ -144,8 +154,8 @@ export const TLL=new Float32Array(N),TLR=new Float32Array(N);
  for(let pass=0;pass<2;pass++)for(let k=0;k<2*N;k++){const i=k%N,p=(i-1+N)%N;dist[i]=KX[i]?0:Math.min(dist[i],dist[p]+1);}
  for(let pass=0;pass<2;pass++)for(let k=2*N-1;k>=0;k--){const i=k%N,q=(i+1)%N;dist[i]=KX[i]?0:Math.min(dist[i],dist[q]+1);}
  for(let i=0;i<N;i++){const f=smooth(Math.min(1,dist[i]/R)),hw=HWa[i],pit=pitOffSp(spI(i))!=null;
-   TLL[i]=pit&&PS<0?hw:hw+f*Math.max(0,WL[i]-EDGE_GAP-hw);
-   TLR[i]=pit&&PS>0?hw:hw+f*Math.max(0,WR[i]-EDGE_GAP-hw);}
+   TLL[i]=pit&&PS<0?hw:hw+f*Math.max(0,WL0[i]-EDGE_GAP-hw);
+   TLR[i]=pit&&PS>0?hw:hw+f*Math.max(0,WR0[i]-EDGE_GAP-hw);}
  // the pit entry / exit ends: ease the pit-side edge back in rather than stepping
  const TLP=PS>0?TLR:TLL;
  for(let pass=0;pass<6;pass++){const c=TLP.slice();for(let i=0;i<N;i++)TLP[i]=Math.max(HWa[i],Math.min(c[i],(c[(i-1+N)%N]+2*c[i]+c[(i+1)%N])*0.25));}}

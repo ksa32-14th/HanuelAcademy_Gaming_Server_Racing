@@ -165,6 +165,11 @@ export const TRACKS={
   // than Sejong-daero — except the sweep across the lot at the Sambong-ro junction (T3), open ground with room for the
   // full 15 m (a later entry overrides an earlier one)
   narrow:[[[115,166],[262,-395],11],[[118,-436],[398,-585],11],[[48,-62],[150,-168],15]],
+  // Seoul Plaza is open paving and lawn inside the loop the circuit runs round it (Sogong-ro, the south side, the foot
+  // of Sejong-daero): the walls on that side, the right, stand 8 m further back, so running past the track limits
+  // there — wide out of the Sogong-ro corners, or cutting the right-handers onto Sejong-daero — ends on the run-off,
+  // not in the barrier. It eases out before the grandstand on the plaza beside Sejong-daero
+  wallBack:[[[79.8,-901.3],[-68.4,-995],1,8]],
   wallGap:1.2,clear:1.0,pitWallGap:2.0,
   // corners get more room than the straights: the inside wall of each kerbed corner 2.2 m further back, the outside wall
   // 2.5 m further back for 60 m past each corner where cars run out wide; only the right-angle (and tighter) corners get

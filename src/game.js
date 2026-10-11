@@ -6,24 +6,24 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261011l';
-import {perf} from './perf.js?v=20261011l';
-import {TRACKS,INTROS} from './data/tracks.js?v=20261011l';
-import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS} from './config.js?v=20261011l';
-import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261011l';
-import {createTextures,canvasTex,winTex} from './textures.js?v=20261011l';
-import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261011l';
+import {$,clamp,wrapA,smooth,rand,rnd,reseed,hex,fmt,fmtRace} from './util.js?v=20261011m';
+import {perf} from './perf.js?v=20261011m';
+import {TRACKS,INTROS} from './data/tracks.js?v=20261011m';
+import {TRACK_ID,TR,TOD,TIMES,TRACK_LEN,W,HW,GRID_D,KERB_W,CAR_SX,CAR_SY,CAR_SZ,WHEEL_S,TL_EDGE,G,RHO,MASS,POWER,CDA,CLA,MU,CRR,WB,VMAX,TRACTION,TC_SLACK,BRK,brakeK,TC_P,SLIDE,gripV,steerLock,PITWALL,PIT_HW,PIT_OFF,PIT_LIMIT,BOX_D,FAST_D,COMP,POINTS,DRS_GAP,DRS_FROM_LAP,GEARS,FUEL_PER_LAP,TEAMS} from './config.js?v=20261011m';
+import {PIT_A,PIT_B,PIT_L,PIT_C,PIT_D,PIT_W,GRID_S,curve,SC,N,L,DS,rw,X,Z,TX,TZ,ANG,K,idxOf,spOf,idxSp,spI,pitOffSp,PS,WP,WALL_GAP,HWa,HWmin,WL,WR,wallClear,KB,KWa,TLL,TLR,DRSZ,SEC,BOX_S,BOX_GAP,drsZoneOf,RL,VP,rawV,sp0} from './track.js?v=20261011m';
+import {createTextures,canvasTex,winTex} from './textures.js?v=20261011m';
+import {lbLoad,lbSubmit,lbSecLoad,lbSecSubmit,lbShared,lbFmt,lbGhost,lbAiGet,lbAiPut,checkName} from './leaderboard.js?v=20261011m';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
 import {FXAAShader} from 'three/addons/shaders/FXAAShader.js';
 import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
-import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261011l';
-import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261011l';
-import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261011l';
-import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261011l';
-import {radioSay,radioClear,radioAudio,radioMuted,radioHush} from './radio.js?v=20261011l';
+import {PRESETS,ORDER,MODES,loadMode,saveMode,detectPreset,ResolutionScaler,GpuTimer,pixelRatioFor} from './quality.js?v=20261011m';
+import {seoulBuilding,seoulScenery,seoulSky,seoulTick,SEOUL_ST,seoulStyle} from './scenery-seoul.js?v=20261011m';
+import {learn,theory,profileFrom,cornerCaps} from './ailearn.js?v=20261011m';
+import {PLAYLIST,musicStart,musicToggle,musicSet,musicState,onMusicChange,musicIntro} from './music.js?v=20261011m';
+import {radioSay,radioClear,radioAudio,radioMuted,radioHush} from './radio.js?v=20261011m';
 // OpenStreetMap scenery: each OSM circuit has its own data module (osm-songdo.js, osm-busan.js), loaded only when chosen
-const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261011l'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261011l'):import('./data/osm-songdo.js?v=20261011l')))[0]:null;
+const OSM=TR.osm?Object.values(await (TRACK_ID==='busan'?import('./data/osm-busan.js?v=20261011m'):TRACK_ID==='seoul'?import('./data/osm-seoul.js?v=20261011m'):import('./data/osm-songdo.js?v=20261011m')))[0]:null;
 const DAY=TOD==='day'; // daylight (Busan, Songdo by choice): bright sky, haze instead of night fog, unlit windows
 const DUSK=TOD==='dusk'; // blue-hour dusk over the West Sea (Songdo's default)
 const SEOUL=TRACK_ID==='seoul'; // Gwanghwamun: Joseon architecture, the sunken Cheonggyecheon, LED boards (scenery-seoul.js)
@@ -390,7 +390,7 @@ async function buildOSM(){
       const tight=TR.tightPaddock,gar=sp>=BOX_S[0]-12&&sp<=BOX_S[BOX_S.length-1]+12,po=pitOffSp(sp),clr=TR.clear??3;
       // the garage block itself is a strip beside the lane: test it square to the track, not as a circle
       if(tight&&gar&&right){if(Math.abs((x-X[i])*TX[i]+(z-Z[i])*TZ[i])<1.5&&lat<PIT_OFF+PIT_HW+12.5+extra)return true;continue;}
-      const r=(!pit||(tight&&!right)?Math.max(WL[i],WR[i])+clr:tight?Math.max(WP[i],Math.abs(po??0)+PIT_HW)+2.5:PIT_OFF+22)+extra;
+      const r=(!pit||(tight&&!right)?wallClear(i,x,z)+clr:tight?Math.max(WP[i],Math.abs(po??0)+PIT_HW)+2.5:PIT_OFF+22)+extra;
       if(Math.hypot(X[i]-x,Z[i]-z)<r)return true;}}return false;};
   const W2=(x,y)=>[x*SC,-y*SC];
   // A building is kept only if NO part of it reaches the circuit. Testing its corners alone missed
@@ -465,7 +465,7 @@ async function buildOSM(){
   // the circuit's corners are rounded off; cross streets now stop at the barrier. Polylines are split into ≤8 m steps first.
   const onCircuit=(x,z,w,dx,dz)=>{const cx=Math.floor(x/cell),cz=Math.floor(z/cell);
     for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const l=hash.get((cx+a)+','+(cz+b));if(l)for(const i of l){
-      const d=Math.hypot(X[i]-x,Z[i]-z);if(d<Math.max(WL[i],WR[i])+1.5)return true;
+      const d=Math.hypot(X[i]-x,Z[i]-z);if(d<wallClear(i,x,z)+1.5)return true;
       if(d<HWa[i]+w/2+4&&Math.abs(dx*TX[i]+dz*TZ[i])>0.8)return true;}}return false;};
   const runs=[];
   for(const r of D.r){const w=r[0],cls=r[1],raw=[];for(let k=2;k<r.length;k+=2)raw.push(W2(r[k],r[k+1]));if(raw.length<2)continue;
@@ -1778,7 +1778,7 @@ function startRace(){
     c.lastLap=null;c.bestLap=null;c.sec=[null,null,null];c.secCol=['','',''];c.bestSec=[null,null,null];
     c.hp=[];c.ht=[];c.drsOpen=false;c.drsElig=[false,false,false];c.detT=[null,null,null];c.zone=-1;
     c.tow=0;c.slip=0;c.v=0;c.gear=0;c.delta=0;c.r=0;c.laneOff=0;c.laneOffT=0;c.laneHold=0;c.sep=0;c.held=true;
-    c.dnf=false;c.dnfWhy=null;c.maxLap=-1;c.defUntil=null;c.mArm=false;c.mT=0;c.passCar=null;
+    c.dnf=false;c.dnfWhy=null;c.aiSpin=null;c.spinAt=null;c.spinLap=null;c.spunT=-99;c.stopT=0;c.maxLap=-1;c.defUntil=null;c.mArm=false;c.mT=0;c.passCar=null;
     c.waveBy=false;c.unlap=false;c.vd=0;c.infr=[];c.flagSt=0;c.dyT=0;c.dyFast=0;c.dWarn=0;c.msk=null;c.pRel=null;c.autoBox=false;handBack(c);
     c.dm=newDmg();c.wingShare=0;c.wingChange=false;c.tT=null;c.bT=null;if(c.isPlayer){c.pitWing=c.pitWing||"AUTO";c.planLap=null;}
     placeOnGrid(c,slot);c.px=c.x;c.pz=c.z;c.pyaw=c.yaw;});
@@ -1816,6 +1816,7 @@ function physics(c,dt){
     c.delta+=clamp(c.steerIn*steerLock(0)-c.delta,-4*dt,4*dt);c.yaw-=vr*Math.tan(c.delta)/WB*dt;c.chi=c.yaw;
     c.x-=Math.cos(c.yaw)*vr*dt;c.z-=Math.sin(c.yaw)*vr*dt;return;}
   if(c.dnf){c.throttle=0;c.brake=1;c.deltaCmd=0;c.steerIn=0;}
+  if(c.aiSpin){aiSpinStep(c,dt);return;}
   // (gk / pk / tk / bf: the AI car's grip, engine, traction and braking against the base model — AI_CAR, set in makeCar)
   const v=c.v,m=MASS+c.fuel,tg=tyreGrip(c)*c.surf*(1-0.12*c.damage),mu=MU*tg*gripV(v)*(c.gk||1),tk=c.tk||1,bf=c.bf||1;
   const cla=CLA*(c.drsOpen?0.9:1)*(1-0.3*c.damage),cda=CDA*(c.drsOpen?0.85:1)*(1-0.22*c.tow);
@@ -1877,6 +1878,30 @@ function physics(c,dt){
   c.x+=Math.cos(c.chi)*c.v*dt;c.z+=Math.sin(c.chi)*c.v*dt;
   afterMove(c,dt,thr,ax,ay);
 }
+/* ---- the AI loses it now and then. Its own model is planted (it can't spin), so a spin is played out here: the rear
+   lets go, the car slides on along the way it was going while it rotates 180–360° and scrubs off speed (the walls
+   still catch it); once it has all but stopped the driver turns it round on the spot to face the way the race goes and
+   drives off. Once a lap each AI car rolls for one (SPIN_P, more on worn tyres); if it comes up, the rear goes at the
+   next corner it takes hard past a random point of that lap — a few spins in a full-length race, now and then one in a
+   short one. A spun car left standing on the track brings out the Safety Car (raceWatch). ---- */
+const SPIN_P=0.005;
+function aiSpinRoll(c){
+  if(session!=='race'||phase!=='race'||raceStart==null||c.pitSide||c.finished||c.dnf)return;
+  if(c.spinLap!==c.lapCount){c.spinLap=c.lapCount;c.spinAt=rnd()<SPIN_P*(1+2*Math.max(0,c.wear-0.4))?rnd()*L:null;}
+  if(c.spinAt==null||c.s<c.spinAt||neutralFor(c)||flagAt(c.s)||c.v<20||Math.abs(c.aLat||0)<16)return;
+  c.spinAt=null;aiSpinStart(c);}
+function aiSpinStart(c){c.aiSpin={phase:'spin',t:0,dir:Math.sign(c.r||c.aLat||1)||1,r0:rand(Math.PI,2*Math.PI)/0.9};c.spunT=simTime;
+  c.throttle=0;c.brake=0;c.deltaCmd=0;}
+function aiSpinStep(c,dt){const s=c.aiSpin;s.t+=dt;
+  if(s.phase==='spin'){const r=s.dir*s.r0*Math.exp(-s.t/0.9),dec=c.surf<1?11:9;
+    c.yaw+=r*dt;c.r=r;c.v=Math.max(0,c.v-dec*dt);c.slip=2;
+    c.x+=Math.cos(c.chi)*c.v*dt;c.z+=Math.sin(c.chi)*c.v*dt;
+    if(c.v<2.5){s.phase='turn';c.v=0;c.chi=c.yaw;c.r=0;}
+    afterMove(c,dt,0,-dec,0);return;}
+  // stopped: round on the spot to face the way the race goes, then the AI drives on
+  const d=wrapA(ANG[c.idx]-c.yaw);c.v=0;c.r=0;c.slip=0;c.yaw+=clamp(d,-1.8*dt,1.8*dt);c.chi=c.yaw;
+  if(Math.abs(d)<0.12||s.t>12){c.aiSpin=null;c.delta=0;}
+  afterMove(c,dt,0,0,0);}
 function afterMove(c,dt,thr,ax,ay){
   c.aLong=ax;c.aLat=ay;
   const dist=c.v*dt;
@@ -2062,6 +2087,7 @@ function collide(){
     // calls the SC / VSC. Lighter contact breaks wings: a nudge at the start or a misjudged pass must not end the race)
     if(phase==='race'&&closing>38&&!A.pitSide&&!B.pitSide){const vic=hitter===A?B:A;
       if(!hitter.dnf)retire(hitter,'COLLISION',closing);if(closing>46&&!vic.dnf)retire(vic,'COLLISION',closing);}
+    if(phase==='race'&&closing>8&&!A.pitSide&&!B.pitSide)bigCrash(A,B,hitter,closing);
     if((A.isPlayer||B.isPlayer)&&closing>3&&simTime-lastContact>1.5){lastContact=simTime;msg('CONTACT'+(closing>16?' · AERO DAMAGE':''));
       if(closing>16)radioDamage(player);}}
 }
@@ -2237,6 +2263,8 @@ function playerControl(dt){const c=player;
 function aiDrive(c,dt){
   if(c.pitStop>0)return;
   if(c.dnf){c.throttle=0;c.brake=1;c.deltaCmd=0;return;}
+  if(c.aiSpin)return; // spinning: a passenger until it has stopped and turned back (aiSpinStep)
+  aiSpinRoll(c);if(c.aiSpin)return;
   // stuck against a barrier (no reverse gear): steer back towards the racing surface and crawl out
   if(c.onWall&&c.v<4){c.stuck=(c.stuck||0)+dt;
     if(c.stuck>0.6){c.deltaCmd=clamp(-c.d*0.06,-0.3,0.3);c.throttle=0.55;c.brake=0;
@@ -2499,7 +2527,8 @@ const order=()=>cars.slice().sort(orderCmp);
      significantly, no overtaking, be ready to stop. The yellow is shown at the post of the incident's sector (and the
      post before, when the incident is right after a post); the GREEN flag at the next post ends the zone.
    · In this game a yellow only ever comes out in the ~5 s before a Safety Car (a double yellow at the incident — see
-     incident()); small offs, stops and touches show nothing.
+     incident(): a car left standing on the track after a spin or a crash, the road blocked, a big collision or a
+     pile-up — raceWatch / bigCrash); small offs, stops and touches show nothing.
    · Overtaking a running car in a yellow zone, or under the SC, has to be undone (give the place back) within
      ~12 s, or it is a 5 s penalty. Not slowing down through a double yellow is a 5 s penalty. DRS is closed in yellow sectors.
    · There is NO SC / VSC delta time: under the SC the field closes up into a train behind it. (The VSC code remains
@@ -2542,6 +2571,7 @@ function updateFlags(dt){
   if(phase!=='race'||raceStart==null){computeFlags();return;}
   // yellows come out ONLY in the seconds before a Safety Car (see incident()); nothing else shows one
   if(scPending&&simTime>=scPending.at){const p=scPending;scPending=null;deploySC(p.cause);}
+  raceWatch(dt);
   computeFlags();
   playerRules(dt);
   updateVSC(dt);updateSafetyCar(dt);}
@@ -2605,11 +2635,30 @@ function retire(c,why,sp){
    ~5 s (the only time a yellow ever comes out), then the SC is deployed. Marshals need ~35–50 s to clear the debris. ---- */
 let scPending=null,debrisUntil=0;
 function resetRaceControl(){sc=null;scRestart=false;restartGo=false;vsc=null;drsResume=null;hazards=[];msFlag.fill(0);msGreen.fill(-1);
-  scPending=null;debrisUntil=0;if(scMesh)scMesh.visible=false;}
+  scPending=null;debrisUntil=0;crashLog=[];if(scMesh)scMesh.visible=false;}
 function incident(c,why){if(phase!=='race'||raceStart==null||checkered||scOn()||scPending||session!=='race')return;
   scPending={at:simTime+5,cause:c};c.incWhy=why;debrisUntil=simTime+5+rand(35,50);
   hazard(c.s,2,30);
   msg('DOUBLE YELLOW',c.code+' · '+why+' · SAFETY CAR TO BE DEPLOYED');}
+// race control watches for a race that can't safely run on and calls incident() for it: a car standing on the racing
+// surface for 5 s (a spin or a crash it didn't retire from — the player's too), or two cars standing within 40 m of
+// each other for 3 s (the road blocked). A car turning itself round after a spin takes ~2 s and doesn't count
+function raceWatch(dt){
+  if(session!=='race'||phase!=='race'||raceStart==null||checkered||scOn()||scPending){for(const c of cars)c.stopT=0;return;}
+  const st=[];
+  for(const c of cars){
+    if(c.dnf||c.parked||c.pitSide||c.finished||c.held||c.pitStop>0||c.v>1||Math.abs(c.d)>HWa[c.idx]+0.5){c.stopT=0;continue;}
+    c.stopT=(c.stopT||0)+dt;
+    if(c.stopT>5){incident(c,simTime-(c.spunT??-99)<15?'SPUN · STOPPED ON TRACK':'STOPPED ON TRACK');return;}
+    if(c.stopT>3){const o=st.find(o=>Math.abs(fwd(o.s,c.s))<40);if(o){incident(o,'TRACK BLOCKED');return;}st.push(c);}}}
+// a big collision — ~95 km/h closing or more that nobody retired from, or three or more cars caught up in contact in the
+// same place within 3 s (a pile-up) — leaves debris and stranded cars: the Safety Car (a retirement calls it itself)
+let crashLog=[];
+function bigCrash(A,B,hitter,closing){crashLog=crashLog.filter(e=>simTime-e.t<3);crashLog.push({t:simTime,s:A.s,a:A,b:B});
+  if(A.dnf||B.dnf)return;
+  if(closing>=26){incident(hitter,'COLLISION');return;}
+  const near=new Set();for(const e of crashLog)if(Math.abs(fwd(e.s,A.s))<80){near.add(e.a);near.add(e.b);}
+  if(near.size>=3)incident(hitter,'MULTI-CAR COLLISION');}
 function clearWrecks(){for(const c of cars)if(c.dnf&&!c.parked&&simTime>=c.clearAt){
   if(c.isPlayer){c.v=0;c.held=true;continue;} // the camera stays on your car
   c.parked=true;c.mesh.root.visible=false;c.held=true;c.v=0;}}
@@ -2990,7 +3039,7 @@ function radioWatch(dt){const p=player;if(!p||replay||p.dnf||(phase!=='race'&&ph
   // a spin: travelling more than ~70° off where the car points, then pointing the right way again at speed
   const sl=Math.abs(wrapA(p.yaw-(p.chi??p.yaw)));
   // a spin: the driver owns it, the pit wall settles him
-  if(!rdW.spin&&sl>1.2&&p.v>3){rdW.spin=true;teamRadioCd('spin',20,['260','261'],2);}
+  if(!rdW.spin&&sl>1.2&&p.v>3){rdW.spin=true;p.spunT=simTime;teamRadioCd('spin',20,['260','261'],2);}
   else if(rdW.spin&&sl<0.2)rdW.spin=false;
   if(race){
     // brakes past 1000 °C (red on the MFD)
@@ -4011,4 +4060,4 @@ function detHash(seed=1,n=6000){
   reseed(null);
   return {hash:(h>>>0).toString(16).padStart(8,'0'),seed,steps:n,simTime:+simTime.toFixed(4),laps:cars.map(c=>c.lapCount),best:cars.map(c=>c.bestLap&&+c.bestLap.toFixed(3))};}
 boot();
-window.hrc={updateHud,updateInfo,restartRace,restartQuali,restartTT,setupSession,incident,get tt(){return tt;},get session(){return session;},quickRace,detHash,deploySC,deployVSC,hazard,retire,get sc(){return sc;},get vsc(){return vsc;},get msFlag(){return msFlag;},reseed,rtEstimate,get player(){return player;},get simTime(){return simTime;},gpuTimer,cullByDistance,finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene,camera,sun};
+window.hrc={updateHud,updateInfo,restartRace,restartQuali,restartTT,setupSession,incident,spin:i=>aiSpinStart(cars[i]),get tt(){return tt;},get session(){return session;},quickRace,detHash,deploySC,deployVSC,hazard,retire,get sc(){return sc;},get vsc(){return vsc;},get msFlag(){return msFlag;},reseed,rtEstimate,get player(){return player;},get simTime(){return simTime;},gpuTimer,cullByDistance,finishQuali,startRace,leaveBox,openBox,composer,step,updateVisuals,renderMirror,applyQuality,H,get cars(){return cars;},get phase(){return phase;},setQualityMode,renderer,scaler,get Q(){return Q;},get qName(){return qName;},THREE,scene,camera,sun};
