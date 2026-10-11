@@ -32,17 +32,26 @@ $n=0;$skip=0;$fail=0
 # (<id>_a, <id>_b … — the game reads the values out in between with n0-n59 / oh / point)
 $jobs=foreach($p in $lines.PSObject.Properties){
   if($p.Name -eq '_'){continue}
+  # the words of a time read out (n0-n59, oh, point) are said mid-sentence and a little quicker: the speech engine is
+  # given the sentence around them (previous_text / next_text) so each word has the run-on intonation of a read-out time,
+  # and its own speed setting (the pitch stays natural — the game plays them at their recorded speed)
+  if($p.Name -match '^(n\d+|oh|point)$'){[pscustomobject]@{id=$p.Name;who=$p.Value[0];text=$p.Value[1];prev='Lap complete. Your time is one';next='four five six.';speed=1.12};continue}
   if($p.Value[1] -notmatch '\{'){[pscustomobject]@{id=$p.Name;who=$p.Value[0];text=$p.Value[1]};continue}
-  $parts=[regex]::Split($p.Value[1],'\{\w+\}')
+  # a line with values: each piece of words is said leading into the value that follows it (or out of the one before)
+  $parts=[regex]::Split($p.Value[1],'\{\w+\}');$names=@([regex]::Matches($p.Value[1],'\{(\w+)\}')|ForEach-Object{$_.Groups[1].Value})
+  $say={param($nm)if($nm -eq 'position'){'seven'}else{'one thirty-two four five six'}}
   for($k=0;$k -lt $parts.Length;$k++){$w=$parts[$k].Trim() -replace '^[\s\.:,]+','' -replace '[\s:,]+$',''
-    if($w -match '[A-Za-z]'){[pscustomobject]@{id="$($p.Name)_$('abcdefgh'[$k])";who=$p.Value[0];text=$w}}}}
+    if($w -match '[A-Za-z]'){[pscustomobject]@{id="$($p.Name)_$('abcdefgh'[$k])";who=$p.Value[0];text=$w
+      next=$(if($k -lt $names.Count){(& $say $names[$k])+'.'}else{$null});prev=$(if($k -gt 0){(& $say $names[$k-1])+'.'}else{$null})}}}}
 foreach($j in $jobs){
   $id=$j.id;$who=$j.who;$text=$j.text
   if($Only -and ($Only -notcontains $id)){continue}
   $out=Join-Path $dir "$id.mp3"
   if((Test-Path $out) -and -not $Force){$skip++;continue}
   $voice=if($who -eq 'd'){$Driver}else{$Engineer}
-  $body=@{text=$text;model_id=$Model;voice_settings=$set[$who]}|ConvertTo-Json -Compress
+  $vs=@{}+$set[$who];if($j.speed){$vs.speed=$j.speed}
+  $req=@{text=$text;model_id=$Model;voice_settings=$vs};if($j.prev){$req.previous_text=$j.prev};if($j.next){$req.next_text=$j.next}
+  $body=$req|ConvertTo-Json -Compress
   try{Invoke-WebRequest -Uri "https://api.elevenlabs.io/v1/text-to-speech/$voice`?output_format=mp3_44100_128" -Method Post `
       -Headers @{'xi-api-key'=$key;'Accept'='audio/mpeg'} -ContentType 'application/json; charset=utf-8' `
       -Body ([Text.Encoding]::UTF8.GetBytes($body)) -OutFile $out -UseBasicParsing

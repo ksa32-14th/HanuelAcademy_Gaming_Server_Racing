@@ -9,8 +9,8 @@
 // the words — band-limited hiss that flutters, crackles and clicks, now and then breaking up — and a squelch as it closes.
 // One call shows at a time: the next waits (urgent ones jump the queue; a low-priority one is dropped if the channel is
 // busy), and a call that waited too long is dropped.
-import {$,clamp} from './util.js?v=20261011g';
-import {RADIO_SFX} from './config.js?v=20261011g';
+import {$,clamp} from './util.js?v=20261011h';
+import {RADIO_SFX} from './config.js?v=20261011h';
 
 const VOICE_DIR='sounds/radio/';
 // the lines (id -> [who, text]): loaded before the game starts
@@ -66,11 +66,11 @@ export function radioHush(){for(const s of voiceNow){try{s.stop();}catch(e){}}vo
 async function sayClips(ids,who,maxMs){ids=ids.filter(Boolean);const a=ctx();if(!a||isMuted()||!ids.length)return;const {ac,dest}=a;
   const bufs=await Promise.all(ids.map(id=>clip(ac,id)));if(bufs.some(b=>!b)||isMuted())return;
   const inp=voiceChain(ac,dest,who),t0=ac.currentTime+0.03;let t=t0;voiceNow=[];
-  // a time is read out quickly, the way an engineer rattles it off: the number words a quarter faster and run into each
-  // other; the line's own words at their pace
-  bufs.forEach((b,i)=>{const num=/^(n\d+|oh)$/.test(ids[i]),nextNum=/^(n\d+|oh)$/.test(ids[i+1]||''),rate=num?1.25:1;
-    const s=ac.createBufferSource();s.buffer=b.buf;s.playbackRate.value=rate;s.connect(inp);s.start(t,b.start,b.duration);voiceNow.push(s);
-    t+=b.duration/rate+(i===bufs.length-1?0:num&&nextNum?-0.03:0.04);});
+  // a time read out runs its words together, the way an engineer rattles it off (the number files are recorded quick and
+  // mid-sentence, so they play at their own speed and pitch); the line's own words keep a breath before the time
+  bufs.forEach((b,i)=>{const num=/^(n\d+|oh)$/.test(ids[i]),nextNum=/^(n\d+|oh)$/.test(ids[i+1]||'');
+    const s=ac.createBufferSource();s.buffer=b.buf;s.connect(inp);s.start(t,b.start,b.duration);voiceNow.push(s);
+    t+=b.duration+(i===bufs.length-1?0:num&&nextNum?-0.015:0.03);});
   if(who==='driver')engineBed(ac,dest,t0,t);
   await wait(Math.min(maxMs,(t-ac.currentTime)*1000));}
 
